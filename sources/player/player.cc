@@ -52,7 +52,11 @@ void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mu
 #endif
 
     uv_async_t async;
+#if UV_VERSION_MAJOR >= 1
     uv_async_init(loop, &async, nullptr);
+#else
+    uv_async_init(loop, &async, +[](uv_async_t *, int) {});
+#endif
     async_ = &async;
 
     Player_Clock clock(loop);
