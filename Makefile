@@ -75,10 +75,11 @@ LDFLAGS += -static
 PKG_CONFIG_FLAGS += -static
 endif
 
-DEP_CFLAGS = $(shell $(PKG_CONFIG) $(PKG_CONFIG_FLAGS) sdl2 libuv uchardet --cflags)
+DEP_CFLAGS = $(shell $(PKG_CONFIG) $(PKG_CONFIG_FLAGS) sdl2 libuv uchardet --cflags) -pthread
 DEP_CXXFLAGS = $(DEP_CFLAGS)
 DEP_CPPFLAGS =
 DEP_LIBS = $(shell $(PKG_CONFIG) $(PKG_CONFIG_FLAGS) sdl2 libuv uchardet --libs) -lboost_locale
+DEP_LDFLAGS = -pthread
 
 ifeq ($(PLATFORM),linux)
 DEP_LIBS += -lasound
@@ -128,7 +129,7 @@ endef
 ###
 $(APP): $(OBJS_ACTUAL)
 	$(call color_echo,92m,Link C++     ,33m,$@)
-	$(CXX_LINK) $(LDFLAGS) -o $@ $^ $(DEP_LIBS)
+	$(CXX_LINK) $(LDFLAGS) $(DEP_LDFLAGS) -o $@ $^ $(DEP_LIBS)
 
 $(filter obj/sources/%.o,$(OBJS_ACTUAL)): obj/%.o: %.cc
 	@mkdir -p $(dir $@)
