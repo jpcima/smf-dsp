@@ -27,7 +27,11 @@ void Player_Clock::stop()
     active_ = false;
 }
 
+#if UV_VERSION_MAJOR >= 1
 void Player_Clock::callback(uv_timer_t *t)
+#else
+void Player_Clock::callback(uv_timer_t *t, int)
+#endif
 {
     Player_Clock *self = static_cast<Player_Clock *>(t->data);
     uint64_t now = uv_hrtime();

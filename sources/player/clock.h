@@ -14,7 +14,11 @@ public:
     std::function<void (uint64_t)> TimerCallback;
 
 private:
+#if UV_VERSION_MAJOR >= 1
     static void callback(uv_timer_t *t);
+#else
+    static void callback(uv_timer_t *t, int);
+#endif
 
 private:
     uv_timer_t timer_;

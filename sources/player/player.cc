@@ -38,16 +38,24 @@ void Player::push_command(std::unique_ptr<Player_Command> cmd)
 
 void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mutex)
 {
-    uv_loop_t loop;
-    if (uv_loop_init(&loop) != 0)
+#if UV_VERSION_MAJOR >= 1
+    uv_loop_t loop_buf;
+    uv_loop_t *loop = &loop_buf;
+    if (uv_loop_init(loop) != 0)
         throw std::runtime_error("uv_loop_init");
-    auto loop_cleanup = gsl::finally([&loop] { uv_loop_close(&loop); });
+    auto loop_cleanup = gsl::finally([loop] { uv_loop_close(loop); });
+#else
+    uv_loop_t *loop = uv_loop_new();
+    if (!loop)
+        throw std::runtime_error("uv_loop_new");
+    auto loop_cleanup = gsl::finally([loop] { uv_loop_delete(loop); });
+#endif
 
     uv_async_t async;
-    uv_async_init(&loop, &async, nullptr);
+    uv_async_init(loop, &async, nullptr);
     async_ = &async;
 
-    Player_Clock clock(&loop);
+    Player_Clock clock(loop);
     clock.TimerCallback = [this](uint64_t elapsed) { tick(elapsed); };
     clock_ = &clock;
 
@@ -58,7 +66,7 @@ void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mu
 
     while (!quit_.load()) {
         process_command_queue();
-        uv_run(&loop, UV_RUN_ONCE);
+        uv_run(loop, UV_RUN_ONCE);
     }
 
     async_ = nullptr;
