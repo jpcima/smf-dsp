@@ -383,9 +383,9 @@ void Application::paint_cached_background(SDL_Renderer *rr)
         Text_Painter::clear_font_caches();
         auto font_cache_cleanup = gsl::finally([] { Text_Painter::clear_font_caches(); });
 
-        SDL_Surface *su = SDL_CreateRGBSurfaceWithFormat(0, size_.x, size_.y, 32, SDL_PIXELFORMAT_RGBA32);
+        SDL_Surface *su = SDLpp_CreateRGBA32Surface(size_.x, size_.y);
         if (!su)
-            throw std::runtime_error("SDL_CreateRGBSurfaceWithFormat");
+            throw std::runtime_error("SDL_CreateRGBSurface");
         auto su_cleanup = gsl::finally([su] { SDL_FreeSurface(su); });
 
         SDL_Renderer *sr = SDL_CreateSoftwareRenderer(su);

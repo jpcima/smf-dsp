@@ -138,7 +138,7 @@ SDL_Texture *Font_Atlas::create(SDL_Renderer *rr, const Font &font)
     size_t gn = font.glyph_count();
     Point as = size(font);
 
-    SDL_Surface *su = SDL_CreateRGBSurfaceWithFormat(0, as.x, as.y, 16, SDL_PIXELFORMAT_RGBA4444);
+    SDL_Surface *su = SDLpp_CreateRGBA4444Surface(as.x, as.y);
     if (!su)
         throw std::runtime_error("SDL_CreateRGBSurfaceWithFormat");
     auto surface_cleanup = gsl::finally([su] { SDL_FreeSurface(su); });
