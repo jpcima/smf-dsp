@@ -1,0 +1,3 @@
+TARGET = i686-w64-mingw32-
+STATIC = 1
+include Makefile
