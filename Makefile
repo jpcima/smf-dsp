@@ -123,7 +123,7 @@ CXX_COMPILE = $(QUIET)$(CXX) -MD -MP
 CXX_LINK = $(QUIET)$(CXX)
 
 define color_echo
-	@printf "\e[%s%s\e[%s%s\e[0m\n" "$(1)" "$(2)" "$(3)" "$(4)"
+	@printf "\033[%s%s\033[%s%s\033[0m\n" "$(1)" "$(2)" "$(3)" "$(4)"
 endef
 
 ###
