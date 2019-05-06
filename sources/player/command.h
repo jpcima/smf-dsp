@@ -15,6 +15,9 @@ enum {
     PC_Speed,
     PC_Repeat_Mode,
     PC_Request_State,
+    PC_Get_Midi_Outputs,
+    PC_Set_Midi_Output,
+    PC_Set_Midi_Virtual_Output,
     PC_Shutdown,
 };
 
@@ -62,6 +65,23 @@ struct Pcmd_Repeat_Mode : Player_Command {
 
 struct Pcmd_Request_State : Player_Command {
     int type() const noexcept override { return PC_Request_State; }
+};
+
+struct Pcmd_Get_Midi_Outputs : Player_Command {
+    int type() const noexcept override { return PC_Get_Midi_Outputs; }
+    std::vector<std::string> *midi_outputs = nullptr;
+    bool *has_virtual_midi_output = nullptr;
+    std::mutex *wait_mutex = nullptr;
+    std::condition_variable *wait_cond = nullptr;
+};
+
+struct Pcmd_Set_Midi_Output : Player_Command {
+    int type() const noexcept override { return PC_Set_Midi_Output; }
+    std::string midi_output;
+};
+
+struct Pcmd_Set_Midi_Virtual_Output : Player_Command {
+    int type() const noexcept override { return PC_Set_Midi_Virtual_Output; }
 };
 
 struct Pcmd_Shutdown : Player_Command {

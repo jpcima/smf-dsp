@@ -1,6 +1,7 @@
 #pragma once
 #include "utility/geometry.h"
 #include <SDL.h>
+#include <gsl.hpp>
 #include <mutex>
 #include <vector>
 #include <memory>
@@ -35,6 +36,8 @@ public:
 
     void request_update();
     void update_modals();
+    void ask_midi_output();
+    void get_midi_outputs(std::vector<std::string> &outputs, bool &has_virtual);
 
     void engage_shutdown();
     void advance_shutdown();

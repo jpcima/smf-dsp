@@ -163,6 +163,25 @@ void Player::process_command_queue()
             if (StateCallback)
                 StateCallback(make_state());
             break;
+        case PC_Get_Midi_Outputs: {
+            std::mutex *wait_mutex = static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).wait_mutex;
+            std::condition_variable *wait_cond = static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).wait_cond;
+
+            *static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).midi_outputs = ins_->get_midi_outputs();
+            *static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).has_virtual_midi_output = ins_->has_virtual_midi_output();
+
+            std::unique_lock<std::mutex> lock(*wait_mutex);
+            wait_cond->notify_one();
+            break;
+        }
+        case PC_Set_Midi_Output: {
+            ins_->set_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output);
+            break;
+        }
+        case PC_Set_Midi_Virtual_Output: {
+            ins_->set_midi_virtual_output();
+            break;
+        }
         case PC_Shutdown: {
             std::mutex *wait_mutex = static_cast<Pcmd_Shutdown &>(*cmd).wait_mutex;
             std::condition_variable *wait_cond = static_cast<Pcmd_Shutdown &>(*cmd).wait_cond;

@@ -53,9 +53,7 @@ void Dummy_Instrument::handle_send_message(const uint8_t *data, unsigned len)
 //
 Midi_Port_Instrument::Midi_Port_Instrument()
 {
-    RtMidiOut *out = new RtMidiOut(RtMidi::UNSPECIFIED, "FMidiPlay");
-    out_.reset(out);
-    out->openVirtualPort("FMidiPlay out");
+    set_midi_virtual_output();
 }
 
 Midi_Port_Instrument::~Midi_Port_Instrument()
@@ -66,4 +64,51 @@ void Midi_Port_Instrument::handle_send_message(const uint8_t *data, unsigned len
 {
     RtMidiOut &out = *out_;
     out.sendMessage(data, len);
+}
+
+std::vector<std::string> Midi_Port_Instrument::get_midi_outputs()
+{
+    RtMidiOut &out = *out_;
+    std::vector<std::string> ports;
+
+    for (size_t i = 0, n = out.getPortCount(); i < n; ++i)
+        ports.push_back(out.getPortName(i));
+
+    return ports;
+}
+
+bool Midi_Port_Instrument::has_virtual_midi_output()
+{
+    RtMidiOut &out = *out_;
+    return out.getCurrentApi() != RtMidi::WINDOWS_MM;
+}
+
+void Midi_Port_Instrument::set_midi_output(gsl::cstring_span name)
+{
+    RtMidi::Api api = out_ ? out_->getCurrentApi() : RtMidi::UNSPECIFIED;
+    out_.reset();
+
+    RtMidiOut *out = new RtMidiOut(api, "FMidiPlay");
+    out_.reset(out);
+
+    bool port_found = false;
+    for (size_t i = 0, n = out->getPortCount(); i < n && !port_found; ++i) {
+        if (out->getPortName(i) == name) {
+            out->openPort(i, "FMidiPlay out");
+            port_found = true;
+        }
+    }
+
+    if (!port_found)
+        out->openVirtualPort("FMidiPlay out");
+}
+
+void Midi_Port_Instrument::set_midi_virtual_output()
+{
+    RtMidi::Api api = out_ ? out_->getCurrentApi() : RtMidi::UNSPECIFIED;
+    out_.reset();
+
+    RtMidiOut *out = new RtMidiOut(api, "FMidiPlay");
+    out_.reset(out);
+    out->openVirtualPort("FMidiPlay out");
 }
