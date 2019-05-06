@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Error creating window renderer.\n");
         return 1;
     }
+    auto renderer_cleanup = gsl::finally([rr] { SDL_DestroyRenderer(rr); });
 
     // Initial painting
     app.paint_cached_background(rr);
