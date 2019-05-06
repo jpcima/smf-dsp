@@ -45,6 +45,7 @@ OBJS = \
   sources/ui/file_browser.o \
   sources/ui/file_entry.o \
   sources/ui/metadata_display.o \
+  sources/ui/modal_box.o \
   sources/utility/charset.o \
   sources/utility/paths.o \
   sources/utility/file_scan.o \
@@ -111,10 +112,8 @@ clean:
 
 ###
 QUIET = @
-QUIET_MSG = @echo -e
 ifneq (,$(V))
 QUIET =
-QUIET_MSG = @true
 endif
 
 ###

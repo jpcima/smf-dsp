@@ -84,8 +84,10 @@ int main(int argc, char *argv[])
             break;
         case SDL_USEREVENT:
             update = true;
-            if (!shutting_down)
+            if (!shutting_down) {
                 app.request_update();
+                app.update_modals();
+            }
             app.advance_shutdown();
             break;
         case SDL_QUIT:

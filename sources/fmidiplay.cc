@@ -8,6 +8,7 @@
 #include "ui/file_entry.h"
 #include "ui/metadata_display.h"
 #include "ui/piano.h"
+#include "ui/modal_box.h"
 #include "ui/text.h"
 #include "ui/fonts.h"
 #include "ui/color_palette.h"
@@ -366,6 +367,15 @@ void Application::paint(SDL_Renderer *rr, int paint)
         }
     }
 
+    if (paint & Pt_Foreground && !modal_.empty()) {
+        Rect bounds(0, 0, size_.x, size_.y);
+        unsigned alpha = 0x80;
+        SDL_SetRenderDrawColor(rr, 0x00, 0x00, 0x00, alpha);
+        SDL_RenderFillRect(rr, &bounds);
+        Modal_Box &modal = *modal_.back();
+        modal.paint(rr);
+    }
+
     if (paint & Pt_Foreground && fadeout_engaged_) {
         Rect bounds(0, 0, size_.x, size_.y);
         unsigned alpha = 0xff - 0xff * std::max(0, fadeout_time_) / fadeout_delay;
@@ -410,6 +420,11 @@ void Application::paint_cached_background(SDL_Renderer *rr)
 bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
 {
     int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
+
+    if (!modal_.empty()) {
+        Modal_Box &modal = *modal_.back();
+        return modal.handle_key_pressed(event);
+    }
 
     switch (info_mode_) {
     case Info_File: {
@@ -532,7 +547,7 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         }
         break;
     case SDL_SCANCODE_ESCAPE:
-        if (keymod == KMOD_NONE) {
+        if (keymod == KMOD_NONE && !event.repeat) {
             engage_shutdown();
             return true;
         }
@@ -546,6 +561,11 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
 
 bool Application::handle_key_released(const SDL_KeyboardEvent &event)
 {
+    if (!modal_.empty()) {
+        Modal_Box &modal = *modal_.back();
+        return modal.handle_key_released(event);
+    }
+
     switch (info_mode_) {
     case Info_File:
         if (file_browser_->handle_key_released(event))
@@ -627,6 +647,16 @@ void Application::request_update()
 {
     std::unique_ptr<Pcmd_Request_State> cmd(new Pcmd_Request_State);
     player_->push_command(std::move(cmd));
+}
+
+void Application::update_modals()
+{
+    if (modal_.empty())
+        return;
+
+    Modal_Box &modal = *modal_.back();
+    if (modal.has_completed())
+        modal_.pop_back();
 }
 
 void Application::engage_shutdown()

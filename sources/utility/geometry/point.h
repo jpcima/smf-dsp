@@ -15,6 +15,10 @@ class PointT : public Point_Traits<T>::storage_type {
   PointT() : storage_type{} {}
   PointT(storage_type s) : storage_type(s) {}
   PointT(T x, T y) : storage_type{x, y} {}
+
+  PointT<T> off_by(const PointT<T> &p) const {
+    return PointT<T>(this->x + p.x, this->y + p.y);
+  }
 };
 
 //------------------------------------------------------------------------------

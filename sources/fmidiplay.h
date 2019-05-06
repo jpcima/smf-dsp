@@ -2,10 +2,12 @@
 #include "utility/geometry.h"
 #include <SDL.h>
 #include <mutex>
+#include <vector>
 #include <memory>
 class File_Browser;
 struct File_Entry;
 class Metadata_Display;
+class Modal_Box;
 class Player;
 struct Player_State;
 class Main_Layout;
@@ -32,6 +34,7 @@ public:
     static bool filter_file_entry(const File_Entry &ent);
 
     void request_update();
+    void update_modals();
 
     void engage_shutdown();
     void advance_shutdown();
@@ -44,6 +47,7 @@ private:
     SDL_TimerID update_timer_ = 0;
 
     std::unique_ptr<Main_Layout> layout_;
+    std::vector<std::unique_ptr<Modal_Box>> modal_;
     SDL_Texture *cached_background_ = nullptr;
 
     bool fadeout_engaged_ = false;

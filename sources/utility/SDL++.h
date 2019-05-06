@@ -38,6 +38,15 @@ inline void SDLpp_RenderDrawLine(SDL_Renderer *rr, const Point &p1, const Point 
     SDL_RenderDrawLine(rr, p1.x, p1.y, p2.x, p2.y);
 }
 
+inline void SDLpp_RenderFillRect(SDL_Renderer *rr, const SDL_Rect &rect)
+{
+    SDL_RenderFillRect(rr, &rect);
+}
+inline void SDLpp_RenderDrawRect(SDL_Renderer *rr, const SDL_Rect &rect)
+{
+    SDL_RenderDrawRect(rr, &rect);
+}
+
 inline SDL_Surface *SDLpp_CreateRGBA32Surface(int width, int height)
 {
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
