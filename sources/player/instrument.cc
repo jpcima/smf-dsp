@@ -53,7 +53,7 @@ void Dummy_Instrument::handle_send_message(const uint8_t *data, unsigned len)
 //
 Midi_Port_Instrument::Midi_Port_Instrument()
 {
-    set_midi_virtual_output();
+    set_midi_output(gsl::cstring_span());
 }
 
 Midi_Port_Instrument::~Midi_Port_Instrument()
@@ -92,15 +92,21 @@ void Midi_Port_Instrument::set_midi_output(gsl::cstring_span name)
     out_.reset(out);
 
     bool port_found = false;
-    for (size_t i = 0, n = out->getPortCount(); i < n && !port_found; ++i) {
-        if (out->getPortName(i) == name) {
-            out->openPort(i, "FMidiPlay out");
-            port_found = true;
+    if (!name.empty()) {
+        for (size_t i = 0, n = out->getPortCount(); i < n && !port_found; ++i) {
+            if (out->getPortName(i) == name) {
+                out->openPort(i, "FMidiPlay out");
+                port_found = true;
+            }
         }
     }
 
-    if (!port_found)
-        out->openVirtualPort("FMidiPlay out");
+    if (!port_found) {
+        if (has_virtual_midi_output())
+            out->openVirtualPort("FMidiPlay out");
+        else
+            out->openPort(0, "FMidiPlay out");
+    }
 }
 
 void Midi_Port_Instrument::set_midi_virtual_output()
