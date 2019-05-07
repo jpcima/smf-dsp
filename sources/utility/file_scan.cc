@@ -54,7 +54,7 @@ std::string File_Scan::file_name(size_t index) const
 bool File_Scan::is_complete() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    return *(volatile bool *)complete_;
+    return static_cast<volatile const bool &>(complete_);
 }
 
 void File_Scan::wait_for_completion()
@@ -64,12 +64,15 @@ void File_Scan::wait_for_completion()
         cond_.wait(lock);
 }
 
-void File_Scan::wait_for_file_count(size_t count)
+bool File_Scan::wait_for_file_count(size_t count, std::chrono::milliseconds timeout)
 {
+    auto predicate =
+        [this, count]() -> bool {
+            return static_cast<volatile size_t &>(file_count_) >= count ||
+                static_cast<volatile bool &>(complete_);
+        };
     std::unique_lock<std::mutex> lock(mutex_);
-    while (static_cast<volatile size_t &>(file_count_) < count &&
-           !static_cast<volatile bool &>(complete_))
-        cond_.wait(lock);
+    return cond_.wait_for(lock, timeout, predicate);
 }
 
 void File_Scan::scan_in_thread()

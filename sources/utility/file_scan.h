@@ -9,6 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <chrono>
 
 class File_Scan {
 public:
@@ -23,7 +24,7 @@ public:
 
     bool is_complete() const;
     void wait_for_completion();
-    void wait_for_file_count(size_t count);
+    bool wait_for_file_count(size_t count, std::chrono::milliseconds timeout);
 
 private:
     void scan_in_thread();

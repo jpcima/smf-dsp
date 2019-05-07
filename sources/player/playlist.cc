@@ -60,7 +60,7 @@ Random_Play_List::~Random_Play_List()
 void Random_Play_List::start()
 {
     File_Scan &fs = *file_scan_;
-    fs.wait_for_file_count(1);
+    fs.wait_for_file_count(100, std::chrono::milliseconds(500));
 
     index_ = 0;
     history_.clear();
