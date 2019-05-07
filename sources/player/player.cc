@@ -13,18 +13,17 @@ Player::Player()
       play_list_(new Linear_Play_List),
       ins_(new Midi_Port_Instrument)
 {
-    std::condition_variable ready_cv;
-    std::mutex ready_mutex;
-
-    std::unique_lock<std::mutex> ready_lock(ready_mutex);
-    thread_ = std::thread([this, &ready_cv, &ready_mutex] { thread_exec(ready_cv, ready_mutex); });
-    ready_cv.wait(ready_lock);
+    std::unique_lock<std::mutex> ready_lock(ready_mutex_);
+    thread_ = std::thread([this] { thread_exec(); });
+    ready_cv_.wait(ready_lock);
 }
 
 Player::~Player()
 {
+    std::unique_lock<std::mutex> lock(ready_mutex_);
     quit_.store(true);
     uv_async_send(async_);
+    ready_cv_.wait(lock);
     thread_.join();
 }
 
@@ -36,7 +35,7 @@ void Player::push_command(std::unique_ptr<Player_Command> cmd)
     uv_async_send(async_);
 }
 
-void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mutex)
+void Player::thread_exec()
 {
 #if UV_VERSION_MAJOR >= 1
     uv_loop_t loop_buf;
@@ -64,8 +63,8 @@ void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mu
     clock_ = &clock;
 
     {
-        std::lock_guard<std::mutex> lock(ready_mutex);
-        ready_cv.notify_one();
+        std::lock_guard<std::mutex> lock(ready_mutex_);
+        ready_cv_.notify_one();
     }
 
     while (!quit_.load()) {
@@ -73,8 +72,10 @@ void Player::thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mu
         uv_run(loop, UV_RUN_ONCE);
     }
 
+    std::lock_guard<std::mutex> lock(ready_mutex_);
     async_ = nullptr;
     clock_ = nullptr;
+    ready_cv_.notify_one();
 }
 
 void Player::process_command_queue()

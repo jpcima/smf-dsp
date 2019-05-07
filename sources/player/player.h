@@ -24,7 +24,7 @@ public:
     std::function<void (const Player_State &)> StateCallback;
 
 private:
-    void thread_exec(std::condition_variable &ready_cv, std::mutex &ready_mutex);
+    void thread_exec();
     void process_command_queue();
 
     void rewind();
@@ -60,4 +60,8 @@ private:
 
     // instrument
     std::unique_ptr<Midi_Instrument> ins_;
+
+    // startup and shutdown synchronization
+    std::condition_variable ready_cv_;
+    std::mutex ready_mutex_;
 };
