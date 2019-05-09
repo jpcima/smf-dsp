@@ -144,7 +144,7 @@ ifeq ($(PLATFORM),linux)
 $(filter obj/thirdparty/rtmidi/%.o,$(OBJS_ACTUAL)): obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(call color_echo,95m,Compile C++  ,33m,$@)
-	$(CXX_COMPILE) -D__LINUX_ALSA__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 $(CXXFLAGS) $(CPPFLAGS) $(DEP_CXXFLAGS) $(DEP_CPPFLAGS) -c -o $@ $<
+	$(CXX_COMPILE) -D__LINUX_ALSA__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 -DHAVE_SEMAPHORE=1 $(CXXFLAGS) $(CPPFLAGS) $(DEP_CXXFLAGS) $(DEP_CPPFLAGS) -c -o $@ $<
 endif
 ifeq ($(PLATFORM),mingw)
 $(filter obj/thirdparty/rtmidi/%.o,$(OBJS_ACTUAL)): obj/%.o: %.cpp
