@@ -1,6 +1,7 @@
 #include "fmidiplay.h"
 #include "player/player.h"
 #include "player/playlist.h"
+#include "player/instrument.h"
 #include "player/command.h"
 #include "data/ins_names.h"
 #include "ui/main_layout.h"
@@ -667,47 +668,37 @@ void Application::update_modals()
 
 void Application::ask_midi_output()
 {
-    std::vector<std::string> outputs;
-    bool has_virtual;
+    std::vector<Midi_Output> outputs;
+    get_midi_outputs(outputs);
 
-    get_midi_outputs(outputs, has_virtual);
-    if (has_virtual)
-        outputs.insert(outputs.begin(), "Virtual port");
+    std::vector<std::string> choices;
+    choices.reserve(outputs.size());
+    for (const Midi_Output &x : outputs)
+        choices.push_back(x.name);
 
     Modal_Selection_Box *modal = new Modal_Selection_Box(
-        Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100)), "Output device", outputs);
+        Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100)), "Output device", choices);
     modal_.emplace_back(modal);
 
     modal->CompletionCallback =
-        [this, modal, has_virtual] {
+        [this, modal, outputs] {
             size_t index;
             modal->get_completion_result(0, &index);
-
-            if (index == ~size_t(0))
-                return;
-
-            if (has_virtual && index == 0) {
-                std::unique_ptr<Pcmd_Set_Midi_Virtual_Output> cmd(new Pcmd_Set_Midi_Virtual_Output);
-                player_->push_command(std::move(cmd));
-            }
-            else {
-                gsl::cstring_span name;
-                modal->get_completion_result(1, &name);
+            if (index != ~size_t(0)) {
                 std::unique_ptr<Pcmd_Set_Midi_Output> cmd(new Pcmd_Set_Midi_Output);
-                cmd->midi_output.assign(name.data(), name.size());
+                cmd->midi_output_id = outputs[index].id;
                 player_->push_command(std::move(cmd));
             }
         };
 }
 
-void Application::get_midi_outputs(std::vector<std::string> &outputs, bool &has_virtual)
+void Application::get_midi_outputs(std::vector<Midi_Output> &outputs)
 {
     std::unique_ptr<Pcmd_Get_Midi_Outputs> cmd(new Pcmd_Get_Midi_Outputs);
     std::mutex wait_mutex;
     std::condition_variable wait_cond;
 
     cmd->midi_outputs = &outputs;
-    cmd->has_virtual_midi_output = &has_virtual;
     cmd->wait_mutex = &wait_mutex;
     cmd->wait_cond = &wait_cond;
 

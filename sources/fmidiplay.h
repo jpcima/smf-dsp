@@ -12,6 +12,7 @@ class Modal_Box;
 class Player;
 struct Player_State;
 class Main_Layout;
+struct Midi_Output;
 
 class Application
 {
@@ -37,7 +38,7 @@ public:
     void request_update();
     void update_modals();
     void ask_midi_output();
-    void get_midi_outputs(std::vector<std::string> &outputs, bool &has_virtual);
+    void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
     void engage_shutdown();
     void advance_shutdown();

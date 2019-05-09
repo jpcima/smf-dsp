@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+struct Midi_Output;
 
 enum {
     PC_Play,
@@ -69,19 +70,14 @@ struct Pcmd_Request_State : Player_Command {
 
 struct Pcmd_Get_Midi_Outputs : Player_Command {
     int type() const noexcept override { return PC_Get_Midi_Outputs; }
-    std::vector<std::string> *midi_outputs = nullptr;
-    bool *has_virtual_midi_output = nullptr;
+    std::vector<Midi_Output> *midi_outputs = nullptr;
     std::mutex *wait_mutex = nullptr;
     std::condition_variable *wait_cond = nullptr;
 };
 
 struct Pcmd_Set_Midi_Output : Player_Command {
     int type() const noexcept override { return PC_Set_Midi_Output; }
-    std::string midi_output;
-};
-
-struct Pcmd_Set_Midi_Virtual_Output : Player_Command {
-    int type() const noexcept override { return PC_Set_Midi_Virtual_Output; }
+    std::string midi_output_id;
 };
 
 struct Pcmd_Shutdown : Player_Command {
