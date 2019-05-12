@@ -66,9 +66,9 @@ $(APP): LIBS += \
     $(call pkg_config_libs,sdl2 libuv uchardet) \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa)) \
     $(if $(MINGW),-lwinmm) \
-    $(if $(APPLE),-framework CoreMIDI -framework CoreAudio) \
+    $(if $(APPLE),-framework CoreMIDI -framework CoreAudio -framework CoreFoundation) \
     $(if $(MINGW),-lboost_filesystem) \
-    $(if $(MINGW),-liconv)
+    $(if $(MINGW)$(APPLE),-liconv)
 
 include build/app.mk
 
