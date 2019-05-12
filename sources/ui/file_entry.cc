@@ -1,6 +1,5 @@
 #include "file_entry.h"
-#include <boost/locale/collator.hpp>
-#include <locale>
+#include "utility/charset.h"
 
 bool operator==(const File_Entry &a, const File_Entry &b)
 {
@@ -21,6 +20,5 @@ bool operator<(const File_Entry &a, const File_Entry &b)
     if (b.type == 'D' && b.name == "..")
         return false;
 
-    auto &collator = std::use_facet<boost::locale::collator<char>>(std::locale());
-    return collator.compare(collator.primary, a.name, b.name) < 0;
+    return utf8_icompare(a.name, b.name) < 0;
 }

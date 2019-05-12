@@ -1,7 +1,20 @@
 #include "charset.h"
 #include <iconv.h>
+#include <bst/utf.hpp>
+#include <array>
 #include <type_traits>
 #include <stdexcept>
+
+#ifdef USE_BOOST_LOCALE
+#include <boost/locale/collator.hpp>
+#include <locale>
+#endif
+
+#ifndef _WIN32
+#include "dynamic_icu.h"
+#else
+#include <windows.h>
+#endif
 
 bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive)
 {
@@ -41,6 +54,101 @@ bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, 
 
     return true;
 }
+
+uint32_t ascii_tolower(uint32_t ch)
+{
+    return (ch >= U'A' && ch <= U'Z') ? (ch - U'A' + U'a') : ch;
+}
+
+uint32_t ascii_toupper(uint32_t ch)
+{
+    return (ch >= U'a' && ch <= U'z') ? (ch - U'a' + U'A') : ch;
+}
+
+#ifndef _WIN32
+uint32_t unicode_tolower(uint32_t ch)
+{
+    static auto f = reinterpret_cast<int32_t (*)(int32_t)>(
+        Icuuc_Lib::instance().find_symbol("u_tolower"));
+    return f ? f(ch) : ascii_tolower(ch);
+}
+
+uint32_t unicode_toupper(uint32_t ch)
+{
+    static auto f = reinterpret_cast<int32_t (*)(int32_t)>(
+        Icuuc_Lib::instance().find_symbol("u_toupper"));
+    return f ? f(ch) : ascii_toupper(ch);
+}
+#else
+static uint32_t unicode_w32_map_case(uint32_t in_ch, uint32_t flags)
+{
+    wchar_t wbuf[4 + 1], *wb, *we;
+    wb = wbuf;
+    we = bst::utf::utf_traits<wchar_t>::encode(in_ch, wb);
+    if (wb == we) return in_ch;
+    unsigned cch = LCMapStringW(
+        LOCALE_INVARIANT, flags, wb, we - wb, wb, sizeof(wbuf) / sizeof(wbuf[0]));
+    if (cch > 0 && wbuf[cch - 1] == L'\0') --cch;
+    if (cch == 0) return in_ch;
+    wb = wbuf;
+    we = wbuf;
+    uint32_t out_ch = bst::utf::utf_traits<wchar_t>::decode(we, wb + cch);
+    if (wb == we) return in_ch;
+    return out_ch;
+}
+
+uint32_t unicode_tolower(uint32_t ch)
+{
+    return unicode_w32_map_case(ch, LCMAP_LOWERCASE);
+}
+
+uint32_t unicode_toupper(uint32_t ch)
+{
+    return unicode_w32_map_case(ch, LCMAP_UPPERCASE);
+}
+#endif
+
+template <class Compare>
+static int utf8_compare_impl(gsl::cstring_span a, gsl::cstring_span b, Compare less)
+{
+    gsl::cstring_span::iterator a_1 = a.begin(), a_2 = a.end();
+    gsl::cstring_span::iterator b_1 = b.begin(), b_2 = b.end();
+
+    while (a_1 != a_2 && b_1 != b_2) {
+        if (a_1 == a_2)
+            return -1;
+        if (b_1 == b_2)
+            return +1;
+        char32_t cha = bst::utf::utf_traits<char>::decode(a_1, a_2);
+        char32_t chb = bst::utf::utf_traits<char>::decode(b_1, b_2);
+        if (less(cha, chb))
+            return -1;
+        if (less(chb, cha))
+            return +1;
+    }
+
+    return 0;
+}
+
+int utf8_compare(gsl::cstring_span a, gsl::cstring_span b)
+{
+    return utf8_compare_impl(a, b, std::less<char32_t>{});
+}
+
+#ifdef USE_BOOST_LOCALE
+int utf8_icompare(gsl::cstring_span a, gsl::cstring_span b)
+{
+    auto &collator = std::use_facet<boost::locale::collator<char>>(std::locale{});
+    return collator.compare(collator.primary, a.begin(), a.end(), b.begin(), b.end()) < 0;
+}
+#else
+int utf8_icompare(gsl::cstring_span a, gsl::cstring_span b)
+{
+    auto compare = [](uint32_t cha, uint32_t chb) -> int
+                       { return unicode_tolower(cha) < unicode_tolower(chb); };
+    return utf8_compare_impl(a, b, compare);
+}
+#endif
 
 //
 #if 1

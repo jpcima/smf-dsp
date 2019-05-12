@@ -1,16 +1,21 @@
 #include "fmidiplay.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
-#include <boost/locale/generator.hpp>
 #include <gsl.hpp>
 #include <getopt.h>
-#include <locale>
 #include <cstdio>
+
+#ifdef USE_BOOST_LOCALE
+#include <boost/locale/generator.hpp>
+#include <locale>
+#endif
 
 int main(int argc, char *argv[])
 {
+#ifdef USE_BOOST_LOCALE
     // Initialize locale
     std::locale::global(boost::locale::generator{}(""));
+#endif
 
     // Initialize command line
     for (int c; (c = getopt(argc, argv, "")) != -1;) {
