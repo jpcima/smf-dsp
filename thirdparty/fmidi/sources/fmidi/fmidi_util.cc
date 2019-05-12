@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #endif
+#include <string>
 
 double fmidi_smpte_time(const fmidi_smpte *smpte)
 {
