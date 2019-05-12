@@ -155,11 +155,14 @@ SDL_Texture *Font_Atlas::create(SDL_Renderer *rr, const Font &font)
         const Font_Glyph &g = font.nth_glyph(i);
         Rect gr = coord(font, i);
         unsigned gsize = g.size;
-        const uint16_t *gdata = g.data;
+        const void *gdata = g.data;
         unsigned gbits = 8 * gsize;
 
         for (unsigned row = 0; row < unsigned(gr.h); ++row) {
-            uint16_t rowdata = gdata[row];
+            uint16_t rowdata =
+                (gsize == 1) ? reinterpret_cast<const uint8_t *>(gdata)[row] :
+                (gsize == 2) ? reinterpret_cast<const uint16_t *>(gdata)[row] :
+                0;
             for (unsigned col = 0; col < unsigned(gr.w); ++col) {
                 uint8_t *pix = &su_pix[(gr.y + row) * su_pitch + (gr.x + col) * 2];
                 if (rowdata & ((1 << (gbits - 1)) >> col))

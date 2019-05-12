@@ -5,7 +5,7 @@
 struct Font_Glyph {
     uint16_t unicode;
     uint8_t size;
-    const uint16_t *data;
+    const void *data;
 };
 
 inline bool operator<(const Font_Glyph &a, const Font_Glyph &b)

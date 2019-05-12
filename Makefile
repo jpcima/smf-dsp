@@ -22,6 +22,7 @@ SOURCES := \
   sources/ui/main_layout.cc \
   sources/ui/text.cc \
   sources/ui/fonts.cc \
+  sources/ui/fonts_data.cc \
   sources/ui/paint.cc \
   sources/ui/color_palette.cc \
   sources/ui/piano.cc \
