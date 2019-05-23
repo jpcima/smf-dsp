@@ -199,6 +199,10 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
         }
     }
 
+    std::sort(
+        plugins.begin(), plugins.end(),
+        [](const Plugin_Info &a, const Plugin_Info &b) -> bool { return a.name < b.name; });
+
     return plugins;
 }
 

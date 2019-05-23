@@ -113,9 +113,73 @@ $(PLUGIN): LIBS := \
 endif
 
 ###
+S_ADLMIDI_ENABLE := $(shell test -d thirdparty/libADLMIDI && echo 1)
+ifneq ($(S_ADLMIDI_ENABLE),1)
+$(call color_warning,libADLMIDI sources are missing from thirdparty/libADLMIDI; skipping plugin s_adlmidi)
+endif
+
+ifeq ($(S_ADLMIDI_ENABLE),1)
+PLUGIN := s_adlmidi$(LIB_EXT)
+SOURCES := \
+  sources/synth/plugins/adlmidi.cc \
+  sources/utility/paths.cc \
+  $(wildcard thirdparty/libADLMIDI/src/*.c*) \
+  $(wildcard thirdparty/libADLMIDI/src/chips/*.c*) \
+  $(wildcard thirdparty/libADLMIDI/src/chips/*/*.c*) \
+  $(wildcard thirdparty/libADLMIDI/src/wopl/*.c*)
+
+include build/plugin.mk
+
+$(PLUGIN): CPPFLAGS += \
+    -Isources \
+    -Ithirdparty/gsl-lite/include \
+    -Ithirdparty/libADLMIDI/include \
+    -DADLMIDI_DISABLE_MIDI_SEQUENCER \
+    -DADLMIDI_DISABLE_CPP_EXTRAS
+$(PLUGIN): LDFLAGS += \
+    $(if $(STATIC),-static) \
+    $(if $(LINUX),-Xlinker -no-undefined)
+endif
+
+###
+S_OPNMIDI_ENABLE := $(shell test -d thirdparty/libOPNMIDI && echo 1)
+ifneq ($(S_OPNMIDI_ENABLE),1)
+$(call color_warning,libOPNMIDI sources are missing from thirdparty/libOPNMIDI; skipping plugin s_opnmidi)
+endif
+
+ifeq ($(S_OPNMIDI_ENABLE),1)
+PLUGIN := s_opnmidi$(LIB_EXT)
+SOURCES := \
+  sources/synth/plugins/opnmidi.cc \
+  sources/utility/paths.cc \
+  $(wildcard thirdparty/libOPNMIDI/src/*.c*) \
+  $(wildcard thirdparty/libOPNMIDI/src/chips/*.c*) \
+  $(wildcard thirdparty/libOPNMIDI/src/chips/*/*.c*) \
+  $(wildcard thirdparty/libOPNMIDI/src/wopn/*.c*)
+
+include build/plugin.mk
+
+$(PLUGIN): CPPFLAGS += \
+    -Isources \
+    -Ithirdparty/gsl-lite/include \
+    -Ithirdparty/libOPNMIDI/include \
+    -DOPNMIDI_DISABLE_MIDI_SEQUENCER \
+    -DOPNMIDI_DISABLE_CPP_EXTRAS
+$(PLUGIN): LDFLAGS += \
+    $(if $(STATIC),-static) \
+    $(if $(LINUX),-Xlinker -no-undefined)
+endif
+
+###
 install: all
 	install -D -m 755 fmidiplay$(APP_EXT) $(DESTDIR)$(PREFIX)/bin/fmidiplay$(APP_EXT)
 ifeq ($(S_FLUID_ENABLE),1)
 	install -D -m 755 s_fluid$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_fluid$(LIB_EXT)
+endif
+ifeq ($(S_ADLMIDI_ENABLE),1)
+	install -D -m 755 s_adlmidi$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_adlmidi$(LIB_EXT)
+endif
+ifeq ($(S_OPNMIDI_ENABLE),1)
+	install -D -m 755 s_opnmidi$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_opnmidi$(LIB_EXT)
 endif
 .PHONY: install
