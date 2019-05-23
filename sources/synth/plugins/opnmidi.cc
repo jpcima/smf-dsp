@@ -30,7 +30,7 @@ static void opnmidi_plugin_shutdown()
 
 static const synth_option the_synth_options[] = {
     {"chip-count", "Number of emulated chips", 'i', {.i = 6}},
-    {"instrument-bank", "Bank number, or WOPL file path", 's', {.s = "0"}},
+    {"instrument-bank", "Bank number, or WOPN file path", 's', {.s = "0"}},
 };
 
 static const synth_option *opnmidi_plugin_option(size_t index)
