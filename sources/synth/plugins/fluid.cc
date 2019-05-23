@@ -153,7 +153,9 @@ static void fluid_synth_write(synth_object *obj, const unsigned char *msg, size_
             fluid_synth_noteon(synth, channel, data1, data2);
             break;
         case 0xa0:
+#if FLUIDSYNTH_VERSION_MAJOR >= 2
             fluid_synth_key_pressure(synth, channel, data1, data2);
+#endif
             break;
         case 0xb0:
             fluid_synth_cc(synth, channel, data1, data2);
