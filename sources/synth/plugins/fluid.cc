@@ -14,7 +14,7 @@ typedef std::unique_ptr<fluid_synth_t, fluid_synth_delete> fluid_synth_u;
 typedef std::unique_ptr<fluid_settings_t, fluid_settings_delete> fluid_settings_u;
 ///
 
-typedef struct _fluid_synth_object {
+struct fluid_synth_object {
     string_list_ptr soundfonts;
     fluid_settings_u settings;
     fluid_synth_u synth;
@@ -31,7 +31,7 @@ typedef struct _fluid_synth_object {
     double reverb_damping = 0;
     double reverb_width = 0;
     double reverb_level = 0;
-} fluid_synth_object;
+};
 
 static std::string fluid_synth_base_dir;
 
