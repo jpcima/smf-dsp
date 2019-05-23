@@ -16,6 +16,7 @@ struct Midi_Output {
 
 class Midi_Instrument {
 public:
+    Midi_Instrument();
     virtual ~Midi_Instrument() {}
     void send_message(const uint8_t *data, unsigned len);
     void initialize();

@@ -7,6 +7,11 @@
 #include <cstring>
 #include <cstdio>
 
+Midi_Instrument::Midi_Instrument()
+{
+    kbs_.clear();
+}
+
 void Midi_Instrument::send_message(const uint8_t *data, unsigned len)
 {
     handle_send_message(data, len);

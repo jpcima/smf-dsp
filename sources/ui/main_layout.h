@@ -49,11 +49,15 @@ public:
     // channel heading
     Line channel_heading_underline;
     Text_Rect octkb_label;
+    Text_Rect volume_label;
+    Text_Rect pan_label;
     Text_Rect instrument_label;
 
     // channel info
     Rect channel_piano[16];
     Line channel_underline[16];
+    Text_Rect channel_volume_value[16];
+    Text_Rect channel_pan_value[16];
     Rect channel_number_label[16];
     Rect channel_midispec_label[16];
     Rect channel_instrument_label[16];
@@ -62,6 +66,11 @@ public:
     Text_Rect file_label;
     Text_Rect file_num_label;
     Text_Rect file_dir_path;
+
+    // program identification and version
+    Text_Rect author_label;
+    Text_Rect version_label;
+    Rect logo_rect;
 
     static void measure_text(Text_Rect &tr);
 };

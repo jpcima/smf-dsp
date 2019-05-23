@@ -13,6 +13,7 @@ struct Channel_State {
         };
     };
     void clear();
+    void reset_controllers();
     void handle_message(const uint8_t *data, unsigned len);
 };
 

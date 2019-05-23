@@ -146,6 +146,24 @@ void Main_Layout::create_layout(Rect bounds)
 
         r.chop_from_right(8);
 
+        r.chop_from_right(16);
+
+        pan_label.font = &font_fmdsp_medium;
+        pan_label.text = "PAN";
+        measure_text(pan_label);
+        pan_label.bounds.x = r.take_from_right(pan_label.bounds.w).x;
+        pan_label.bounds.y = r.y;
+
+        r.chop_from_right(16);
+
+        volume_label.font = &font_fmdsp_medium;
+        volume_label.text = "VOL";
+        measure_text(volume_label);
+        volume_label.bounds.x = r.take_from_right(volume_label.bounds.w).x;
+        volume_label.bounds.y = r.y;
+
+        r.chop_from_right(16);
+
         r.chop_from_left(2);
         r.take_from_left(16);
 
@@ -168,6 +186,24 @@ void Main_Layout::create_layout(Rect bounds)
 
         channel_underline[ch].p1 = Point(r.x, r.y + r.h - 1);
         channel_underline[ch].p2 = Point(r.x + r.w - 1, r.y + r.h - 1);
+
+        r.chop_from_right(16);
+
+        channel_pan_value[ch].font = &font_s12;
+        channel_pan_value[ch].text = "000";
+        channel_pan_value[ch].bounds.x = r.take_from_right(pan_label.bounds.w).x;
+        channel_pan_value[ch].bounds.y = r.y;
+        measure_text(channel_pan_value[ch]);
+
+        r.chop_from_right(16);
+
+        channel_volume_value[ch].font = &font_s12;
+        channel_volume_value[ch].text = "000";
+        channel_volume_value[ch].bounds.x = r.take_from_right(volume_label.bounds.w).x;
+        channel_volume_value[ch].bounds.y = r.y;
+        measure_text(channel_volume_value[ch]);
+
+        r.chop_from_right(16);
 
         r.chop_from_left(2);
 
@@ -203,6 +239,25 @@ void Main_Layout::create_layout(Rect bounds)
 
         file_dir_path.font = &font_fmdsp_medium;
         file_dir_path.bounds = r;
+    }
+
+    {
+        Rect r = Rect(part_top).chop_from_top(4).chop_from_right(4);
+
+        logo_rect = r.take_from_right(r.h);
+
+        r.chop_from_right(8);
+
+        author_label.font = &font_fmdsp_medium;
+        author_label.text = "(C)" PROGRAM_AUTHOR;
+        version_label.font = &font_fmdsp_medium;
+        version_label.text = "Ver." PROGRAM_VERSION;
+        measure_text(author_label);
+        measure_text(version_label);
+        author_label.bounds.x = r.take_from_right(std::max(author_label.bounds.w, version_label.bounds.w)).x;
+        author_label.bounds.y = r.y;
+        version_label.bounds.x = author_label.bounds.x;
+        version_label.bounds.y = r.y + 4 + author_label.bounds.h;
     }
 }
 

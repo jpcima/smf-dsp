@@ -56,6 +56,8 @@ SOURCES := \
 $(APP): CPPFLAGS += \
     -DPROGRAM_NAME='"fmidiplay"' \
     -DPROGRAM_DISPLAY_NAME='"FMidiPlay"' \
+    -DPROGRAM_AUTHOR='"JPC"' \
+    -DPROGRAM_VERSION='"0.10a"' \
     -Isources -Ifontdata \
     -Ithirdparty/gsl-lite/include -Ithirdparty/bst \
     -Ithirdparty/fmidi/sources -DFMIDI_STATIC=1 -DFMIDI_DISABLE_DESCRIBE_API=1 \

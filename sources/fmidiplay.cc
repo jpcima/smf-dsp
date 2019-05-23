@@ -97,6 +97,15 @@ void Application::paint(SDL_Renderer *rr, int paint)
     SDL_RenderSetScale(rr, scale_factor_, scale_factor_);
     SDL_SetRenderDrawBlendMode(rr, SDL_BLENDMODE_BLEND);
 
+    auto draw_text_rect = [rr](const Main_Layout::Text_Rect &tr, gsl::cstring_span str, const SDL_Color &color) {
+                              Text_Painter tp;
+                              tp.rr = rr;
+                              tp.fg = color;
+                              tp.pos = tr.bounds.origin();
+                              tp.font = tr.font;
+                              tp.draw_utf8(str);
+                          };
+
     if (paint & Pt_Background) {
         SDLpp_SetRenderDrawColor(rr, Color_Palette::background);
         SDL_RenderClear(rr);
@@ -104,7 +113,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
 
     #pragma message("XXX remove me")
     if (paint & Pt_Background) {
-        Rect r(size_.x - 32, 2, 10, 10);
+        Rect r = Rect(lo.logo_rect).take_from_top(10).chop_from_right(20).take_from_right(10);
         SDL_SetRenderDrawColor(rr, 0xff, 0x00, 0x00, 0xff);
         SDL_RenderDrawRect(rr, &r);
         r = r.off_by(Point(10, 10));
@@ -113,6 +122,11 @@ void Application::paint(SDL_Renderer *rr, int paint)
         r = r.off_by(Point(10, 10));
         SDL_SetRenderDrawColor(rr, 0x00, 0x00, 0xff, 0xff);
         SDL_RenderDrawRect(rr, &r);
+    }
+
+    if (paint & Pt_Background) {
+        draw_text_rect(lo.author_label, lo.author_label.text, Color_Palette::text_low_brightness);
+        draw_text_rect(lo.version_label, lo.version_label.text, Color_Palette::text_low_brightness);
     }
 
     if (paint & Pt_Background)
@@ -135,15 +149,6 @@ void Application::paint(SDL_Renderer *rr, int paint)
                    sprintf(dst + 3, "%02u:%02u", mm, ss);
                    return dst;
                };
-
-    auto draw_text_rect = [rr](const Main_Layout::Text_Rect &tr, gsl::cstring_span str, const SDL_Color &color) {
-                              Text_Painter tp;
-                              tp.rr = rr;
-                              tp.fg = color;
-                              tp.pos = tr.bounds.origin();
-                              tp.font = tr.font;
-                              tp.draw_utf8(str);
-                          };
 
     // Draw top
     if (paint & Pt_Background) {
@@ -217,6 +222,8 @@ void Application::paint(SDL_Renderer *rr, int paint)
             SDLpp_RenderDrawLine(rr, lo.channel_heading_underline.p1, lo.channel_heading_underline.p2);
 
             draw_text_rect(lo.octkb_label, lo.octkb_label.text, Color_Palette::text_low_brightness);
+            draw_text_rect(lo.volume_label, lo.volume_label.text, Color_Palette::text_low_brightness);
+            draw_text_rect(lo.pan_label, lo.pan_label.text, Color_Palette::text_low_brightness);
             draw_text_rect(lo.instrument_label, lo.instrument_label.text, Color_Palette::text_low_brightness);
         }
     }
@@ -321,6 +328,14 @@ void Application::paint(SDL_Renderer *rr, int paint)
                 tp.font = &font_s12;
                 tp.pos = r.origin();
                 tp.draw_utf8(gsl::ensure_z(patch_name));
+            }
+
+            if (paint & Pt_Foreground) {
+                char text[8];
+                sprintf(text, "%3u", cs.ctl[0x07]);
+                draw_text_rect(lo.channel_volume_value[ch], text, Color_Palette::text_high_brightness);
+                sprintf(text, "%3d", cs.ctl[0x0a] - 64);
+                draw_text_rect(lo.channel_pan_value[ch], text, Color_Palette::text_high_brightness);
             }
         }
     }

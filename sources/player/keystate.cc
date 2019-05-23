@@ -5,10 +5,19 @@
 void Channel_State::clear()
 {
     memset(key, 0, sizeof(key));
-    memset(ctl, 0, sizeof(ctl));
-    bend = 0;
+    reset_controllers();
     pgm = 0;
     flags = 0;
+}
+
+void Channel_State::reset_controllers()
+{
+    memset(ctl, 0, sizeof(ctl));
+    ctl[0x07] = 100;
+    ctl[0x0a] = 64;
+    ctl[0x0b] = 127;
+    ctl[0x2b] = 127;
+    bend = 0;
 }
 
 void Channel_State::handle_message(const uint8_t *data, unsigned len)
@@ -38,7 +47,7 @@ void Channel_State::handle_message(const uint8_t *data, unsigned len)
             if (id < 120)
                 ctl[id] = data[2] & 127;
             else if (id == 121)
-                memset(ctl, 0, sizeof(ctl));
+                reset_controllers();
             else if (id == 120 || id >= 123)
                 memset(key, 0, sizeof(key));
             break;
