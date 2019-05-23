@@ -18,7 +18,7 @@ enum {
     PC_Request_State,
     PC_Get_Midi_Outputs,
     PC_Set_Midi_Output,
-    PC_Set_Midi_Virtual_Output,
+    PC_Set_Synth,
     PC_Shutdown,
 };
 
@@ -78,6 +78,11 @@ struct Pcmd_Get_Midi_Outputs : Player_Command {
 struct Pcmd_Set_Midi_Output : Player_Command {
     int type() const noexcept override { return PC_Set_Midi_Output; }
     std::string midi_output_id;
+};
+
+struct Pcmd_Set_Synth : Player_Command {
+    int type() const noexcept override { return PC_Set_Synth; }
+    std::string synth_plugin_id;
 };
 
 struct Pcmd_Shutdown : Player_Command {

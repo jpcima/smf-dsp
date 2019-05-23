@@ -1,9 +1,15 @@
 #include "paths.h"
 #include <list>
 #include <algorithm>
+#include <stdexcept>
 #include <cstring>
 #include <cerrno>
 #include <unistd.h>
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
 
 std::string get_home_directory()
 {
@@ -44,6 +50,36 @@ std::string get_current_directory()
         cwd.push_back('/');
 
     return cwd;
+}
+
+std::string get_executable_path()
+{
+    size_t bufsize = 0x100;
+    std::unique_ptr<char[]> buf(new char[bufsize]);
+
+    bool need_more_buffer;
+    do {
+        buf.reset(new char[bufsize]);
+#if defined(_WIN32)
+        HMODULE mod = GetModuleHandle(nullptr);
+        DWORD ret = GetModuleFileNameA(mod, buf.get(), bufsize);
+        if (ret == 0)
+            throw std::runtime_error("GetModuleFileNameA");
+        need_more_buffer = (ret == bufsize);
+#elif defined(__APPLE__)
+        need_more_buffer = (_NSGetExecutablePath(buf.get(), &bufsize) == -1);
+#else
+        size_t count = readlink("/proc/self/exe", buf.get(), bufsize);
+        if ((ssize_t)count == -1)
+            throw std::runtime_error("readlink");
+        need_more_buffer = (count == bufsize);
+        if (!need_more_buffer)
+            buf[count] = '\0';
+#endif
+        bufsize <<= 1;
+    } while (need_more_buffer);
+
+    return normalize_path_separators(buf.get());
 }
 
 #ifdef _WIN32

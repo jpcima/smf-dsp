@@ -3,6 +3,7 @@
 #include "instrument.h"
 #include "command.h"
 #include "clock.h"
+#include "synth/synth_host.h"
 #include "utility/charset.h"
 #include <gsl.hpp>
 #include <stdexcept>
@@ -11,8 +12,14 @@
 Player::Player()
     : quit_(false),
       play_list_(new Linear_Play_List),
-      ins_(new Midi_Port_Instrument)
+      midiport_ins_(new Midi_Port_Instrument),
+      synth_ins_(new Midi_Synth_Instrument)
 {
+    ins_ = midiport_ins_.get();
+
+    // scan and initialize plugins
+    Synth_Host::plugins();
+
     std::unique_lock<std::mutex> ready_lock(ready_mutex_);
     thread_ = std::thread([this] { thread_exec(); });
     ready_cv_.wait(ready_lock);
@@ -167,13 +174,21 @@ void Player::process_command_queue()
         case PC_Get_Midi_Outputs: {
             std::mutex *wait_mutex = static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).wait_mutex;
             std::condition_variable *wait_cond = static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).wait_cond;
-            *static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).midi_outputs = ins_->get_midi_outputs();
+            *static_cast<Pcmd_Get_Midi_Outputs &>(*cmd).midi_outputs = Midi_Port_Instrument::get_midi_outputs();
             std::unique_lock<std::mutex> lock(*wait_mutex);
             wait_cond->notify_one();
             break;
         }
         case PC_Set_Midi_Output: {
-            ins_->set_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id);
+            Midi_Port_Instrument &ins = *midiport_ins_;
+            switch_instrument(ins);
+            ins.open_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id);
+            break;
+        }
+        case PC_Set_Synth: {
+            Midi_Synth_Instrument &ins = *synth_ins_;
+            switch_instrument(ins);
+            ins.open_midi_output(static_cast<Pcmd_Set_Synth &>(*cmd).synth_plugin_id);
             break;
         }
         case PC_Shutdown: {
@@ -390,4 +405,14 @@ Player_State Player::make_state() const
         ps.file_path = pll.current();
 
     return ps;
+}
+
+void Player::switch_instrument(Midi_Instrument &ins)
+{
+    Midi_Instrument &old = *ins_;
+    if (&ins != &old) {
+        old.initialize();
+        old.close_midi_output();
+        ins_ = &ins;
+    }
 }

@@ -3,6 +3,7 @@
 #include "player/playlist.h"
 #include "player/instrument.h"
 #include "player/command.h"
+#include "synth/synth_host.h"
 #include "data/ins_names.h"
 #include "ui/main_layout.h"
 #include "ui/file_browser.h"
@@ -21,7 +22,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-const char Application::title_[] = "FMidiPlay";
 const Point Application::size_{640, 400};
 
 static constexpr unsigned fadeout_delay = 10;
@@ -668,11 +668,15 @@ void Application::update_modals()
 
 void Application::ask_midi_output()
 {
+    const std::vector<Synth_Host::Plugin_Info> &plugins = Synth_Host::plugins();
     std::vector<Midi_Output> outputs;
     get_midi_outputs(outputs);
 
     std::vector<std::string> choices;
-    choices.reserve(outputs.size());
+    choices.reserve(plugins.size() + outputs.size());
+
+    for (const Synth_Host::Plugin_Info &plugin : plugins)
+        choices.push_back("synth: " + plugin.name);
     for (const Midi_Output &x : outputs)
         choices.push_back(x.name);
 
@@ -681,14 +685,23 @@ void Application::ask_midi_output()
     modal_.emplace_back(modal);
 
     modal->CompletionCallback =
-        [this, modal, outputs] {
+        [this, modal, outputs, plugins] {
             size_t index;
             modal->get_completion_result(0, &index);
-            if (index != ~size_t(0)) {
+            if (index < plugins.size()) {
+                std::unique_ptr<Pcmd_Set_Synth> cmd(new Pcmd_Set_Synth);
+                cmd->synth_plugin_id = plugins[index].id;
+                player_->push_command(std::move(cmd));
+                return;
+            }
+            index -= plugins.size();
+            if (index < outputs.size()) {
                 std::unique_ptr<Pcmd_Set_Midi_Output> cmd(new Pcmd_Set_Midi_Output);
                 cmd->midi_output_id = outputs[index].id;
                 player_->push_command(std::move(cmd));
+                return;
             }
+            index -= outputs.size();
         };
 }
 

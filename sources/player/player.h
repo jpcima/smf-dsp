@@ -12,7 +12,10 @@ struct Player_Command;
 class Player_Clock;
 class Play_List;
 class Midi_Instrument;
+class Midi_Port_Instrument;
+class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
+class Synth_Host;
 
 class Player {
 public:
@@ -40,6 +43,8 @@ private:
 
     Player_State make_state() const;
 
+    void switch_instrument(Midi_Instrument &ins);
+
 private:
     std::thread thread_;
     std::atomic_bool quit_;
@@ -59,7 +64,9 @@ private:
     unsigned current_speed_ = 100;
 
     // instrument
-    std::unique_ptr<Midi_Instrument> ins_;
+    Midi_Instrument *ins_ = nullptr;
+    std::unique_ptr<Midi_Port_Instrument> midiport_ins_;
+    std::unique_ptr<Midi_Synth_Instrument> synth_ins_;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;

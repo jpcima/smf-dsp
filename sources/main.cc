@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     if (!initial_path.empty())
         app.set_current_file(initial_path);
     SDL_Window *win = SDL_CreateWindow(
-        app.title_, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        PROGRAM_DISPLAY_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         Application::size_.x, Application::size_.y, 0);
     if (!win) {
         fprintf(stderr, "Error creating window.\n");

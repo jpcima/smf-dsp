@@ -1,20 +1,20 @@
-_OBJS := $(SOURCES:%=obj/%.o)
+_OBJS := $(SOURCES:%=obj/$(notdir $(APP))/%.o)
 
 all: $(APP)
 clean: clean-app-$(APP)
 
 clean-app-$(APP):
 	rm -f $(APP)
-	rm -rf obj/
+	rm -rf obj/$(notdir $(APP))
 .PHONY: clean-app-$(APP)
 
 $(APP): $(_OBJS)
 	$(call link_cxx)
-$(filter %.c.o,$(_OBJS)): obj/%.c.o: %.c
+$(filter %.c.o,$(_OBJS)): obj/$(notdir $(APP))/%.c.o: %.c
 	$(call compile_c)
-$(filter %.cc.o,$(_OBJS)): obj/%.cc.o: %.cc
+$(filter %.cc.o,$(_OBJS)): obj/$(notdir $(APP))/%.cc.o: %.cc
 	$(call compile_cxx)
-$(filter %.cpp.o,$(_OBJS)): obj/%.cpp.o: %.cpp
+$(filter %.cpp.o,$(_OBJS)): obj/$(notdir $(APP))/%.cpp.o: %.cpp
 	$(call compile_cxx)
 
 -include $(_OBJS:%.o=%.d)

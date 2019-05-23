@@ -17,8 +17,13 @@ $(eval $(if $(findstring linux,$(_CC_PLATFORM)),LINUX = 1,$(if \
 
 ###
 APP_EXT = $(if $(MINGW),.exe,)
+LIB_EXT = $(if $(MINGW),.dll,$(if $(APPLE),.dylib,.so))
 
 ###
+define color_warning
+$(warning $(shell printf "\033[31m")$(1)$(shell printf "\033[0m"))
+endef
+
 define color_print
 	@printf "\033[%s%s\033[%s%s\033[0m\n" "$(1)" "$(2)" "$(3)" "$(4)"
 endef

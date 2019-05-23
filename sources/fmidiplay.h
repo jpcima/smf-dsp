@@ -17,7 +17,6 @@ struct Midi_Output;
 class Application
 {
 public:
-    static const char title_[];
     static const Point size_;
 
     Application();
