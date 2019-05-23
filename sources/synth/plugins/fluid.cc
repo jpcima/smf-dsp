@@ -1,5 +1,5 @@
 #include "../synth.h"
-#include "synth_utility.h"
+#include "../synth_utility.h"
 #include "utility/paths.h"
 #include <fluidsynth.h>
 #include <memory>

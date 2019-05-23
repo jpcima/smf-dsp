@@ -96,7 +96,7 @@ ifeq ($(S_FLUID_ENABLE),1)
 PLUGIN := s_fluid$(LIB_EXT)
 SOURCES := \
   sources/synth/plugins/fluid.cc \
-  sources/synth/plugins/synth_utility.cc \
+  sources/synth/synth_utility.cc \
   sources/utility/paths.cc
 
 include build/plugin.mk

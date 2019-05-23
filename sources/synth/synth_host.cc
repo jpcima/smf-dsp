@@ -1,5 +1,5 @@
 #include "synth_host.h"
-#include "synth/plugins/synth_utility.h"
+#include "synth_utility.h"
 #include "utility/paths.h"
 #include <algorithm>
 #include <cassert>
