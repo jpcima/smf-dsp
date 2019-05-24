@@ -3,6 +3,7 @@ _OBJS := $(SOURCES:%=obj/$(notdir $(PLUGIN))/%.o)
 all: $(PLUGIN)
 clean: clean-plugin-$(PLUGIN)
 
+clean-plugin-$(PLUGIN): PLUGIN := $(PLUGIN)
 clean-plugin-$(PLUGIN):
 	rm -f $(PLUGIN)
 	rm -rf obj/$(notdir $(PLUGIN))

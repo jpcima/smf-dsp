@@ -3,6 +3,7 @@ _OBJS := $(SOURCES:%=obj/$(notdir $(APP))/%.o)
 all: $(APP)
 clean: clean-app-$(APP)
 
+clean-app-$(APP): APP := $(APP)
 clean-app-$(APP):
 	rm -f $(APP)
 	rm -rf obj/$(notdir $(APP))
