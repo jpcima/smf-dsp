@@ -52,3 +52,5 @@ The optional synthesizers have additional requirements, and they are built only 
   `git clone https://github.com/Wohlstand/libADLMIDI.git thirdparty/libADLMIDI`
 - **FM-OPN2 (OPNMIDI)**: check out external sources into the tree, as follows.  
   `git clone https://github.com/Wohlstand/libOPNMIDI.git thirdparty/libOPNMIDI`
+- **SCC (emidi)**: check out external sources into the tree, as follows.  
+  `git clone https://github.com/jpcima/scc.git thirdparty/scc`

@@ -171,6 +171,30 @@ $(PLUGIN): LDFLAGS += \
 endif
 
 ###
+S_SCC_ENABLE := $(shell test -d thirdparty/scc && echo 1)
+ifneq ($(S_SCC_ENABLE),1)
+$(call color_warning,scc sources are missing from thirdparty/scc; skipping plugin s_scc)
+endif
+
+ifeq ($(S_SCC_ENABLE),1)
+PLUGIN := s_scc$(LIB_EXT)
+SOURCES := \
+  sources/synth/plugins/scc.cc \
+  $(wildcard thirdparty/scc/emidi_alpha/C*.cpp) \
+  $(wildcard thirdparty/scc/emidi_alpha/device/*.c)
+
+include build/plugin.mk
+
+$(PLUGIN): CPPFLAGS += \
+    -Isources \
+    -Ithirdparty/gsl-lite/include \
+    -Ithirdparty/scc
+$(PLUGIN): LDFLAGS += \
+    $(if $(STATIC),-static) \
+    $(if $(LINUX),-Xlinker -no-undefined)
+endif
+
+###
 install: all
 	install -D -m 755 fmidiplay$(APP_EXT) $(DESTDIR)$(PREFIX)/bin/fmidiplay$(APP_EXT)
 ifeq ($(S_FLUID_ENABLE),1)
@@ -181,5 +205,8 @@ ifeq ($(S_ADLMIDI_ENABLE),1)
 endif
 ifeq ($(S_OPNMIDI_ENABLE),1)
 	install -D -m 755 s_opnmidi$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_opnmidi$(LIB_EXT)
+endif
+ifeq ($(S_SCC_ENABLE),1)
+	install -D -m 755 s_scc$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_scc$(LIB_EXT)
 endif
 .PHONY: install
