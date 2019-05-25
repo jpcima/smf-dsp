@@ -1,0 +1,12 @@
+image: ubuntu
+
+install:
+  - sudo apt-get update -y
+  - sudo apt-get install -y build-essential git pkg-config libsdl2-dev libasound2-dev libjack-jackd2-dev libuv-dev libuchardet-dev libfluidsynth-dev
+
+build_script:
+  - git clone --depth=1 https://github.com/Wohlstand/libADLMIDI.git thirdparty/libADLMIDI
+  - git clone --depth=1 https://github.com/Wohlstand/libOPNMIDI.git thirdparty/libOPNMIDI
+  - git clone --depth=1 https://github.com/jpcima/scc.git thirdparty/scc
+  - git clone --depth=1 https://github.com/munt/munt.git thirdparty/munt
+  - make -j2
