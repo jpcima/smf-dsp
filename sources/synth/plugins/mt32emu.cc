@@ -2,6 +2,7 @@
 #include "utility/paths.h"
 #define MT32EMU_API_TYPE 1
 #include <mt32emu/mt32emu.h>
+#include <algorithm>
 #include <string>
 #include <memory>
 #include <cstring>
@@ -19,7 +20,7 @@ struct mt32emu_synth_object {
     std::string pcm_rom;
     bool gm_emulation = false;
     int partial_count = 0;
-    mt32emu_context_u context;
+    mt32emu_context_u devices[2];
 };
 
 static std::string mt32emu_synth_base_dir;
@@ -110,14 +111,13 @@ static int mt32emu_synth_activate(synth_object *obj)
     mt32emu_report_handler_i report_handler;
     report_handler.v0 = &the_report_handler;
 
-    mt32emu_context_u context(mt32emu_create_context(report_handler, obj));
-    if (!context) {
+    mt32emu_context_u devices[2];
+    devices[0].reset(mt32emu_create_context(report_handler, obj));
+    devices[1].reset(mt32emu_create_context(report_handler, obj));
+    if (!devices[0] || !devices[1]) {
         fprintf(stderr, "mt32emu: error creating context\n");
         return -1;
     }
-
-    mt32emu_set_stereo_output_samplerate(context.get(), sy->srate);
-    mt32emu_select_renderer_type(context.get(), MT32EMU_RT_FLOAT);
 
     std::string control_rom = sy->control_rom;
     std::string pcm_rom = sy->pcm_rom;
@@ -126,31 +126,52 @@ static int mt32emu_synth_activate(synth_object *obj)
     if (!is_path_absolute(pcm_rom))
         pcm_rom = mt32emu_synth_base_dir + pcm_rom;
 
-    if (mt32emu_add_rom_file(context.get(), control_rom.c_str()) < 0) {
-        fprintf(stderr, "mt32emu: cannot add control ROM \"%s\"\n", control_rom.c_str());
-        return -1;
+    for (unsigned devno = 0; devno < 2; ++devno) {
+        mt32emu_context device = devices[devno].get();
+
+        mt32emu_set_stereo_output_samplerate(device, sy->srate);
+        mt32emu_select_renderer_type(device, MT32EMU_RT_FLOAT);
+
+        if (mt32emu_add_rom_file(device, control_rom.c_str()) < 0) {
+            fprintf(stderr, "mt32emu: cannot add control ROM \"%s\"\n", control_rom.c_str());
+            return -1;
+        }
+        if (mt32emu_add_rom_file(device, pcm_rom.c_str()) < 0) {
+            fprintf(stderr, "mt32emu: cannot add PCM ROM \"%s\"\n", pcm_rom.c_str());
+            return -1;
+        }
+
+        mt32emu_rom_info rom_info;
+        mt32emu_get_rom_info(device, &rom_info);
+
+        if (devno == 0) {
+            fprintf(stderr, "mt32emu: using control ROM \"%s\"\n", rom_info.control_rom_description);
+            fprintf(stderr, "mt32emu: using PCM ROM \"%s\"\n", rom_info.pcm_rom_description);
+        }
+
+        mt32emu_set_partial_count(device, sy->partial_count);
+
+        if (mt32emu_open_synth(device) != MT32EMU_RC_OK) {
+            fprintf(stderr, "mt32emu: cannot open synth\n");
+            return -1;
+        }
+
+        if (devno == 0)
+            fprintf(stderr, "mt32emu: number of partials %u\n", mt32emu_get_partial_count(device));
+
+        // setup part assignment
+        const uint8_t device_part_channel[2][9] = {
+            {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x09}, // device 1: channels 1-8 and 10
+            {0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x10}}; // device 2: channels 9 and 10-16
+        for (unsigned part = 0; part < 9; ++part) {
+            uint8_t sysex_assign[] = {0x10, 0x00, (uint8_t)(0x0D + part), device_part_channel[devno][part]};
+            mt32emu_write_sysex(device, 0x10, sysex_assign, sizeof(sysex_assign));
+        }
     }
-    if (mt32emu_add_rom_file(context.get(), pcm_rom.c_str()) < 0) {
-        fprintf(stderr, "mt32emu: cannot add PCM ROM \"%s\"\n", pcm_rom.c_str());
-        return -1;
-    }
 
-    mt32emu_rom_info rom_info;
-    mt32emu_get_rom_info(context.get(), &rom_info);
+    for (unsigned devno = 0; devno < 2; ++devno)
+        sy->devices[devno] = std::move(devices[devno]);
 
-    fprintf(stderr, "mt32emu: using control ROM \"%s\"\n", rom_info.control_rom_description);
-    fprintf(stderr, "mt32emu: using PCM ROM \"%s\"\n", rom_info.pcm_rom_description);
-
-    mt32emu_set_partial_count(context.get(), sy->partial_count);
-
-    if (mt32emu_open_synth(context.get()) != MT32EMU_RC_OK) {
-        fprintf(stderr, "mt32emu: cannot open synth\n");
-        return -1;
-    }
-
-    fprintf(stderr, "mt32emu: number of partials %u\n", mt32emu_get_partial_count(context.get()));
-
-    sy->context = std::move(context);
     return 0;
 }
 
@@ -158,7 +179,8 @@ static void mt32emu_synth_deactivate(synth_object *obj)
 {
     mt32emu_synth_object *sy = (mt32emu_synth_object *)obj;
 
-    sy->context.reset();
+    for (unsigned devno = 0; devno < 2; ++devno)
+        sy->devices[devno].reset();
 }
 
 static const uint8_t patch_gm_to_mt32[128] = {
@@ -318,7 +340,7 @@ static uint32_t convert_gm_to_mt32(uint32_t msg)
 static void mt32emu_synth_write(synth_object *obj, const unsigned char *msg, size_t size)
 {
     mt32emu_synth_object *sy = (mt32emu_synth_object *)obj;
-    mt32emu_context context = sy->context.get();
+    mt32emu_context_u *devices = sy->devices;
 
     uint32_t short_msg = 0;
     switch (size) {
@@ -335,13 +357,25 @@ static void mt32emu_synth_write(synth_object *obj, const unsigned char *msg, siz
         short_msg |= msg[0];
         if (sy->gm_emulation)
             short_msg = convert_gm_to_mt32(short_msg);
-        if (short_msg)
-            mt32emu_play_msg(context, short_msg);
+        if (!short_msg)
+            break;
+        if ((short_msg & 0xf0) == 0xf0) {
+            // system message: send to both
+            for (unsigned devno = 0; devno < 2; ++devno)
+                mt32emu_play_msg(devices[devno].get(), short_msg);
+        }
+        else {
+            // channel message: send to device which handles part
+            unsigned channel = short_msg & 0x0f;
+            unsigned devno = (channel < 8 || channel == 9) ? 0 : 1;
+            mt32emu_play_msg(devices[devno].get(), short_msg);
+        }
         break;
     case 0:
         break;
     default:
-        mt32emu_play_sysex(context, msg, size);
+        for (unsigned devno = 0; devno < 2; ++devno)
+            mt32emu_play_sysex(devices[devno].get(), msg, size);
         break;
     }
 }
@@ -349,9 +383,22 @@ static void mt32emu_synth_write(synth_object *obj, const unsigned char *msg, siz
 static void mt32emu_synth_generate(synth_object *obj, float *frames, size_t nframes)
 {
     mt32emu_synth_object *sy = (mt32emu_synth_object *)obj;
-    mt32emu_context context = sy->context.get();
+    mt32emu_context_u *devices = sy->devices;
 
-    mt32emu_render_float(context, frames, nframes);
+    constexpr size_t frames_max = 512;
+    float buffer[2 * frames_max];
+
+    while (nframes > 0) {
+        size_t frames_cur = std::min(nframes, frames_max);
+        std::fill(frames, frames + 2 * frames_cur, 0);
+        for (unsigned devno = 0; devno < 2; ++devno) {
+            mt32emu_render_float(devices[devno].get(), buffer, frames_cur);
+            for (size_t i = 0; i < 2 * frames_cur; ++i)
+                frames[i] += buffer[i];
+        }
+        frames += 2 * frames_cur;
+        nframes -= frames_cur;
+    }
 }
 
 static void mt32emu_synth_set_option(synth_object *obj, const char *name, synth_value value)
