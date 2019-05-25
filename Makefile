@@ -195,6 +195,30 @@ $(PLUGIN): LDFLAGS += \
 endif
 
 ###
+S_MT32EMU_ENABLE := $(call try_compile_cxx,build/feature-test/munt.cpp -lmt32emu)
+ifneq ($(S_MT32EMU_ENABLE),1)
+$(call color_warning,Munt is missing; skipping plugin s_mt32emu)
+endif
+
+ifeq ($(S_MT32EMU_ENABLE),1)
+PLUGIN := s_mt32emu$(LIB_EXT)
+SOURCES := \
+  sources/synth/plugins/mt32emu.cc \
+  sources/utility/paths.cc
+
+include build/plugin.mk
+
+$(PLUGIN): CPPFLAGS += \
+    -Isources \
+    -Ithirdparty/gsl-lite/include
+$(PLUGIN): LDFLAGS += \
+    $(if $(STATIC),-static) \
+    $(if $(LINUX),-Xlinker -no-undefined)
+$(PLUGIN): LIBS := \
+    -lmt32emu
+endif
+
+###
 install: all
 	install -D -m 755 fmidiplay$(APP_EXT) $(DESTDIR)$(PREFIX)/bin/fmidiplay$(APP_EXT)
 ifeq ($(S_FLUID_ENABLE),1)
@@ -208,5 +232,8 @@ ifeq ($(S_OPNMIDI_ENABLE),1)
 endif
 ifeq ($(S_SCC_ENABLE),1)
 	install -D -m 755 s_scc$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_scc$(LIB_EXT)
+endif
+ifeq ($(S_MT32EMU_ENABLE),1)
+	install -D -m 755 s_mt32emu$(LIB_EXT) $(DESTDIR)$(PREFIX)/lib/fmidiplay/s_mt32emu$(LIB_EXT)
 endif
 .PHONY: install

@@ -60,6 +60,14 @@ define pkg_config_libs
 	$(shell $(PKG_CONFIG) $(PKG_CONFIG_FLAGS) --libs $(1))
 endef
 
+define try_compile_c
+$(shell $(CC) $(1) 2> /dev/null && echo 1; rm -f $(if $(MINGW),a.exe,a.out))
+endef
+
+define try_compile_cxx
+$(shell $(CXX) $(1) 2> /dev/null && echo 1; rm -f $(if $(MINGW),a.exe,a.out))
+endef
+
 all:
 clean:
 .PHONY: all clean
