@@ -162,134 +162,134 @@ static void mt32emu_synth_deactivate(synth_object *obj)
 }
 
 static const uint8_t patch_gm_to_mt32[128] = {
-    0, // Acou Piano 1 -> Acoustic Grand Piano
-    1, // Acou Piano 2 -> Bright Acoustic Piano
-    0, // Acou Piano 3 -> Acoustic Grand Piano
-    2, // Elec Piano 1 -> Electric Grand Piano
-    4, // Elec Piano 2 -> Rhodes Piano
-    4, // Elec Piano 3 -> Rhodes Piano
-    5, // Elec Piano 4 -> Chorused Piano
-    3, // Honkytonk -> Honky-tonk Piano
-    6, // Elec Org 1 -> Hammond Organ
-    7, // Elec Org 2 -> Percussive Organ
-    18, // Elec Org 3 -> Rock Organ
-    16, // Elec Org 4 -> Hammond Organ
-    16, // Pipe Org 1 -> Hammond Organ
-    19, // Pipe Org 2 -> Church Organ
-    20, // Pipe Org 3 -> Reed Organ
-    21, // Accordion -> Accordion
-    6, // Harpsi 1 -> Harpsichord
-    6, // Harpsi 2 -> Harpsichord
-    6, // Harpsi 3 -> Harpsichord
-    7, // Clavi 1 -> Clavinet
-    7, // Clavi 2 -> Clavinet
-    7, // Clavi 3 -> Clavinet
-    8, // Celesta 1 -> Celesta
-    12, // Celesta 2 -> Tinkle Bell
-    62, // Syn Brass 1 -> Synth Brass 1
-    62, // Syn Brass 2 -> Synth Brass 1
-    63, // Syn Brass 3 -> Synth Brass 2
-    63, // Syn Brass 4 -> Synth Brass 2
-    38, // Syn Bass 1 -> Synth Bass 1
-    38, // Syn Bass 2 -> Synth Bass 1
-    39, // Syn Bass 3 -> Synth Bass 2
-    39, // Syn Bass 4 -> Synth Bass 2
-    88, // Fantasy -> Pad 1 (new age)
-    54, // Harmo Pan -> Synth Voice
-    52, // Chorale -> Choir Aahs
-    98, // Glasses -> FX 3 (crystal)
-    97, // Soundtrack -> FX 2 (soundtrack)
-    99, // Atmosphere -> FX 4 (atmosphere)
-    14, // Warm Bell -> Tubular Bells
-    54, // Funny Vox -> Synth Voice
-    02, // Echo Bell -> FX 7 (echoes)
-    96, // Ice Rain -> FX 1 (rain)
-    53, // Oboe 2001 -> Voice Oohs
-    02, // Echo Pan -> FX 7 (echoes)
-    81, // Doctor Solo -> Lead 2 (sawtooth)
-    00, // School Daze -> FX 5 (brightness)
-    14, // Bellsinger -> Tubular Bells
-    80, // Square Wave -> Lead 1 (square)
-    48, // Str Sect 1 -> String Ensemble 1
-    48, // Str Sect 2 -> String Ensemble 1
-    49, // Str Sect 3 -> String Ensemble 2
-    45, // Pizzicato -> Pizzicato Strings
-    41, // Violin 1 -> Viola
-    40, // Violin 2 -> Violin
-    42, // Cello 1 -> Cello
-    42, // Cello 2 -> Cello
-    43, // Contrabass -> Contrabass
-    46, // Harp 1 -> Orchestral Harp
-    45, // Harp 2 -> Pizzicato Strings
-    24, // Guitar 1 -> Acoustic Guitar (nylon)
-    25, // Guitar 2 -> Acoustic Guitar (steel)
-    28, // Elec Gtr 1 -> Electric Guitar (muted)
-    27, // Elec Gtr 2 -> Electric Guitar (clean)
-    04, // Sitar -> Sitar
-    32, // Acou Bass 1 -> Acoustic Bass
-    32, // Acou Bass 2 -> Acoustic Bass
-    34, // Elec Bass 1 -> Electric Bass (pick)
-    33, // Elec Bass 2 -> Electric Bass (finger)
-    36, // Slap Bass 1 -> Slap Bass 1
-    37, // Slap Bass 2 -> Slap Bass 2
-    35, // Fretless 1 -> Fretless Bass
-    35, // Fretless 2 -> Fretless Bass
-    79, // Flute 1 -> Ocarina
-    73, // Flute 2 -> Flute
-    72, // Piccolo 1 -> Piccolo
-    72, // Piccolo 2 -> Piccolo
-    74, // Recorder -> Recorder
-    75, // Pan Pipes -> Pan Flute
-    64, // Sax 1 -> Soprano Sax
-    65, // Sax 2 -> Alto Sax
-    66, // Sax 3 -> Tenor Sax
-    67, // Sax 4 -> Baritone Sax
-    71, // Clarinet 1 -> Clarinet
-    71, // Clarinet 2 -> Clarinet
-    68, // Oboe -> Oboe
-    69, // Engl Horn -> English Horn
-    70, // Bassoon -> Bassoon
-    22, // Harmonica -> Harmonica
-    56, // Trumpet 1 -> Trumpet
-    59, // Trumpet 2 -> Muted Trumpet
-    57, // Trombone 1 -> Trombone
-    57, // Trombone 2 -> Trombone
-    60, // Fr Horn 1 -> French Horn
-    60, // Fr Horn 2 -> French Horn
-    58, // Tuba -> Tuba
-    61, // Brs Sect 1 -> Brass Section
-    61, // Brs Sect 2 -> Brass Section
-    11, // Vibe 1 -> Vibraphone
-    11, // Vibe 2 -> Vibraphone
-    98, // Syn Mallet -> FX 3 (crystal)
-    14, // Windbell -> Tubular Bells
-    9, // Glock -> Glockenspiel
-    14, // Tube Bell -> Tubular Bells
-    13, // Xylophone -> Xylophone
-    12, // Marimba -> Marimba
-    107, // Koto -> Koto
-    107, // Sho -> Koto
-    77, // Shakuhachi -> Shakuhachi
-    78, // Whistle 1 -> Whistle
-    78, // Whistle 2 -> Whistle
-    76, // Bottleblow -> Bottle Blow
-    76, // Breathpipe -> Bottle Blow
-    47, // Timpani -> Timpani
-    117, // Melodic Tom -> Melodic Tom
-    127, // Deep Snare -> Gunshot
-    118, // Elec Perc 1 -> Synth Drum
-    118, // Elec Perc 2 -> Synth Drum
-    116, // Taiko -> Taiko Drum
-    116, // Taiko Rim -> Taiko Drum
-    119, // Cymbal -> Reverse Cymbal
-    115, // Castanets -> Woodblock
-    112, // Triangle -> Tinkle Bell
-    55, // Orche Hit -> Orchestra Hit
-    124, // Telephone -> Telephone Ring
-    123, // Bird Tweet -> Bird Tweet
-    0, // One Note Jam -> Acoustic Grand Piano
-    14, // Water Bell -> Tubular Bells
-    117, // Jungle Tune -> Melodic Tom
+    0, // Acoustic Grand Piano -> Acou Piano 1
+    1, // Bright Acoustic Piano -> Acou Piano 2
+    3, // Electric Grand Piano -> Elec Piano 1
+    7, // Honky-tonk Piano -> Honkytonk
+    5, // Rhodes Piano -> Elec Piano 3
+    6, // Chorused Piano -> Elec Piano 4
+    17, // Harpsichord -> Harpsi 2
+    21, // Clavinet -> Clavi 3
+    22, // Celesta -> Celesta 1
+    101, // Glockenspiel -> Glock
+    101, // Music Box -> Glock
+    98, // Vibraphone -> Vibe 2
+    104, // Marimba -> Marimba
+    103, // Xylophone -> Xylophone
+    102, // Tubular Bells -> Tube Bell
+    105, // Dulcimer -> Koto
+    12, // Hammond Organ -> Pipe Org 1
+    9, // Percussive Organ -> Elec Org 2
+    10, // Rock Organ -> Elec Org 3
+    13, // Church Organ -> Pipe Org 2
+    14, // Reed Organ -> Pipe Org 3
+    15, // Accordion -> Accordion
+    87, // Harmonica -> Harmonica
+    15, // Tango Accordion -> Accordion
+    59, // Acoustic Guitar (nylon) -> Guitar 1
+    60, // Acoustic Guitar (steel) -> Guitar 2
+    59, // Electric Guitar (jazz) -> Guitar 1
+    62, // Electric Guitar (clean) -> Elec Gtr 2
+    61, // Electric Guitar (muted) -> Elec Gtr 1
+    59, // Overdriven Guitar -> Guitar 1
+    62, // Distortion Guitar -> Elec Gtr 2
+    62, // Guitar Harmonics -> Elec Gtr 2
+    64, // Acoustic Bass -> Acou Bass 1
+    67, // Electric Bass (finger) -> Elec Bass 2
+    66, // Electric Bass (pick) -> Elec Bass 1
+    71, // Fretless Bass -> Fretless 2
+    68, // Slap Bass 1 -> Slap Bass 1
+    69, // Slap Bass 2 -> Slap Bass 2
+    66, // Synth Bass 1 -> Elec Bass 1
+    70, // Synth Bass 2 -> Fretless 1
+    53, // Violin -> Violin 2
+    52, // Viola -> Violin 1
+    54, // Cello -> Cello 1
+    56, // Contrabass -> Contrabass
+    53, // Tremolo Strings -> Violin 2
+    51, // Pizzicato Strings -> Pizzicato
+    57, // Orchestral Harp -> Harp 1
+    112, // Timpani -> Timpani
+    48, // String Ensemble 1 -> Str Sect 1
+    50, // String Ensemble 2 -> Str Sect 3
+    48, // SynthStrings 1 -> Str Sect 1
+    50, // SynthStrings 2 -> Str Sect 3
+    34, // Choir Aahs -> Chorale
+    42, // Voice Oohs -> Oboe 2001
+    33, // Synth Voice -> Harmo Pan
+    122, // Orchestra Hit -> Orche Hit
+    88, // Trumpet -> Trumpet 1
+    90, // Trombone -> Trombone 1
+    94, // Tuba -> Tuba
+    89, // Muted Trumpet -> Trumpet 2
+    92, // French Horn -> Fr Horn 1
+    95, // Brass Section -> Brs Sect 1
+    89, // Synth Brass 1 -> Trumpet 2
+    91, // Synth Brass 2 -> Trombone 2
+    78, // Soprano Sax -> Sax 1
+    79, // Alto Sax -> Sax 2
+    80, // Tenor Sax -> Sax 3
+    81, // Baritone Sax -> Sax 4
+    84, // Oboe -> Oboe
+    85, // English Horn -> Engl Horn
+    86, // Bassoon -> Bassoon
+    83, // Clarinet -> Clarinet 2
+    75, // Piccolo -> Piccolo 2
+    73, // Flute -> Flute 2
+    76, // Recorder -> Recorder
+    77, // Pan Flute -> Pan Pipes
+    110, // Bottle Blow -> Bottleblow
+    107, // Shakuhachi -> Shakuhachi
+    108, // Whistle -> Whistle 1
+    72, // Ocarina -> Flute 1
+    47, // Lead 1 (square) -> Square Wave
+    67, // Lead 2 (sawtooth) -> Elec Bass 2
+    75, // Lead 3 (calliope lead) -> Piccolo 2
+    51, // Lead 4 (chiff lead) -> Pizzicato
+    61, // Lead 5 (charang) -> Elec Gtr 1
+    72, // Lead 6 (voice) -> Flute 1
+    52, // Lead 7 (fifths) -> Violin 1
+    67, // Lead 8 (bass + lead) -> Elec Bass 2
+    32, // Pad 1 (new age) -> Fantasy
+    33, // Pad 2 (warm) -> Harmo Pan
+    67, // Pad 3 (polysynth) -> Elec Bass 2
+    34, // Pad 4 (choir) -> Chorale
+    32, // Pad 5 (bowed) -> Fantasy
+    32, // Pad 6 (metallic) -> Fantasy
+    33, // Pad 7 (halo) -> Harmo Pan
+    33, // Pad 8 (sweep) -> Harmo Pan
+    41, // FX 1 (rain) -> Ice Rain
+    36, // FX 2 (soundtrack) -> Soundtrack
+    35, // FX 3 (crystal) -> Glasses
+    37, // FX 4 (atmosphere) -> Atmosphere
+    45, // FX 5 (brightness) -> School Daze
+    33, // FX 6 (goblins) -> Harmo Pan
+    43, // FX 7 (echoes) -> Echo Pan
+    32, // FX 8 (sci-fi) -> Fantasy
+    63, // Sitar -> Sitar
+    105, // Banjo -> Koto
+    105, // Shamisen -> Koto
+    105, // Koto -> Koto
+    51, // Kalimba -> Pizzicato
+    81, // Bagpipe -> Sax 4
+    52, // Fiddle -> Violin 1
+    81, // Shanai -> Sax 4
+    23, // Tinkle Bell -> Celesta 2
+    103, // Agogo -> Xylophone
+    103, // Steel Drums -> Xylophone
+    113, // Woodblock -> Melodic Tom
+    117, // Taiko Drum -> Taiko
+    113, // Melodic Tom -> Melodic Tom
+    116, // Synth Drum -> Elec Perc 2
+    119, // Reverse Cymbal -> Cymbal
+    124, // Guitar Fret Noise -> Bird Tweet
+    120, // Breath Noise -> Castanets
+    119, // Seashore -> Cymbal
+    124, // Bird Tweet -> Bird Tweet
+    123, // Telephone Ring -> Telephone
+    120, // Helicopter -> Castanets
+    119, // Applause -> Cymbal
+    114, // Gunshot -> Deep Snare
 };
 
 static uint32_t convert_gm_to_mt32(uint32_t msg)
