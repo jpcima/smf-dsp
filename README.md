@@ -54,4 +54,5 @@ The optional synthesizers have additional requirements, and they are built only 
   `git clone https://github.com/Wohlstand/libOPNMIDI.git thirdparty/libOPNMIDI`
 - **SCC (emidi)**: check out external sources into the tree, as follows.  
   `git clone https://github.com/jpcima/scc.git thirdparty/scc`
-- **MT32EMU**: install libmt32emu from [Munt](https://github.com/munt/munt).
+- **MT32EMU**: check out external sources into the tree, as follows.  
+  `git clone https://github.com/munt/munt.git thirdparty/munt`

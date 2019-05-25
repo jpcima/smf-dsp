@@ -195,27 +195,39 @@ $(PLUGIN): LDFLAGS += \
 endif
 
 ###
-S_MT32EMU_ENABLE := $(call try_compile_cxx,build/feature-test/munt.cpp -lmt32emu)
+S_MT32EMU_ENABLE := $(shell test -d thirdparty/munt && echo 1)
 ifneq ($(S_MT32EMU_ENABLE),1)
-$(call color_warning,Munt is missing; skipping plugin s_mt32emu)
+$(call color_warning,munt sources are missing from thirdparty/munt; skipping plugin s_mt32emu)
 endif
 
 ifeq ($(S_MT32EMU_ENABLE),1)
+$(shell touch -a thirdparty/munt/mt32emu/src/config.h)
+
 PLUGIN := s_mt32emu$(LIB_EXT)
 SOURCES := \
   sources/synth/plugins/mt32emu.cc \
-  sources/utility/paths.cc
+  sources/utility/paths.cc \
+  $(wildcard thirdparty/munt/mt32emu/src/*.cpp) \
+  $(wildcard thirdparty/munt/mt32emu/src/c_interface/*.cpp) \
+  $(wildcard thirdparty/munt/mt32emu/src/sha1/*.cpp) \
+  thirdparty/munt/mt32emu/src/srchelper/InternalResampler.cpp \
+  $(wildcard thirdparty/munt/mt32emu/src/srchelper/srctools/src/*.cpp)
 
 include build/plugin.mk
 
 $(PLUGIN): CPPFLAGS += \
     -Isources \
-    -Ithirdparty/gsl-lite/include
+    -Ithirdparty/gsl-lite/include \
+    -Ithirdparty/munt/mt32emu/src \
+    -DMT32EMU_WITH_INTERNAL_RESAMPLER \
+    -DMT32EMU_EXPORTS_TYPE=1 \
+    -DMT32EMU_VERSION='"0.0.0"' \
+    -DMT32EMU_VERSION_MAJOR=0 \
+    -DMT32EMU_VERSION_MINOR=0 \
+    -DMT32EMU_VERSION_PATCH=0
 $(PLUGIN): LDFLAGS += \
     $(if $(STATIC),-static) \
     $(if $(LINUX),-Xlinker -no-undefined)
-$(PLUGIN): LIBS := \
-    -lmt32emu
 endif
 
 ###
