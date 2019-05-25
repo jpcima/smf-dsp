@@ -149,6 +149,8 @@ static int mt32emu_synth_activate(synth_object *obj)
             fprintf(stderr, "mt32emu: using PCM ROM \"%s\"\n", rom_info.pcm_rom_description);
         }
 
+        mt32emu_set_midi_event_queue_size(device, 8192);
+
         mt32emu_set_partial_count(device, sy->partial_count);
 
         if (mt32emu_open_synth(device) != MT32EMU_RC_OK) {
