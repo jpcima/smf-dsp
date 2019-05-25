@@ -371,7 +371,7 @@ static void mt32emu_synth_write(synth_object *obj, const unsigned char *msg, siz
             unsigned status = short_msg & 0xff;
             unsigned channel = status & 0x0f;
             unsigned data1 = (short_msg >> 8) & 0xff;
-            unsigned data2 = (short_msg >> 16) & 0xff;
+            //unsigned data2 = (short_msg >> 16) & 0xff;
             unsigned devno = (channel < 8 || channel == 9) ? 0 : 1;
 
             if ((status & 0xf0) == 0xb0 && (data1 == 120 || data1 == 123)) {
