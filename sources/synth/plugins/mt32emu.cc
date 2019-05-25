@@ -366,9 +366,22 @@ static void mt32emu_synth_write(synth_object *obj, const unsigned char *msg, siz
         }
         else {
             // channel message: send to device which handles part
-            unsigned channel = short_msg & 0x0f;
+            unsigned status = short_msg & 0xff;
+            unsigned channel = status & 0x0f;
+            unsigned data1 = (short_msg >> 8) & 0xff;
+            unsigned data2 = (short_msg >> 16) & 0xff;
             unsigned devno = (channel < 8 || channel == 9) ? 0 : 1;
-            mt32emu_play_msg(devices[devno].get(), short_msg);
+
+            if ((status & 0xf0) == 0xb0 && (data1 == 120 || data1 == 123)) {
+                // special: all sound off/all notes off
+                mt32emu_flush_midi_queue(devices[devno].get());
+                for (unsigned key = 0; key < 128; ++key) {
+                    uint32_t msg_off = 0x80 | channel | (key << 8);
+                    mt32emu_play_msg_now(devices[devno].get(), msg_off);
+                }
+            }
+            else
+                mt32emu_play_msg(devices[devno].get(), short_msg);
         }
         break;
     case 0:
