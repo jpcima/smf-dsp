@@ -124,8 +124,10 @@ void Player::process_command_queue()
         case PC_Pause:
             if (pl_) {
                 Player_Clock &c = *clock_;
-                if (!c.active())
+                if (!c.active()) {
+                    mts_started_ = false;
                     c.start(1);
+                }
                 else {
                     c.stop();
                     ins_->all_sound_off();
@@ -253,6 +255,8 @@ void Player::resume_play_list()
 
         smf_ = std::move(smf);
         extract_smf_metadata();
+
+        mts_started_ = false;
         clock_->start(1);
     }
 }
@@ -271,7 +275,16 @@ void Player::play_event(const fmidi_event_t &event)
 {
     switch (event.type) {
     case fmidi_event_message: {
-        ins_->send_message(event.data, event.datalen);
+        double ts = 0;
+        uint64_t now = uv_hrtime();
+        if (mts_started_)
+            ts = 1e-9 * (now - mts_lasttime_);
+        else {
+            ins_->begin_send_messages();
+            mts_started_ = true;
+        }
+        mts_lasttime_ = now;
+        ins_->send_message(event.data, event.datalen, ts);
         break;
     }
     case fmidi_event_meta: {
@@ -414,5 +427,7 @@ void Player::switch_instrument(Midi_Instrument &ins)
         old.initialize();
         old.close_midi_output();
         ins_ = &ins;
+        // clear MIDI timestamp
+        mts_started_ = false;
     }
 }

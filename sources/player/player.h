@@ -68,6 +68,10 @@ private:
     std::unique_ptr<Midi_Port_Instrument> midiport_ins_;
     std::unique_ptr<Midi_Synth_Instrument> synth_ins_;
 
+    // MIDI timestamping
+    bool mts_started_ = false;
+    uint64_t mts_lasttime_ = 0;
+
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;
     std::mutex ready_mutex_;

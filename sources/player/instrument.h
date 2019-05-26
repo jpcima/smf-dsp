@@ -18,7 +18,8 @@ class Midi_Instrument {
 public:
     Midi_Instrument();
     virtual ~Midi_Instrument() {}
-    void send_message(const uint8_t *data, unsigned len);
+    virtual void begin_send_messages() {};
+    void send_message(const uint8_t *data, unsigned len, double ts);
     void initialize();
     void all_sound_off();
 
@@ -28,7 +29,7 @@ public:
     virtual void close_midi_output() = 0;
 
 protected:
-    virtual void handle_send_message(const uint8_t *data, unsigned len) = 0;
+    virtual void handle_send_message(const uint8_t *data, unsigned len, double ts) = 0;
 
 private:
     Keyboard_State kbs_;
@@ -41,7 +42,7 @@ public:
     void close_midi_output() override {}
 
 protected:
-    void handle_send_message(const uint8_t *data, unsigned len) override;
+    void handle_send_message(const uint8_t *data, unsigned len, double ts) override;
 };
 
 ///
@@ -55,7 +56,7 @@ public:
     void close_midi_output() override;
 
 protected:
-    void handle_send_message(const uint8_t *data, unsigned len) override;
+    void handle_send_message(const uint8_t *data, unsigned len, double ts) override;
 
 private:
     std::unique_ptr<RtMidiOut> out_;
@@ -70,19 +71,29 @@ public:
     void open_midi_output(gsl::cstring_span id) override;
     void close_midi_output() override;
 
+    void begin_send_messages() override;
+
 protected:
-    void handle_send_message(const uint8_t *data, unsigned len) override;
+    void handle_send_message(const uint8_t *data, unsigned len, double ts) override;
 
 private:
     static int audio_callback(void *output_buffer, void *, unsigned int nframes, double, RtAudioStreamStatus, void *user_data);
-    void process_midi();
+    void process_midi(unsigned nth_buffer, unsigned total_buffers);
+
+private:
+    bool extract_next_message();
+
+private:
+    static constexpr unsigned midi_buffer_size = 8192;
+    static constexpr unsigned midi_message_max = 256;
 
 private:
     std::unique_ptr<Synth_Host> host_;
     std::unique_ptr<Ring_Buffer> midibuf_;
     std::unique_ptr<RtAudio> audio_;
 
-private:
-    static constexpr unsigned midi_buffer_size = 8192;
-    static constexpr unsigned midi_message_max = 256;
+    double time_delta_ = 0;
+    bool have_current_msg_ = false;
+    unsigned current_msg_size_ = 0;
+    uint8_t current_msg_[midi_message_max];
 };
