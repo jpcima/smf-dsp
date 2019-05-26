@@ -177,6 +177,8 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     unsigned audio_device = audio->getDefaultOutputDevice();
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
 
+    fprintf(stderr, "Audio interface: %s\n", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
+
     RtAudio::StreamParameters audio_param;
     audio_param.deviceId = audio_device;
     audio_param.nChannels = 2;
@@ -189,6 +191,8 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_devinfo.preferredSampleRate);
 
     audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_devinfo.preferredSampleRate, &audio_buffer_size, &audio_callback, this, &audio_opt);
+
+    fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_buffer_size / audio_devinfo.preferredSampleRate);
 
     if (!host.load(id, audio_devinfo.preferredSampleRate))
         return;
