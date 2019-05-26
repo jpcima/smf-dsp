@@ -237,7 +237,7 @@ int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned 
 
     while (frame_index < nframes) {
         self->process_midi();
-        unsigned nframes_current = std::min(nframes, midi_interval_max);
+        unsigned nframes_current = std::min(nframes - frame_index, midi_interval_max);
         host.generate(&frame_buffer[2 * frame_index], nframes_current);
         frame_index += nframes_current;
     }
