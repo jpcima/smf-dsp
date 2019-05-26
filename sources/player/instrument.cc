@@ -183,6 +183,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     RtAudio::StreamOptions audio_opt;
     audio_opt.streamName = PROGRAM_DISPLAY_NAME " synth";
+    audio_opt.flags = RTAUDIO_ALSA_USE_DEFAULT;
 
     const double audio_latency = 20e-3;
     unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_devinfo.preferredSampleRate);

@@ -37,7 +37,7 @@ To build the software, type `make` in the source directory.
 
 Install following packages on Debian/LibraZiK/Mint:
 
-- `build-essential` `git` `pkg-config` `libsdl2-dev` `libasound2-dev` `libjack-jackd2-dev` `libuv-dev` `libuchardet-dev`
+- `build-essential` `git` `pkg-config` `libsdl2-dev` `libasound2-dev` `libpulse-dev` `libjack-jackd2-dev` `libuv-dev` `libuchardet-dev`
 
 (in case JACK 1 is preferred over JACK 2, replace `libjack-jackd2-dev` with `libjack-dev`)
 
