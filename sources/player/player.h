@@ -45,6 +45,9 @@ private:
 
     void switch_instrument(Midi_Instrument &ins);
 
+    bool start_ticking();
+    bool stop_ticking();
+
 private:
     std::thread thread_;
     std::atomic_bool quit_;
@@ -67,6 +70,10 @@ private:
     Midi_Instrument *ins_ = nullptr;
     std::unique_ptr<Midi_Port_Instrument> midiport_ins_;
     std::unique_ptr<Midi_Synth_Instrument> synth_ins_;
+
+    // timestamping
+    bool ts_started_ = false;
+    uint64_t ts_last_ = 0;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;

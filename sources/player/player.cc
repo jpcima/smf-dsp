@@ -124,11 +124,12 @@ void Player::process_command_queue()
         case PC_Pause:
             if (pl_) {
                 Player_Clock &c = *clock_;
+                Midi_Instrument &ins = *ins_;
                 if (!c.active())
-                    c.start(1);
+                    start_ticking();
                 else {
-                    c.stop();
-                    ins_->all_sound_off();
+                    ins.all_sound_off();
+                    stop_ticking();
                 }
             }
             break;
@@ -181,23 +182,28 @@ void Player::process_command_queue()
         }
         case PC_Set_Midi_Output: {
             Midi_Port_Instrument &ins = *midiport_ins_;
+            bool active = stop_ticking();
             switch_instrument(ins);
             ins.open_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id);
+            if (active) start_ticking();
             break;
         }
         case PC_Set_Synth: {
             Midi_Synth_Instrument &ins = *synth_ins_;
+            bool active = stop_ticking();
             switch_instrument(ins);
             ins.open_midi_output(static_cast<Pcmd_Set_Synth &>(*cmd).synth_plugin_id);
+            if (active) start_ticking();
             break;
         }
         case PC_Shutdown: {
+            Midi_Instrument &ins = *ins_;
             std::mutex *wait_mutex = static_cast<Pcmd_Shutdown &>(*cmd).wait_mutex;
             std::condition_variable *wait_cond = static_cast<Pcmd_Shutdown &>(*cmd).wait_cond;
 
             reset_current_playback();
-            clock_->stop();
-            ins_->initialize();
+            ins.initialize();
+            stop_ticking();
 
             std::unique_lock<std::mutex> lock(*wait_mutex);
             wait_cond->notify_one();
@@ -214,14 +220,20 @@ void Player::rewind()
         return;
 
     fmidi_player_rewind(pl);
-    ins_->initialize();
+
+    Midi_Instrument &ins = *ins_;
+    ins.initialize();
+    ins.flush_events();
 }
 
 void Player::reset_current_playback()
 {
     pl_.reset();
     smf_.reset();
-    ins_->initialize();
+
+    Midi_Instrument &ins = *ins_;
+    ins.initialize();
+    ins.flush_events();
 }
 
 void Player::resume_play_list()
@@ -253,7 +265,7 @@ void Player::resume_play_list()
 
         smf_ = std::move(smf);
         extract_smf_metadata();
-        clock_->start(1);
+        start_ticking();
     }
 }
 
@@ -271,7 +283,18 @@ void Player::play_event(const fmidi_event_t &event)
 {
     switch (event.type) {
     case fmidi_event_message: {
-        ins_->send_message(event.data, event.datalen);
+        Midi_Instrument &ins = *ins_;
+        uint64_t now = uv_hrtime();
+        double ts = 0;
+        int flags = 0;
+        if (ts_started_)
+            ts = 1e-9 * (now - ts_last_);
+        else {
+            flags |= Midi_Message_Is_First;
+            ts_started_ = true;
+        }
+        ins.send_message(event.data, event.datalen, ts, flags);
+        ts_last_ = now;
         break;
     }
     case fmidi_event_meta: {
@@ -317,7 +340,7 @@ void Player::file_finished()
 
     if (must_stop) {
         reset_current_playback();
-        clock_->stop();
+        stop_ticking();
     }
 }
 
@@ -388,7 +411,8 @@ void Player::extract_smf_metadata()
 Player_State Player::make_state() const
 {
     Player_State ps;
-    ps.kb = ins_->keyboard_state();
+    Midi_Instrument &ins = *ins_;
+    ps.kb = ins.keyboard_state();
     ps.repeat_mode = repeat_mode_;
 
     fmidi_player_t *pl = pl_.get();
@@ -409,10 +433,39 @@ Player_State Player::make_state() const
 
 void Player::switch_instrument(Midi_Instrument &ins)
 {
-    Midi_Instrument &old = *ins_;
-    if (&ins != &old) {
-        old.initialize();
-        old.close_midi_output();
-        ins_ = &ins;
-    }
+    Midi_Instrument &old_ins = *ins_;
+
+    if (&ins == &old_ins)
+        return;
+
+    old_ins.initialize();
+    old_ins.flush_events();
+    old_ins.close_midi_output();
+
+    ins_ = &ins;
+}
+
+bool Player::start_ticking()
+{
+    Player_Clock &clock = *clock_;
+
+    if (clock.active())
+        return false;
+
+    ts_started_ = false;
+    clock.start(1);
+    return true;
+}
+
+bool Player::stop_ticking()
+{
+    Player_Clock &clock = *clock_;
+    Midi_Instrument &ins = *ins_;
+
+    if (!clock.active())
+        return false;
+
+    ins.flush_events();
+    clock.stop();
+    return true;
 }

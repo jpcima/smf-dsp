@@ -12,9 +12,9 @@ Midi_Instrument::Midi_Instrument()
     kbs_.clear();
 }
 
-void Midi_Instrument::send_message(const uint8_t *data, unsigned len)
+void Midi_Instrument::send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags)
 {
-    handle_send_message(data, len);
+    handle_send_message(data, len, ts, flags);
     kbs_.handle_message(data, len);
 }
 
@@ -23,21 +23,21 @@ void Midi_Instrument::initialize()
     for (unsigned c = 0; c < 16; ++c) {
         // all sound off
         { uint8_t msg[] { (uint8_t)((0b1011 << 4) | c), 120, 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
         // reset all controllers
         { uint8_t msg[] { (uint8_t)((0b1011 << 4) | c), 121, 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
         // bank select
         { uint8_t msg[] { (uint8_t)((0b1011 << 4) | c), 0, 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
         { uint8_t msg[] { (uint8_t)((0b1011 << 4) | c), 32, 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
         // program change
         { uint8_t msg[] { (uint8_t)((0b1100 << 4) | c), 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
         // pitch bend change
         { uint8_t msg[] { (uint8_t)((0b1110 << 4) | c), 0, 0b1000000 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
     }
 }
 
@@ -46,13 +46,16 @@ void Midi_Instrument::all_sound_off()
     for (unsigned c = 0; c < 16; ++c) {
         // all sound off
         { uint8_t msg[] { (uint8_t)((0b1011 << 4) | c), 120, 0 };
-            send_message(msg, sizeof(msg)); }
+            send_message(msg, sizeof(msg), 0, 0); }
     }
 }
 
 //
-void Dummy_Instrument::handle_send_message(const uint8_t *data, unsigned len)
+void Dummy_Instrument::handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags)
 {
+    (void)ts;
+    (void)flags;
+
     if (false) {
         for (unsigned i = 0; i < len; ++i)
             fprintf(stderr, "%s%02X", i ? " " : "", data[i]);
@@ -70,8 +73,11 @@ Midi_Port_Instrument::~Midi_Port_Instrument()
 {
 }
 
-void Midi_Port_Instrument::handle_send_message(const uint8_t *data, unsigned len)
+void Midi_Port_Instrument::handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags)
 {
+    (void)ts;
+    (void)flags;
+
     RtMidiOut &out = *out_;
     out.sendMessage(data, len);
 }
@@ -156,12 +162,19 @@ void Midi_Port_Instrument::close_midi_output()
 
 //
 Midi_Synth_Instrument::Midi_Synth_Instrument()
-    : host_(new Synth_Host)
+    : host_(new Synth_Host),
+      midibuf_(new Ring_Buffer(midi_buffer_size))
 {
 }
 
 Midi_Synth_Instrument::~Midi_Synth_Instrument()
 {
+}
+
+void Midi_Synth_Instrument::flush_events()
+{
+    while (message_count_.load() > 0)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
@@ -187,57 +200,66 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     audio_opt.streamName = PROGRAM_DISPLAY_NAME " synth";
     audio_opt.flags = RTAUDIO_ALSA_USE_DEFAULT;
 
-    const double audio_latency = 20e-3;
-    unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_devinfo.preferredSampleRate);
+    double audio_latency = 50e-3;
+    double audio_rate = audio_devinfo.preferredSampleRate;
+    unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_rate);
 
-    audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_devinfo.preferredSampleRate, &audio_buffer_size, &audio_callback, this, &audio_opt);
+    audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_rate, &audio_buffer_size, &audio_callback, this, &audio_opt);
 
-    fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_buffer_size / audio_devinfo.preferredSampleRate);
+    audio_latency = audio_latency_ = audio_buffer_size / audio_rate;
+    fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
-    if (!host.load(id, audio_devinfo.preferredSampleRate))
+    if (!host.load(id, audio_rate))
         return;
 
-    midibuf_.reset(new Ring_Buffer(midi_buffer_size));
-    audio->startStream();
     audio_ = std::move(audio);
+    audio_->startStream();
 }
 
 void Midi_Synth_Instrument::close_midi_output()
 {
     audio_.reset();
-    midibuf_.reset();
     host_->unload();
+
+    Ring_Buffer &midibuf = *midibuf_;
+    midibuf.discard(midibuf.size_used());
+
+    time_delta_ = -audio_latency_;
+    have_next_message_ = false;
+    message_count_.store(0);
 }
 
-void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned len)
+void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags)
 {
-    Ring_Buffer *midibuf = midibuf_.get();
-    size_t size_need = sizeof(unsigned) + sizeof(len);
+    Ring_Buffer &midibuf = *midibuf_;
 
-    if (!midibuf || size_need > midibuf->capacity())
-        return;
+    if (len > midi_message_max)
+        len = 0; // too large, only write header
 
-    while (midibuf->size_free() < size_need)
+    Message_Header hdr{len, ts, flags};
+    size_t size_need = sizeof(hdr) + len;
+
+    while (midibuf.size_free() < size_need)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-    midibuf->put(len);
-    midibuf->put(data, len);
+    message_count_.fetch_add(1);
+    midibuf.put(hdr);
+    midibuf.put(data, len);
 }
 
-int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned int nframes, double, RtAudioStreamStatus, void *user_data)
+int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned nframes, double, RtAudioStreamStatus, void *user_data)
 {
     Midi_Synth_Instrument *self = (Midi_Synth_Instrument *)user_data;
     Synth_Host &host = *self->host_;
-
-    // maximum interval between midi processing cycles
-    constexpr unsigned midi_interval_max = 64;
+    double srate = self->audio_->getStreamSampleRate();
 
     float *frame_buffer = (float *)output_buffer;
     unsigned frame_index = 0;
 
     while (frame_index < nframes) {
-        self->process_midi();
         unsigned nframes_current = std::min(nframes - frame_index, midi_interval_max);
+        self->time_delta_ += nframes_current * (1.0 / srate);
+        self->process_midi();
         host.generate(&frame_buffer[2 * frame_index], nframes_current);
         frame_index += nframes_current;
     }
@@ -248,20 +270,44 @@ int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned 
 void Midi_Synth_Instrument::process_midi()
 {
     Synth_Host &host = *host_;
-    Ring_Buffer *midibuf = midibuf_.get();
+    double audio_latency = audio_latency_;
 
-    if (!midibuf)
-        return;
+    while (extract_next_message()) {
+        Message_Header hdr = next_header_;
 
-    unsigned len = 0;
-    while (midibuf->peek(len) && midibuf->size_used() >= sizeof(len) + len) {
-        midibuf->discard(sizeof(len));
-        uint8_t msg[midi_message_max];
-        if (len > sizeof(msg))
-            midibuf->discard(len);
-        else {
-            midibuf->get(msg, len);
-            host.send_midi(msg, len);
+        if (hdr.flags & Midi_Message_Is_First) {
+            time_delta_ = -audio_latency;
+            next_header_.flags = hdr.flags & ~Midi_Message_Is_First;
+            break;
         }
+
+        if (time_delta_ < hdr.timestamp)
+            break;
+        time_delta_ -= hdr.timestamp;
+
+        if (hdr.len > 0)
+            host.send_midi(next_message_, hdr.len);
+
+        have_next_message_ = false;
+        message_count_.fetch_sub(1);
     }
+}
+
+bool Midi_Synth_Instrument::extract_next_message()
+{
+    if (have_next_message_)
+        return true;
+
+    Ring_Buffer &midibuf = *midibuf_;
+    Message_Header hdr;
+
+    bool have = midibuf.peek(hdr) && midibuf.size_used() >= sizeof(hdr) + hdr.len;
+    if (!have)
+        return false;
+
+    have_next_message_ = true;
+    next_header_ = hdr;
+    midibuf.discard(sizeof(hdr));
+    midibuf.get(next_message_, hdr.len);
+    return true;
 }
