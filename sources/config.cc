@@ -55,3 +55,13 @@ bool save_configuration(gsl::cstring_span name, const CSimpleIniA &ini)
 {
     return ini.SaveFile(get_configuration_file(name).c_str()) == SI_OK;
 }
+
+std::unique_ptr<CSimpleIniA> load_global_configuration()
+{
+    return load_configuration(PROGRAM_DISPLAY_NAME);
+}
+
+bool save_global_configuration(const CSimpleIniA &ini)
+{
+    return save_configuration(PROGRAM_DISPLAY_NAME, ini);
+}

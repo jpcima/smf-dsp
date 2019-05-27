@@ -1,4 +1,5 @@
 #include "instrument.h"
+#include "config.h"
 #include "synth/synth_host.h"
 #include <algorithm>
 #include <thread>
@@ -186,6 +187,9 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     if (id.empty())
         return;
 
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+
     std::unique_ptr<RtAudio> audio(new RtAudio);
     unsigned audio_device = audio->getDefaultOutputDevice();
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
@@ -200,7 +204,9 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     audio_opt.streamName = PROGRAM_DISPLAY_NAME " synth";
     audio_opt.flags = RTAUDIO_ALSA_USE_DEFAULT;
 
-    double audio_latency = 50e-3;
+    double audio_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
+    audio_latency = 1e-3 * std::max(1.0, std::min(500.0, audio_latency));
+
     double audio_rate = audio_devinfo.preferredSampleRate;
     unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_rate);
 

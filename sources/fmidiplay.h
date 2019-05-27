@@ -44,6 +44,9 @@ public:
     bool should_quit() const;
 
 private:
+    void initialize_config();
+
+private:
     void receive_state_in_other_thread(const Player_State &ps);
 
 private:

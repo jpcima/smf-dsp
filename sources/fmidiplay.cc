@@ -1,4 +1,5 @@
 #include "fmidiplay.h"
+#include "config.h"
 #include "player/player.h"
 #include "player/playlist.h"
 #include "player/instrument.h"
@@ -39,6 +40,8 @@ uint32_t timer_push_event(uint32_t interval, void *user_data)
 
 Application::Application()
 {
+    initialize_config();
+
     Rect bounds(0, 0, size_.x, size_.y);
     Main_Layout *layout = new Main_Layout;
     layout_.reset(layout);
@@ -762,6 +765,22 @@ void Application::advance_shutdown()
 bool Application::should_quit() const
 {
     return fadeout_engaged_ && fadeout_time_ < 0;
+}
+
+void Application::initialize_config()
+{
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+
+    bool ini_update = false;
+
+    if (!ini->GetValue("", "synth-audio-latency")) {
+        ini->SetDoubleValue("", "synth-audio-latency", 50, "; Latency of synthesized audio stream (ms) [1:500]");
+        ini_update = true;
+    }
+
+    if (ini_update)
+        save_global_configuration(*ini);
 }
 
 void Application::receive_state_in_other_thread(const Player_State &ps)
