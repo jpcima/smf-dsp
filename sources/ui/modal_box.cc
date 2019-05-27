@@ -53,6 +53,12 @@ Modal_Selection_Box::Modal_Selection_Box(const Rect &bounds, std::string title, 
         sel_ = ~size_t(0);
 }
 
+void Modal_Selection_Box::set_selection_index(size_t index) noexcept
+{
+    if (index < items_.size())
+        sel_ = index;
+}
+
 bool Modal_Selection_Box::get_completion_result(size_t index, void *dst)
 {
     switch (index) {

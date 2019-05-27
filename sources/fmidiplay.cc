@@ -1,5 +1,4 @@
 #include "fmidiplay.h"
-#include "config.h"
 #include "player/player.h"
 #include "player/playlist.h"
 #include "player/instrument.h"
@@ -40,7 +39,10 @@ uint32_t timer_push_event(uint32_t interval, void *user_data)
 
 Application::Application()
 {
-    initialize_config();
+    std::unique_ptr<CSimpleIniA> ini = initialize_config();
+
+    if (const char *value = ini->GetValue("", "midi-out-device"))
+        last_midi_output_choice_.assign(value);
 
     Rect bounds(0, 0, size_.x, size_.y);
     Main_Layout *layout = new Main_Layout;
@@ -71,6 +73,8 @@ Application::Application()
     update_timer_ = SDL_AddTimer(update_interval, &timer_push_event<SDL_USEREVENT>, this);
     if (update_timer_ == 0)
         throw std::runtime_error("SDL_AddTimer");
+
+    choose_midi_output(false, last_midi_output_choice_);
 }
 
 Application::~Application()
@@ -567,7 +571,7 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         break;
     case SDL_SCANCODE_F2:
         if (keymod == KMOD_NONE) {
-            ask_midi_output();
+            choose_midi_output(true, last_midi_output_choice_);
             return true;
         }
         break;
@@ -684,7 +688,7 @@ void Application::update_modals()
         modal_.pop_back();
 }
 
-void Application::ask_midi_output()
+void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
 {
     const std::vector<Synth_Host::Plugin_Info> &plugins = Synth_Host::plugins();
     std::vector<Midi_Output> outputs;
@@ -693,19 +697,33 @@ void Application::ask_midi_output()
     std::vector<std::string> choices;
     choices.reserve(plugins.size() + outputs.size());
 
-    for (const Synth_Host::Plugin_Info &plugin : plugins)
-        choices.push_back("synth: " + plugin.name);
-    for (const Midi_Output &x : outputs)
-        choices.push_back(x.name);
+    size_t default_index = ~size_t(0);
 
-    Modal_Selection_Box *modal = new Modal_Selection_Box(
-        Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100)), "Output device", choices);
-    modal_.emplace_back(modal);
+    for (const Synth_Host::Plugin_Info &plugin : plugins) {
+        std::string name = "synth: " + plugin.name;
+        if (default_index == ~size_t(0) && name == choice)
+            default_index = choices.size();
+        choices.push_back(std::move(name));
+    }
+    for (const Midi_Output &x : outputs) {
+        std::string name = x.name;
+        if (default_index == ~size_t(0) && name == choice)
+            default_index = choices.size();
+        choices.push_back(std::move(name));
+    }
 
-    modal->CompletionCallback =
-        [this, modal, outputs, plugins] {
-            size_t index;
-            modal->get_completion_result(0, &index);
+    auto choose =
+        [this, choices, outputs, plugins](size_t index) {
+            if (index >= choices.size())
+                return;
+
+            last_midi_output_choice_ = choices[index];
+
+            std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+            if (!ini) ini = create_configuration();
+            ini->SetValue("", "midi-out-device", last_midi_output_choice_.c_str(), nullptr, true);
+            save_global_configuration(*ini);
+
             if (index < plugins.size()) {
                 std::unique_ptr<Pcmd_Set_Synth> cmd(new Pcmd_Set_Synth);
                 cmd->synth_plugin_id = plugins[index].id;
@@ -713,6 +731,7 @@ void Application::ask_midi_output()
                 return;
             }
             index -= plugins.size();
+
             if (index < outputs.size()) {
                 std::unique_ptr<Pcmd_Set_Midi_Output> cmd(new Pcmd_Set_Midi_Output);
                 cmd->midi_output_id = outputs[index].id;
@@ -721,6 +740,24 @@ void Application::ask_midi_output()
             }
             index -= outputs.size();
         };
+
+    if (!ask)
+        choose(default_index);
+    else {
+        Modal_Selection_Box *modal = new Modal_Selection_Box(
+            Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100)), "Output device", choices);
+        modal_.emplace_back(modal);
+
+        if (default_index != ~size_t(0))
+            modal->set_selection_index(default_index);
+
+        modal->CompletionCallback =
+            [this, modal, choose] {
+                size_t index;
+                modal->get_completion_result(0, &index);
+                choose(index);
+            };
+    }
 }
 
 void Application::get_midi_outputs(std::vector<Midi_Output> &outputs)
@@ -767,12 +804,17 @@ bool Application::should_quit() const
     return fadeout_engaged_ && fadeout_time_ < 0;
 }
 
-void Application::initialize_config()
+std::unique_ptr<CSimpleIniA> Application::initialize_config()
 {
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
     if (!ini) ini = create_configuration();
 
     bool ini_update = false;
+
+    if (!ini->GetValue("", "midi-out-device")) {
+        ini->SetValue("", "midi-out-device", "", "; Selected device for MIDI output");
+        ini_update = true;
+    }
 
     if (!ini->GetValue("", "synth-audio-latency")) {
         ini->SetDoubleValue("", "synth-audio-latency", 50, "; Latency of synthesized audio stream (ms) [1:500]");
@@ -781,6 +823,8 @@ void Application::initialize_config()
 
     if (ini_update)
         save_global_configuration(*ini);
+
+    return ini;
 }
 
 void Application::receive_state_in_other_thread(const Player_State &ps)

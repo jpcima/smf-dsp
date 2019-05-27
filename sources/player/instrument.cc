@@ -142,6 +142,9 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
     out_.reset(out);
     api = out->getCurrentApi();
 
+    if (id.empty())
+        return;
+
     // export port
     if (id.size() > 7 && !memcmp(id.data(), "//port/", 7)) {
         gsl::cstring_span port_id(id.begin() + 7, id.end());
@@ -151,7 +154,7 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
                 out->openPort(i, PROGRAM_DISPLAY_NAME " out");
         }
     }
-    else // if (id.size() == 7 && !memcmp(id.data(), "//vport", 7))
+    else if (id.size() == 7 && !memcmp(id.data(), "//vport", 7))
         out->openVirtualPort(PROGRAM_DISPLAY_NAME " out");
 }
 

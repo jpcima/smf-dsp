@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "utility/geometry.h"
 #include <SDL.h>
 #include <gsl.hpp>
@@ -36,7 +37,7 @@ public:
 
     void request_update();
     void update_modals();
-    void ask_midi_output();
+    void choose_midi_output(bool ask, gsl::cstring_span choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
     void engage_shutdown();
@@ -44,7 +45,7 @@ public:
     bool should_quit() const;
 
 private:
-    void initialize_config();
+    std::unique_ptr<CSimpleIniA> initialize_config();
 
 private:
     void receive_state_in_other_thread(const Player_State &ps);
@@ -63,6 +64,8 @@ private:
     std::unique_ptr<File_Browser> file_browser_;
     std::unique_ptr<Metadata_Display> metadata_display_;
     std::unique_ptr<Player> player_;
+
+    std::string last_midi_output_choice_;
 
     std::unique_ptr<Player_State> ps_;
     std::mutex ps_mutex_;

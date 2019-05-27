@@ -37,6 +37,9 @@ class Modal_Selection_Box : public Modal_Box {
 public:
     Modal_Selection_Box(const Rect &bounds, std::string title, std::vector<std::string> items);
 
+    size_t selection_index() const noexcept { return sel_; }
+    void set_selection_index(size_t index) noexcept;
+
     /* 0: (size_t)             selection index
        1: (gsl::cstring_span)  selection text  */
     bool get_completion_result(size_t index, void *dst) override;
