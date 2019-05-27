@@ -93,6 +93,7 @@ private:
     std::unique_ptr<Synth_Host> host_;
     std::unique_ptr<Ring_Buffer> midibuf_;
     std::unique_ptr<RtAudio> audio_;
+    double audio_rate_ = 0;
     double audio_latency_ = 0;
     double time_delta_ = 0;
 

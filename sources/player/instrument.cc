@@ -206,11 +206,14 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_rate, &audio_buffer_size, &audio_callback, this, &audio_opt);
 
-    audio_latency = audio_latency_ = audio_buffer_size / audio_rate;
+    audio_latency = audio_buffer_size / audio_rate;
     fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
     if (!host.load(id, audio_rate))
         return;
+
+    audio_rate_ = audio_rate;
+    audio_latency_ = audio_latency;
 
     audio_ = std::move(audio);
     audio_->startStream();
@@ -251,7 +254,7 @@ int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned 
 {
     Midi_Synth_Instrument *self = (Midi_Synth_Instrument *)user_data;
     Synth_Host &host = *self->host_;
-    double srate = self->audio_->getStreamSampleRate();
+    double srate = self->audio_rate_;
 
     float *frame_buffer = (float *)output_buffer;
     unsigned frame_index = 0;
