@@ -1,15 +1,12 @@
 #include "synth_host.h"
 #include "synth_utility.h"
+#include "config.h"
 #include "utility/paths.h"
 #include <algorithm>
 #include <cassert>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#if defined(_WIN32)
-#include <direct.h>
-#define mkdir(path, mode) _mkdir(path)
-#endif
 
 static const gsl::cstring_span plugin_prefix = "s_";
 #if defined(_WIN32)
@@ -71,7 +68,7 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
 
     unload();
 
-    intf->plugin_init(configuration_dir(*info).c_str());
+    intf->plugin_init(get_configuration_dir().c_str());
     module_ = std::move(handle_u);
     intf_ = intf;
 
@@ -206,69 +203,6 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
     return plugins;
 }
 
-std::unique_ptr<CSimpleIniA> Synth_Host::create_configuration(const Plugin_Info &info)
-{
-    bool iniIsUtf8 = true, iniMultiKey = true, iniMultiLine = true;
-    return std::unique_ptr<CSimpleIniA>(
-        new CSimpleIniA(iniIsUtf8, iniMultiKey, iniMultiLine));
-}
-
-std::unique_ptr<CSimpleIniA> Synth_Host::load_configuration(const Plugin_Info &info)
-{
-    FILE *fh = fopen(configuration_path(info).c_str(), "rb");
-    if (!fh)
-        return nullptr;
-    auto fh_cleanup = gsl::finally([fh] { fclose(fh); });
-
-    std::unique_ptr<CSimpleIniA> ini = create_configuration(info);
-    if (ini->LoadFile(fh) != SI_OK)
-        return nullptr;
-
-    return ini;
-}
-
-bool Synth_Host::save_configuration(const Plugin_Info &info, const CSimpleIniA &ini)
-{
-    FILE *fh = fopen(configuration_path(info).c_str(), "wb");
-    if (!fh)
-        return false;
-    auto fh_cleanup = gsl::finally([fh] { fclose(fh); });
-
-    return ini.SaveFile(fh) == SI_OK;
-}
-
-std::string Synth_Host::configuration_path(const Plugin_Info &info)
-{
-#if defined(_WIN32)
-    std::string path = get_executable_path();
-    while (!path.empty() && path.back() != '/') path.pop_back();
-    path.append("config/");
-    mkdir(path.c_str(), 0755);
-#else
-    std::string path = get_home_directory();
-    if (path.empty())
-        return std::string();
-    path.append(".config/");
-    mkdir(path.c_str(), 0755);
-    path.append(PROGRAM_DISPLAY_NAME);
-    path.push_back('/');
-    mkdir(path.c_str(), 0755);
-#endif
-    path.append("s_");
-    path.append(info.id);
-    path.append(".ini");
-    return path;
-}
-
-std::string Synth_Host::configuration_dir(const Plugin_Info &info)
-{
-    std::string path = configuration_path(info);
-    if (path.empty())
-        return std::string();
-    while (!path.empty() && path.back() != '/') path.pop_back();
-    return path;
-}
-
 std::string Synth_Host::plugin_path(const Plugin_Info &info)
 {
     std::string path;
@@ -283,7 +217,7 @@ std::string Synth_Host::plugin_path(const Plugin_Info &info)
 
 void Synth_Host::initial_setup_plugin(const Plugin_Info &info, const synth_interface &intf)
 {
-    intf.plugin_init(configuration_dir(info).c_str());
+    intf.plugin_init(get_configuration_dir().c_str());
     auto plugin_cleanup = gsl::finally([&intf] { intf.plugin_shutdown(); });
 
     size_t option_index = 0;
@@ -292,8 +226,8 @@ void Synth_Host::initial_setup_plugin(const Plugin_Info &info, const synth_inter
     if (!option)
         return;
 
-    std::unique_ptr<CSimpleIniA> ini = load_configuration(info);
-    if (!ini) ini = create_configuration(info);
+    std::unique_ptr<CSimpleIniA> ini = load_configuration("s_" + info.id);
+    if (!ini) ini = create_configuration();
     bool ini_update = false;
 
     do {
@@ -326,12 +260,12 @@ void Synth_Host::initial_setup_plugin(const Plugin_Info &info, const synth_inter
     } while ((option = intf.plugin_option(++option_index)));
 
     if (ini_update)
-        save_configuration(info, *ini);
+        save_configuration("s_" + info.id, *ini);
 }
 
 void Synth_Host::initial_setup_synth(const Plugin_Info &info, const synth_interface *intf, synth_object *synth)
 {
-    std::unique_ptr<CSimpleIniA> ini = load_configuration(info);
+    std::unique_ptr<CSimpleIniA> ini = load_configuration("s_" + info.id);
 
     if (!ini) {
         const synth_option *opt;

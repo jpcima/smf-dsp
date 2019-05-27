@@ -38,12 +38,6 @@ private:
     synth_object *synth_ = nullptr;
 
 private:
-    static std::unique_ptr<CSimpleIniA> create_configuration(const Plugin_Info &info);
-    static std::unique_ptr<CSimpleIniA> load_configuration(const Plugin_Info &info);
-    static bool save_configuration(const Plugin_Info &info, const CSimpleIniA &ini);
-
-    static std::string configuration_path(const Plugin_Info &info);
-    static std::string configuration_dir(const Plugin_Info &info);
     static std::string plugin_path(const Plugin_Info &info);
 
 private:
