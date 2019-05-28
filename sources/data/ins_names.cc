@@ -1,124 +1,108 @@
-/*
- * OPN2 Bank Editor by Wohlstand, a free tool for music bank editing
- * Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//          Copyright Jean Pierre Cimalando 2019.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.md or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "ins_names.h"
 #include "ins_names_data.h"
 #include <unordered_map>
 
-static bool mapsInitialized = false;
-typedef std::unordered_map<uint32_t, const MidiProgram *> InstrumentMap;
-static InstrumentMap XgMap, GsMap, ScMap, Gm2Map, Gm1Map;
+namespace Midi_Data {
 
-static void fillInstMap(InstrumentMap &map, const MidiProgram *pgms, unsigned size)
+static bool maps_initialized = false;
+typedef std::unordered_map<uint32_t, const Midi_Program *> Instrument_Map;
+static Instrument_Map XgMap, GsMap, ScMap, Gm2Map, Gm1Map;
+
+static void fill_inst_map(Instrument_Map &map, const Midi_Program *pgms, unsigned size)
 {
     map.clear();
 
-    for(unsigned i = 0; i < size; ++i)
-    {
-        MidiProgramId id;
+    for (unsigned i = 0; i < size; ++i) {
+        Midi_Program_Id id;
         id.percussive = pgms[i].kind == 'P';
-        id.bankMsb = pgms[i].bankMsb;
-        id.bankLsb = pgms[i].bankLsb;
+        id.bank_msb = pgms[i].bank_msb;
+        id.bank_lsb = pgms[i].bank_lsb;
         id.program = pgms[i].program;
-        const MidiProgram *&pgm_slot = map[id.identifier];
+        const Midi_Program *&pgm_slot = map[id.identifier];
         pgm_slot = &pgms[i];
         // insert pseudo-entry for bank (reserved = 1, program = 0)
         id.reserved = 1;
         id.program = 0;
-        const MidiProgram *&bank_slot = map[id.identifier];
-        if(!bank_slot)
+        const Midi_Program *&bank_slot = map[id.identifier];
+        if (!bank_slot)
             bank_slot = &pgms[i];
     }
 
     //map.shrink_to_fit();
 }
 
-static const MidiProgram *lookupMap(const InstrumentMap &map, uint32_t identifier)
+static const Midi_Program *lookup_map(const Instrument_Map &map, uint32_t identifier)
 {
-    InstrumentMap::const_iterator it = map.find(identifier);
+    Instrument_Map::const_iterator it = map.find(identifier);
     return (it != map.end()) ? it->second : nullptr;
 }
 
-const MidiProgram *getMidiProgram(MidiProgramId id, unsigned spec, unsigned *specObtained)
+const Midi_Program *get_program(Midi_Program_Id id, unsigned spec, unsigned *specObtained)
 {
-    if(!mapsInitialized)
-    {
-        fillInstMap(XgMap, XgSet, sizeof(XgSet) / sizeof(*XgSet));
-        fillInstMap(GsMap, GsSet, sizeof(GsSet) / sizeof(*GsSet));
-        fillInstMap(ScMap, ScSet, sizeof(ScSet) / sizeof(*ScSet));
-        fillInstMap(Gm2Map, Gm2Set, sizeof(Gm2Set) / sizeof(*Gm2Set));
-        fillInstMap(Gm1Map, Gm1Set, sizeof(Gm1Set) / sizeof(*Gm1Set));
-        mapsInitialized = true;
+    if (!maps_initialized) {
+        fill_inst_map(XgMap, XgSet, sizeof(XgSet) / sizeof(*XgSet));
+        fill_inst_map(GsMap, GsSet, sizeof(GsSet) / sizeof(*GsSet));
+        fill_inst_map(ScMap, ScSet, sizeof(ScSet) / sizeof(*ScSet));
+        fill_inst_map(Gm2Map, Gm2Set, sizeof(Gm2Set) / sizeof(*Gm2Set));
+        fill_inst_map(Gm1Map, Gm1Set, sizeof(Gm1Set) / sizeof(*Gm1Set));
+        maps_initialized = true;
     }
 
-    struct MidiSpecToInstrumentMap
-    {
-        MidiSpec spec;
-        const InstrumentMap *map;
+    struct MidiSpecToInstrumentMap {
+        Midi_Spec spec;
+        const Instrument_Map *map;
     };
 
-    const MidiSpecToInstrumentMap imaps[] =
-    {
-        {kMidiSpecXG, &XgMap},
-        {kMidiSpecGS, &GsMap},
-        {kMidiSpecSC, &ScMap},
-        {kMidiSpecGM2, &Gm2Map},
-        {kMidiSpecGM1, &Gm1Map},
+    const MidiSpecToInstrumentMap imaps[] = {
+        {Midi_Spec_XG, &XgMap},
+        {Midi_Spec_GS, &GsMap},
+        {Midi_Spec_SC, &ScMap},
+        {Midi_Spec_GM2, &Gm2Map},
+        {Midi_Spec_GM1, &Gm1Map},
     };
 
-    const MidiProgram *pgm = nullptr;
-    unsigned pgmspec = kMidiSpecNone;
+    const Midi_Program *pgm = nullptr;
+    unsigned pgmspec = Midi_Spec_None;
 
-    for(const MidiSpecToInstrumentMap &imap : imaps)
-    {
-        if(!(spec & imap.spec))
+    for (const MidiSpecToInstrumentMap &imap : imaps) {
+        if (!(spec & imap.spec))
             continue;
-        pgm = lookupMap(*imap.map, id.identifier);
-        if(pgm)
-        {
+        pgm = lookup_map(*imap.map, id.identifier);
+        if (pgm) {
             pgmspec = imap.spec;
             break;
         }
     }
 
-    if(specObtained)
+    if (specObtained)
         *specObtained = pgmspec;
 
     return pgm;
 }
 
-const MidiProgram *getFallbackProgram(MidiProgramId id, unsigned spec, unsigned *specObtained)
+const Midi_Program *get_fallback_program(Midi_Program_Id id, unsigned spec, unsigned *specObtained)
 {
-    const MidiProgram *pgm = nullptr;
-    if (id.percussive && (id.bankMsb != 0 || id.bankLsb != 0))
-    {
-        MidiProgramId fallbackId(id.identifier);
-        fallbackId.bankMsb = 0;
-        fallbackId.bankLsb = 0;
-        pgm = getMidiProgram(fallbackId, spec & kMidiSpecGM1, specObtained);
+    const Midi_Program *pgm = nullptr;
+    if (id.percussive && (id.bank_msb != 0 || id.bank_lsb != 0)) {
+        Midi_Program_Id fallbackId(id.identifier);
+        fallbackId.bank_msb = 0;
+        fallbackId.bank_lsb = 0;
+        pgm = get_program(fallbackId, spec & Midi_Spec_GM1, specObtained);
     }
 
     return pgm;
 }
 
-const MidiProgram *getMidiBank(MidiProgramId id, unsigned spec, unsigned *specObtained)
+const Midi_Program *get_bank(Midi_Program_Id id, unsigned spec, unsigned *specObtained)
 {
     id.reserved = 1;
     id.program = 0;
-    return getMidiProgram(id, spec, specObtained);
+    return get_program(id, spec, specObtained);
 }
+
+} // namespace Midi_Data

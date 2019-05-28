@@ -1,24 +1,11 @@
-/*
- * OPN2 Bank Editor by Wohlstand, a free tool for music bank editing
- * Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//          Copyright Jean Pierre Cimalando 2019.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.md or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "ins_names.h"
 
-static const MidiProgram XgSet[] =
+static const Midi_Program XgSet[] =
 {
     {'M',   0,   1,   0, "XG #001 Key Scale Panning", "GrndPnoK"},
     {'M',   0,   1,   1, "XG #001 Key Scale Panning", "BritPnoK"},
@@ -2685,7 +2672,7 @@ static const MidiProgram XgSet[] =
     {'P',   0, 127,  84, "XG #128 StandKit Mu Basic", "Bell Tree"},
 };
 
-static const MidiProgram GsSet[] =
+static const Midi_Program GsSet[] =
 {
     {'M',   1,   0,  38, "GS Var #01", "Synth Bass101"},
     {'M',   1,   0,  57, "GS Var #01", "Trombone 2"},
@@ -2908,7 +2895,7 @@ static const MidiProgram GsSet[] =
     {'P',   0,  56,  84, "GS SFX Set", "Bubble"},
 };
 
-static const MidiProgram ScSet[] =
+static const Midi_Program ScSet[] =
 {
     {'M',   0,   1,   0, "SC-55 Map Capital Tones", "Piano 1"},
     {'M',   0,   1,   1, "SC-55 Map Capital Tones", "Piano 2"},
@@ -13689,7 +13676,7 @@ static const MidiProgram ScSet[] =
     {'P',   4,  62,  96, "SC-8850 CYM&CLAPS 2 Set", "[Pro] TR-707 Hand Clap"},
 };
 
-static const MidiProgram Gm2Set[] =
+static const Midi_Program Gm2Set[] =
 {
     {'M', 121,   0,   0, "GM2 Var #00", "Acoustic Grand Piano"},
     {'M', 121,   0,   1, "GM2 Var #00", "Bright Acoustic Piano"},
@@ -14131,7 +14118,7 @@ static const MidiProgram Gm2Set[] =
     {'P', 120,  56,  84, "GM2 SFX Set", "Bubble"},
 };
 
-static const MidiProgram Gm1Set[] =
+static const Midi_Program Gm1Set[] =
 {
     {'M',   0,   0,   0, "GM1 Melodic", "Acoustic Grand Piano"},
     {'M',   0,   0,   1, "GM1 Melodic", "Bright Acoustic Piano"},

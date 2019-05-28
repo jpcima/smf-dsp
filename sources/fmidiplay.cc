@@ -1,3 +1,8 @@
+//          Copyright Jean Pierre Cimalando 2019.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.md or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
 #include "fmidiplay.h"
 #include "player/player.h"
 #include "player/playlist.h"
@@ -278,29 +283,29 @@ void Application::paint(SDL_Renderer *rr, int paint)
             tp.rr = rr;
 
             const char *patch_name = nullptr;
-            unsigned patch_spec = kMidiSpecGM1;
+            unsigned patch_spec = Midi_Spec_GM1;
 
             if (paint & Pt_Foreground) {
                 Rect r = lo.channel_midispec_label[ch];
 
-                unsigned desired_spec = kMidiSpecGM1;
+                unsigned desired_spec = Midi_Spec_GM1;
                 switch (ps.kb.midispec) {
                 default: break;
-                case KMS_GeneralMidi2: desired_spec |= kMidiSpecGM2; break;
-                case KMS_YamahaXG: desired_spec |= kMidiSpecXG; break;
-                case KMS_RolandGS: desired_spec |= kMidiSpecGS|kMidiSpecSC; break;
+                case KMS_GeneralMidi2: desired_spec |= Midi_Spec_GM2; break;
+                case KMS_YamahaXG: desired_spec |= Midi_Spec_XG; break;
+                case KMS_RolandGS: desired_spec |= Midi_Spec_GS|Midi_Spec_SC; break;
                 }
 
                 if (cs.percussion) {
-                    MidiProgramId bank_id(true, 0, cs.pgm, 0);
-                    const MidiProgram *bnk = getMidiBank(bank_id, desired_spec, &patch_spec);
-                    patch_name = bnk ? bnk->bankName : nullptr;
+                    Midi_Program_Id bank_id(true, 0, cs.pgm, 0);
+                    const Midi_Program *bnk = Midi_Data::get_bank(bank_id, desired_spec, &patch_spec);
+                    patch_name = bnk ? bnk->bank_name : nullptr;
                 }
                 else {
-                    MidiProgramId pgm_id(false, cs.ctl[0], cs.ctl[32], cs.pgm);
-                    const MidiProgram *pgm = getMidiProgram(pgm_id, desired_spec, &patch_spec);
-                    pgm = pgm ? pgm : getFallbackProgram(pgm_id, desired_spec, &patch_spec);
-                    patch_name = pgm ? pgm->patchName : nullptr;
+                    Midi_Program_Id pgm_id(false, cs.ctl[0], cs.ctl[32], cs.pgm);
+                    const Midi_Program *pgm = Midi_Data::get_program(pgm_id, desired_spec, &patch_spec);
+                    pgm = pgm ? pgm : Midi_Data::get_fallback_program(pgm_id, desired_spec, &patch_spec);
+                    patch_name = pgm ? pgm->patch_name : nullptr;
                 }
 
                 tp.fg = Color_Palette::text_high_brightness;
@@ -312,17 +317,17 @@ void Application::paint(SDL_Renderer *rr, int paint)
                     tp.pos.y += 6;
                     tp.draw_char(U'M');
                     break;
-                case kMidiSpecXG:
+                case Midi_Spec_XG:
                     tp.draw_char(U'X');
                     tp.pos.y += 6;
                     tp.draw_char(U'G');
                     break;
-                case kMidiSpecGS:
+                case Midi_Spec_GS:
                     tp.draw_char(U'G');
                     tp.pos.y += 6;
                     tp.draw_char(U'S');
                     break;
-                case kMidiSpecSC:
+                case Midi_Spec_SC:
                     tp.draw_char(U'S');
                     tp.pos.y += 6;
                     tp.draw_char(U'C');

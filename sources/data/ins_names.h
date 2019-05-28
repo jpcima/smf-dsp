@@ -1,92 +1,72 @@
-/*
- * OPN2 Bank Editor by Wohlstand, a free tool for music bank editing
- * Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//          Copyright Jean Pierre Cimalando 2019.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.md or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef INSTRUMENTNAMES_H
-#define INSTRUMENTNAMES_H
-
+#pragma once
 #include <cstdint>
 
 #pragma pack(push, 1)
-struct MidiProgram
-{
+struct Midi_Program {
     //! Kind of instrument. 'M' melodic 'P' percussive
     char kind;
     //! Bank identifier MSB
-    unsigned char bankMsb;
+    unsigned char bank_msb;
     //! Bank identifier LSB. (if percussive, this is the program number)
-    unsigned char bankLsb;
+    unsigned char bank_lsb;
     //! Program number (if percussive, this is the key number)
     unsigned char program;
     //! Bank name
-    const char *bankName;
+    const char *bank_name;
     //! Patch name
-    const char *patchName;
+    const char *patch_name;
 };
 #pragma pack(pop)
 
-enum MidiSpec
-{
+enum Midi_Spec {
     //! General MIDI Level 1
-    kMidiSpecGM1 = 1,
+    Midi_Spec_GM1 = 1,
     //! General MIDI Level 2
-    kMidiSpecGM2 = 2,
+    Midi_Spec_GM2 = 2,
     //! Roland Sound Canvas
-    kMidiSpecSC  = 4,
+    Midi_Spec_SC  = 4,
     //! Roland GS
-    kMidiSpecGS  = 8,
+    Midi_Spec_GS  = 8,
     //! Yamaha XG Level 1, 2, 3
-    kMidiSpecXG  = 16,
+    Midi_Spec_XG  = 16,
     //! No MIDI specification
-    kMidiSpecNone = 0,
+    Midi_Spec_None = 0,
     //! Any MIDI specification
-    kMidiSpecAny = 255,
+    Midi_Spec_Any = 255,
 };
 
-struct MidiProgramId
-{
-    explicit MidiProgramId(uint32_t i = 0) : identifier(i)
+struct Midi_Program_Id {
+    explicit Midi_Program_Id(uint32_t i = 0) : identifier(i)
     {
     }
 
-    MidiProgramId(bool d, unsigned m, unsigned l, unsigned p) : identifier()
+    Midi_Program_Id(bool d, unsigned m, unsigned l, unsigned p) : identifier()
     {
         percussive = d;
-        bankMsb = m;
-        bankLsb = l;
+        bank_msb = m;
+        bank_lsb = l;
         program = p;
     }
 
-    union
-    {
+    union {
         uint32_t identifier;
-        struct
-        {
+        struct {
             uint32_t percussive : 1;
-            uint32_t bankMsb : 7;
-            uint32_t bankLsb : 7;
+            uint32_t bank_msb : 7;
+            uint32_t bank_lsb : 7;
             uint32_t program : 7;
             uint32_t reserved : 1;
         };
     };
 };
 
-const MidiProgram *getMidiProgram(MidiProgramId id, unsigned spec, unsigned *specObtained = nullptr);
-const MidiProgram *getFallbackProgram(MidiProgramId id, unsigned spec, unsigned *specObtained = nullptr);
-const MidiProgram *getMidiBank(MidiProgramId id, unsigned spec, unsigned *specObtained = nullptr);
-
-#endif // INSTRUMENTNAMES_H
+namespace Midi_Data {
+const Midi_Program *get_program(Midi_Program_Id id, unsigned spec, unsigned *spec_obtained = nullptr);
+const Midi_Program *get_fallback_program(Midi_Program_Id id, unsigned spec, unsigned *spec_obtained = nullptr);
+const Midi_Program *get_bank(Midi_Program_Id id, unsigned spec, unsigned *spec_obtained = nullptr);
+} // namespace Midi_Data
