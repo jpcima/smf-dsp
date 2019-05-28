@@ -14,14 +14,23 @@ std::string get_configuration_dir()
     while (!path.empty() && path.back() != '/') path.pop_back();
     path.append("config/");
     mkdir(path.c_str(), 0755);
+#elif defined(__HAIKU__)
+    std::string path = get_home_directory();
+    if (path.empty())
+        return std::string();
+    path.append("config/");
+    mkdir(path.c_str(), 0755);
+    path.append("settings/");
+    mkdir(path.c_str(), 0755);
+    path.append(PROGRAM_DISPLAY_NAME "/");
+    mkdir(path.c_str(), 0755);
 #else
     std::string path = get_home_directory();
     if (path.empty())
         return std::string();
     path.append(".config/");
     mkdir(path.c_str(), 0755);
-    path.append(PROGRAM_DISPLAY_NAME);
-    path.push_back('/');
+    path.append(PROGRAM_DISPLAY_NAME "/");
     mkdir(path.c_str(), 0755);
 #endif
     return path;
