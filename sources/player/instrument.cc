@@ -323,3 +323,7 @@ bool Midi_Synth_Instrument::extract_next_message()
     midibuf.get(next_message_, hdr.len);
     return true;
 }
+
+constexpr unsigned Midi_Synth_Instrument::midi_buffer_size;
+constexpr unsigned Midi_Synth_Instrument::midi_message_max;
+constexpr unsigned Midi_Synth_Instrument::midi_interval_max;
