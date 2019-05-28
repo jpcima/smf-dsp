@@ -198,6 +198,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
     if (!ini) ini = create_configuration();
 
+#if !defined(__HAIKU__)
     std::unique_ptr<RtAudio> audio(new RtAudio);
     unsigned audio_device = audio->getDefaultOutputDevice();
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
@@ -221,6 +222,23 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_rate, &audio_buffer_size, &audio_callback, this, &audio_opt);
 
     audio_latency = audio_buffer_size / audio_rate;
+#else
+    media_raw_audio_format format = media_raw_audio_format::wildcard;
+    format.channel_count = 2;
+    format.format = media_raw_audio_format::B_AUDIO_FLOAT;
+    format.byte_order = B_MEDIA_HOST_ENDIAN;
+    //NOTE: latency setting not used
+
+    std::unique_ptr<BSoundPlayer> audio(
+        new BSoundPlayer(&format, PROGRAM_DISPLAY_NAME " synth", &audio_callback, nullptr, this));
+
+    if (audio->InitCheck() != B_OK)
+        return;
+
+    format = audio->Format();
+    double audio_rate = format.frame_rate;
+    double audio_latency = format.buffer_size / audio_rate;
+#endif
     fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
     if (!host.load(id, audio_rate))
@@ -230,7 +248,16 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     audio_latency_ = audio_latency;
 
     audio_ = std::move(audio);
+
+#if !defined(__HAIKU__)
     audio_->startStream();
+#else
+    if (audio_->Start() != B_OK) {
+        audio_.reset();
+        return;
+    }
+    audio_->SetHasData(true);
+#endif
 }
 
 void Midi_Synth_Instrument::close_midi_output()
@@ -264,11 +291,19 @@ void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned le
     midibuf.put(data, len);
 }
 
+#if !defined(__HAIKU__)
 int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned nframes, double, RtAudioStreamStatus, void *user_data)
+#else
+void Midi_Synth_Instrument::audio_callback(void *user_data, void *output_buffer, size_t size, const media_raw_audio_format &)
+#endif
 {
     Midi_Synth_Instrument *self = (Midi_Synth_Instrument *)user_data;
     Synth_Host &host = *self->host_;
     double srate = self->audio_rate_;
+
+#if defined(__HAIKU__)
+    unsigned nframes = size / (2 * sizeof(float));
+#endif
 
     float *frame_buffer = (float *)output_buffer;
     unsigned frame_index = 0;
@@ -281,7 +316,9 @@ int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned 
         frame_index += nframes_current;
     }
 
+#if !defined(__HAIKU__)
     return 0;
+#endif
 }
 
 void Midi_Synth_Instrument::process_midi()

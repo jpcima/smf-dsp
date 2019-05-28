@@ -81,6 +81,7 @@ $(APP): LIBS += \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa libpulse-simple)) \
     $(if $(MINGW),-lwinmm -ldsound) \
     $(if $(APPLE),-framework CoreMIDI -framework CoreAudio -framework CoreFoundation) \
+    $(if $(HAIKU),-lmedia) \
     $(if $(MINGW),-lboost_filesystem) \
     $(if $(MINGW)$(APPLE)$(HAIKU),-liconv) \
     $(if $(LINUX),-ldl)
