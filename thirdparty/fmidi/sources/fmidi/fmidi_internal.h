@@ -25,7 +25,8 @@ struct printfmt_bytes {
 std::ostream &operator<<(std::ostream &out, const printfmt_bytes &b);
 
 //------------------------------------------------------------------------------
-extern thread_local fmidi_error_info_t fmidi_last_error;
+#define fmidi_last_error                                \
+    const_cast<fmidi_error_info_t &>(*fmidi_errinfo())
 
 #if defined(FMIDI_DEBUG)
 # define RET_FAIL(x, e) do {                                      \

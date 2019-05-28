@@ -5,16 +5,16 @@
 
 #include "fmidi_internal.h"
 
-thread_local fmidi_error_info_t fmidi_last_error;
+static thread_local fmidi_error_info_t the_last_error;
 
 fmidi_status_t fmidi_errno()
 {
-    return fmidi_last_error.code;
+    return the_last_error.code;
 }
 
 const fmidi_error_info_t *fmidi_errinfo()
 {
-    return &fmidi_last_error;
+    return &the_last_error;
 }
 
 const char *fmidi_strerror(fmidi_status_t status)
