@@ -41,6 +41,7 @@ int portfts_close(pFTS *fts);
 pFTSENT *portfts_read(pFTS *fts);
 
 #else
+#include <sys/types.h>
 #include <fts.h>
 
 typedef FTS pFTS;

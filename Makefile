@@ -72,18 +72,18 @@ $(APP): CPPFLAGS += \
     $(call pkg_config_cflags,sdl2 libuv uchardet) \
     $(if $(LINUX),$(call pkg_config_cflags,jack alsa libpulse-simple)) \
     $(if $(MINGW),-DWINICONV_CONST=) \
-    -pthread
+    $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
 $(APP): LDFLAGS += \
     $(if $(STATIC),-static) \
-    -pthread
+    $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
 $(APP): LIBS += \
     $(call pkg_config_libs,sdl2 libuv uchardet) \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa libpulse-simple)) \
     $(if $(MINGW),-lwinmm -ldsound) \
     $(if $(APPLE),-framework CoreMIDI -framework CoreAudio -framework CoreFoundation) \
     $(if $(MINGW),-lboost_filesystem) \
-    $(if $(MINGW)$(APPLE),-liconv) \
-    $(if $(LINUX),-ldl) \
+    $(if $(MINGW)$(APPLE)$(HAIKU),-liconv) \
+    $(if $(LINUX),-ldl)
 
 include build/app.mk
 

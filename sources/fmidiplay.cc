@@ -752,7 +752,7 @@ void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
             modal->set_selection_index(default_index);
 
         modal->CompletionCallback =
-            [this, modal, choose] {
+            [modal, choose] {
                 size_t index;
                 modal->get_completion_result(0, &index);
                 choose(index);

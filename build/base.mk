@@ -12,8 +12,9 @@ PKG_CONFIG_FLAGS =
 _CC_PLATFORM = $(shell $(CC) -dumpmachine)
 $(eval $(if $(findstring linux,$(_CC_PLATFORM)),LINUX = 1,$(if \
             $(findstring mingw,$(_CC_PLATFORM)),MINGW = 1,$(if \
-            $(findstring apple,$(_CC_PLATFORM)),APPLE = 1, \
-            $(error unrecognized platform: $(_CC_PLATFORM))))))
+            $(findstring apple,$(_CC_PLATFORM)),APPLE = 1,$(if \
+            $(findstring haiku,$(_CC_PLATFORM)),HAIKU = 1, \
+            $(error unrecognized platform: $(_CC_PLATFORM)))))))
 
 ###
 APP_EXT = $(if $(MINGW),.exe,)
