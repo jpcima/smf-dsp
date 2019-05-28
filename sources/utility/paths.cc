@@ -14,6 +14,8 @@
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h>
+#elif defined(__HAIKU__)
+#include <KernelKit.h>
 #endif
 
 std::string get_home_directory()
@@ -59,6 +61,7 @@ std::string get_current_directory()
 
 std::string get_executable_path()
 {
+#if !defined(__HAIKU__)
     size_t bufsize = 0x100;
     std::unique_ptr<char[]> buf(new char[bufsize]);
 
@@ -85,6 +88,13 @@ std::string get_executable_path()
     } while (need_more_buffer);
 
     return normalize_path_separators(buf.get());
+#else
+    image_info info;
+    int32 cookie = 0;
+    if (get_next_image_info(0, &cookie, &info) != B_OK)
+        throw std::runtime_error("get_next_image_info");
+    return normalize_path_separators(info.name);
+#endif
 }
 
 #ifdef _WIN32
