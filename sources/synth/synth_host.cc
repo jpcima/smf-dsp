@@ -171,7 +171,7 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
     auto dir_cleanup = gsl::finally([dir_handle] { closedir(dir_handle); });
 
     while (dirent *ent = readdir(dir_handle)) {
-        gsl::cstring_span name = ent->d_name;
+        gsl::cstring_span name = &ent->d_name[0];
         size_t namelen = name.size();
 
         size_t prefixlen = plugin_prefix.size();
