@@ -9,6 +9,7 @@
 #include "ui/fonts.h"
 #include "ui/text.h"
 #include "ui/paint.h"
+#include "utility/charset.h"
 #include "utility/SDL++.h"
 #include <gsl.hpp>
 #include <algorithm>
@@ -199,26 +200,20 @@ void File_Browser::refresh_file_list()
     else
 #endif
     {
-        DIR *dir = opendir(cwd.c_str());
+        Dir dir(cwd);
         if (!dir)
             return;
-        auto dir_clearnup = gsl::finally([dir] { closedir(dir); });
 
-        while (dirent *ent = readdir(dir)) {
-            if (ent->d_name[0] == '.')
+        for (std::string name; dir.read_next(name);) {
+            if (name.empty() || name[0] == '.')
                 continue;
 
-            struct stat st;
-#ifndef _WIN32
-            int stat_ret = fstatat(dirfd(dir), ent->d_name, &st, 0);
-#else
-            int stat_ret = stat((cwd + '/' + ent->d_name).c_str(), &st);
-#endif
-            if (stat_ret != 0)
+            unsigned mode = filemode_utf8((cwd + '/' + name).c_str());
+            if ((int)mode == -1)
                 continue;
 
-            char type = S_ISDIR(st.st_mode) ? 'D' : 'F';
-            File_Entry entry{type, ent->d_name};
+            char type = S_ISDIR(mode) ? 'D' : 'F';
+            File_Entry entry{type, name};
 
             if (!FileFilterCallback || FileFilterCallback(entry))
                 entries.push_back(std::move(entry));

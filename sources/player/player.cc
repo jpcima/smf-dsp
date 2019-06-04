@@ -10,6 +10,7 @@
 #include "clock.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
+#include <uv.h>
 #include <gsl.hpp>
 #include <stdexcept>
 #include <cstdio>
@@ -250,7 +251,12 @@ void Player::resume_play_list()
     fmidi_smf_u smf;
     while (!smf && !pll.at_end()) {
         const std::string &current = pll.current();
-        smf.reset(fmidi_smf_file_read(current.c_str()));
+
+        if (FILE *fh = fopen_utf8(current.c_str(), "rb")) {
+            auto fh_cleanup = gsl::finally([fh] { fclose(fh); });
+            smf.reset(fmidi_smf_stream_read(fh));
+        }
+
         if (!smf)
             pll.go_next();
         else {

@@ -38,6 +38,7 @@ SOURCES := \
   sources/utility/paths.cc \
   sources/utility/file_scan.cc \
   sources/utility/portfts.cc \
+  sources/utility/load_library.cc \
   sources/utility/dynamic_icu.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_util.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_player.cc \
@@ -66,6 +67,7 @@ $(APP): CPPFLAGS += \
     -Ithirdparty/rtmidi \
     -Ithirdparty/rtaudio \
     -Ithirdparty/ring_buffer \
+    -DSI_CONVERT_GENERIC \
     $(if $(LINUX),-D__LINUX_ALSA__=1 -D__LINUX_PULSE__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 -DHAVE_SEMAPHORE=1) \
     $(if $(MINGW),-D__WINDOWS_MM__=1 -D__WINDOWS_DS__=1) \
     $(if $(APPLE),-D__MACOSX_CORE__=1) \

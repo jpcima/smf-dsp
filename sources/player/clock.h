@@ -4,8 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <uv.h>
 #include <functional>
+#include <memory>
+typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_timer_s uv_timer_t;
 
 class Player_Clock {
 public:
@@ -19,14 +21,10 @@ public:
     std::function<void (uint64_t)> TimerCallback;
 
 private:
-#if UV_VERSION_MAJOR >= 1
     static void callback(uv_timer_t *t);
-#else
-    static void callback(uv_timer_t *t, int);
-#endif
 
 private:
-    uv_timer_t timer_;
+    std::unique_ptr<uv_timer_t> timer_;
     uint64_t last_tick_ = ~(uint64_t)0;
     bool active_ = false;
 };

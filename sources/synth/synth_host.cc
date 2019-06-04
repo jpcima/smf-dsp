@@ -7,6 +7,7 @@
 #include "synth_utility.h"
 #include "config.h"
 #include "utility/paths.h"
+#include "utility/charset.h"
 #include <algorithm>
 #include <cassert>
 #include <dirent.h>
@@ -165,23 +166,21 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
     std::vector<Synth_Host::Plugin_Info> plugins;
     const std::string &dir = plugin_dir();
 
-    DIR *dir_handle = opendir(dir.c_str());
-    if (!dir_handle)
+    Dir dh(dir);
+    if (!dh)
         return plugins;
-    auto dir_cleanup = gsl::finally([dir_handle] { closedir(dir_handle); });
 
-    while (dirent *ent = readdir(dir_handle)) {
-        gsl::cstring_span name = &ent->d_name[0];
+    for (std::string name; dh.read_next(name);) {
         size_t namelen = name.size();
 
         size_t prefixlen = plugin_prefix.size();
         size_t suffixlen = plugin_suffix.size();
 
         if (namelen > prefixlen + suffixlen &&
-            name.subspan(0, prefixlen) == plugin_prefix &&
-            name.subspan(namelen - suffixlen) == plugin_suffix)
+            gsl::cstring_span(name).subspan(0, prefixlen) == plugin_prefix &&
+            gsl::cstring_span(name).subspan(namelen - suffixlen) == plugin_suffix)
         {
-            gsl::cstring_span id = name.subspan(prefixlen, namelen - prefixlen - suffixlen);
+            gsl::cstring_span id = gsl::cstring_span(name).subspan(prefixlen, namelen - prefixlen - suffixlen);
             Dl_Handle_U handle(Dl_open((dir + name.data()).c_str()));
             synth_plugin_entry_fn *entry = nullptr;
             const synth_interface *intf = nullptr;

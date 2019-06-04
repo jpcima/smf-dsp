@@ -9,6 +9,10 @@
 #include <array>
 #include <type_traits>
 #include <stdexcept>
+#include <cerrno>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef USE_BOOST_LOCALE
 #include <boost/locale/collator.hpp>
@@ -59,6 +63,36 @@ bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, 
 
     return true;
 }
+
+template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive)
+{
+    typedef bst::utf::utf_traits<CharSrc> Src;
+    typedef bst::utf::utf_traits<CharDst> Dst;
+
+    dst.clear();
+    dst.reserve(src.size() * Dst::max_width);
+
+    for (auto si = src.begin(), se = src.end(); si != se;) {
+        bst::utf::code_point cp = Src::decode(si, se);
+        if (cp == bst::utf::incomplete || cp == bst::utf::illegal) {
+            if (!permissive)
+                return false;
+        }
+        else {
+            CharDst db[Dst::max_width], *de = Dst::encode(cp, db);
+            dst.append(db, de - db);
+        }
+    }
+
+    return true;
+}
+
+template bool convert_utf(gsl::basic_string_span<const wchar_t>, std::basic_string<char> &, bool);
+template bool convert_utf(gsl::basic_string_span<const char16_t>, std::basic_string<char> &, bool);
+template bool convert_utf(gsl::basic_string_span<const char32_t>, std::basic_string<char> &, bool);
+template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<wchar_t> &, bool);
+template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char16_t> &, bool);
+template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char32_t> &, bool);
 
 uint32_t ascii_tolower(uint32_t ch)
 {
@@ -152,6 +186,91 @@ int utf8_icompare(gsl::cstring_span a, gsl::cstring_span b)
     auto compare = [](uint32_t cha, uint32_t chb) -> int
                        { return unicode_tolower(cha) < unicode_tolower(chb); };
     return utf8_compare_impl(a, b, compare);
+}
+#endif
+
+//
+FILE *fopen_utf8(const char *path, const char *mode)
+{
+#ifndef _WIN32
+    return fopen(path, mode);
+#else
+    std::wstring wpath, wmode;
+    if (!convert_utf<char, wchar_t>(path, wpath, false) ||
+        !convert_utf<char, wchar_t>(mode, wmode, false))
+    {
+        errno = EINVAL;
+        return nullptr;
+    }
+    return _wfopen(wpath.c_str(), wmode.c_str());
+#endif
+}
+
+int filemode_utf8(const char *path)
+{
+#ifndef _WIN32
+    struct stat st;
+    if (stat(path, &st) != 0)
+        return -1;
+#else
+    struct _stat st;
+    std::wstring wpath;
+    if (!convert_utf<char, wchar_t>(path, wpath, false)) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (_wstat(wpath.c_str(), &st) != 0)
+        return -1;
+#endif
+    return st.st_mode;
+}
+
+//
+Dir::Dir(const gsl::cstring_span path)
+{
+#ifndef _WIN32
+    std::string cpath(path.begin(), path.end());
+    dh_.reset((DirInfo *)opendir(cpath.c_str()));
+#else
+    std::wstring wpath;
+    if (convert_utf<char, wchar_t>(path, wpath, false))
+        dh_.reset((DirInfo *)_wopendir(wpath.c_str()));
+#endif
+}
+
+Dir::~Dir()
+{
+}
+
+#ifndef _WIN32
+void Dir::DirInfo_delete::operator()(DirInfo *dh) const noexcept { closedir((DIR *)dh); }
+#else
+void Dir::DirInfo_delete::operator()(DirInfo *dh) const noexcept { _wclosedir((_WDIR *)dh); }
+#endif
+
+bool Dir::read_next(std::string &name)
+{
+#ifndef _WIN32
+    dirent *ent = readdir((DIR *)dh_.get());
+    if (!ent)
+        return false;
+    name.assign(&ent->d_name[0]);
+    return true;
+#else
+    do {
+        _wdirent *ent = _wreaddir((_WDIR *)dh_.get());
+        if (!ent)
+            return false;
+        if (convert_utf<wchar_t, char>(&ent->d_name[0], name, false))
+            return true;
+    } while (1);
+#endif
+}
+
+#ifndef _WIN32
+int Dir::fd()
+{
+    return dirfd((DIR *)dh_.get());
 }
 #endif
 

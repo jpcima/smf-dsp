@@ -6,6 +6,12 @@
 #include "instrument.h"
 #include "config.h"
 #include "synth/synth_host.h"
+#include <RtMidi.h>
+#if !defined(__HAIKU__)
+#include <RtAudio.h>
+#else
+#include <MediaKit.h>
+#endif
 #include <algorithm>
 #include <thread>
 #include <chrono>

@@ -5,12 +5,6 @@
 
 #pragma once
 #include "keystate.h"
-#include <RtMidi.h>
-#if !defined(__HAIKU__)
-#include <RtAudio.h>
-#else
-#include <MediaKit.h>
-#endif
 #include <ring_buffer.h>
 #include <gsl.hpp>
 #include <vector>
@@ -18,6 +12,14 @@
 #include <atomic>
 #include <cstdint>
 class Synth_Host;
+class RtMidiOut;
+#if !defined(__HAIKU__)
+class RtAudio;
+typedef unsigned RtAudioStreamStatus;
+#else
+class BSoundPlayer;
+struct media_raw_audio_format;
+#endif
 
 struct Midi_Output {
     std::string id;

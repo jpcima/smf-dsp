@@ -6,6 +6,7 @@
 #include "portfts.h"
 
 #if !PORTFTS_HAVE_FTS
+#include "charset.h"
 #include <boost/filesystem.hpp>
 #include <string>
 #include <memory>
@@ -75,9 +76,16 @@ static pFTSENT *build_entry(pFTS *fts, int type, const fs::path &path, int level
         return nullptr;
 
     fts->ent_buf.fts_info = type;
-    fts->path_buf = path.string();
+#ifndef _WIN32
+    fts->path_buf = path.native();
+    fts->name_buf = path.filename().native();
+#else
+    if (!convert_utf<wchar_t, char>(path.native(), fts->path_buf, false))
+        fts->ent_buf.fts_info = pFTS_ERR;
+    if (!convert_utf<wchar_t, char>(path.filename().native(), fts->name_buf, false))
+        fts->ent_buf.fts_info = pFTS_ERR;
+#endif
     fts->ent_buf.fts_path = fts->path_buf.c_str();
-    fts->name_buf = path.filename().string();
     fts->ent_buf.fts_name = fts->name_buf.c_str();
     fts->ent_buf.fts_level = level;
     return &fts->ent_buf;

@@ -6,7 +6,6 @@
 #pragma once
 #include "state.h"
 #include <fmidi/fmidi.h>
-#include <uv.h>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -21,6 +20,7 @@ class Midi_Port_Instrument;
 class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
 class Synth_Host;
+typedef struct uv_async_s uv_async_t;
 
 class Player {
 public:
