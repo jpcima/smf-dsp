@@ -77,7 +77,11 @@ protected:
     void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) override;
 
 private:
+    void handle_midi_error(int type, const std::string &text);
+
+private:
     std::unique_ptr<RtMidiOut> out_;
+    int midi_error_status_ = 0;
 };
 
 ///

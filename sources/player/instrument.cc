@@ -94,6 +94,12 @@ void Midi_Port_Instrument::handle_send_message(const uint8_t *data, unsigned len
     out.sendMessage(data, len);
 }
 
+void Midi_Port_Instrument::handle_midi_error(int type, const std::string &text)
+{
+    fprintf(stderr, "[MIDI] %s\n", text.c_str());
+    midi_error_status_ = (type < RtMidiError::UNSPECIFIED) ? 0 : type;
+}
+
 std::vector<Midi_Output> Midi_Port_Instrument::get_midi_outputs()
 {
     std::vector<Midi_Output> ports;
@@ -149,8 +155,15 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
     }
 
     // open client
+    midi_error_status_ = 0;
     out = new RtMidiOut(api, PROGRAM_DISPLAY_NAME);
     out_.reset(out);
+
+    out->setErrorCallback(
+        +[](RtMidiError::Type type, const std::string &error, void *data) {
+             static_cast<Midi_Port_Instrument *>(data)->handle_midi_error(type, error);
+         }, this);
+
     api = out->getCurrentApi();
 
     if (id.empty())
