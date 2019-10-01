@@ -25,5 +25,5 @@ bool operator<(const File_Entry &a, const File_Entry &b)
     if (b.type == 'D' && b.name == "..")
         return false;
 
-    return utf8_icompare(a.name, b.name) < 0;
+    return utf8_strcoll(a.name, b.name) < 0;
 }

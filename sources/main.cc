@@ -10,18 +10,8 @@
 #include <getopt.h>
 #include <cstdio>
 
-#ifdef USE_BOOST_LOCALE
-#include <boost/locale/generator.hpp>
-#include <locale>
-#endif
-
 int main(int argc, char *argv[])
 {
-#ifdef USE_BOOST_LOCALE
-    // Initialize locale
-    std::locale::global(boost::locale::generator{}(""));
-#endif
-
     // Initialize command line
     for (int c; (c = getopt(argc, argv, "")) != -1;) {
         switch (c) {

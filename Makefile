@@ -39,7 +39,6 @@ SOURCES := \
   sources/utility/file_scan.cc \
   sources/utility/portfts.cc \
   sources/utility/load_library.cc \
-  sources/utility/dynamic_icu.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_util.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_player.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_internal.cc \
@@ -80,6 +79,7 @@ $(APP): LDFLAGS += \
     $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
 $(APP): LIBS += \
     $(call pkg_config_libs,sdl2 libuv uchardet) \
+    $(call pkg_config_libs,icu-uc icu-i18n) \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa libpulse-simple)) \
     $(if $(MINGW),-lwinmm -ldsound) \
     $(if $(APPLE),-framework CoreMIDI -framework CoreAudio -framework CoreFoundation) \

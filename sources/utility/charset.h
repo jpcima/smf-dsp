@@ -12,14 +12,11 @@
 // conversion
 bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive);
 template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive);
-uint32_t ascii_tolower(uint32_t ch);
-uint32_t ascii_toupper(uint32_t ch);
 uint32_t unicode_tolower(uint32_t ch);
 uint32_t unicode_toupper(uint32_t ch);
 
 // comparison
-int utf8_compare(gsl::cstring_span a, gsl::cstring_span b);
-int utf8_icompare(gsl::cstring_span a, gsl::cstring_span b);
+int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b);
 
 // file I/O
 FILE *fopen_utf8(const char *path, const char *mode);
