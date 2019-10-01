@@ -48,11 +48,7 @@ Immediately after building, the program is available by starting `./fmidiplay`.
 The optional synthesizers have additional requirements, and they are built only if these are present.
 
 - **Fluidsynth**: install the package `libfluidsynth-dev`.
-- **FM-OPL3 (ADLMIDI)**: check out external sources into the tree, as follows.  
-  `git clone https://github.com/Wohlstand/libADLMIDI.git thirdparty/libADLMIDI`
-- **FM-OPN2 (OPNMIDI)**: check out external sources into the tree, as follows.  
-  `git clone https://github.com/Wohlstand/libOPNMIDI.git thirdparty/libOPNMIDI`
-- **SCC (emidi)**: check out external sources into the tree, as follows.  
-  `git clone https://github.com/jpcima/scc.git thirdparty/scc`
-- **MT32EMU**: check out external sources into the tree, as follows.  
-  `git clone https://github.com/munt/munt.git thirdparty/munt`
+- **FM-OPL3 (ADLMIDI)**: check out the `thirdparty/libADLMIDI` submodule.
+- **FM-OPN2 (OPNMIDI)**: check out the `thirdparty/libOPNMIDI` submodule.
+- **SCC (emidi)**: check out the `thirdparty/scc` submodule.
+- **MT32EMU**: check out the `thirdparty/munt` submodule.

@@ -1,0 +1,12 @@
+[submodule "thirdparty/libADLMIDI"]
+	path = thirdparty/libADLMIDI
+	url = https://github.com/Wohlstand/libADLMIDI.git
+[submodule "thirdparty/libOPNMIDI"]
+	path = thirdparty/libOPNMIDI
+	url = https://github.com/Wohlstand/libOPNMIDI.git
+[submodule "thirdparty/scc"]
+	path = thirdparty/scc
+	url = https://github.com/jpcima/scc.git
+[submodule "thirdparty/munt"]
+	path = thirdparty/munt
+	url = https://github.com/munt/munt.git

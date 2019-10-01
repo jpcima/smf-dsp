@@ -138,6 +138,7 @@ $(PLUGIN): CPPFLAGS += \
     -Isources \
     -Ithirdparty/gsl-lite/include \
     -Ithirdparty/libADLMIDI/include \
+    -Ithirdparty/libADLMIDI/src \
     -DADLMIDI_DISABLE_MIDI_SEQUENCER \
     -DADLMIDI_DISABLE_CPP_EXTRAS
 $(PLUGIN): LDFLAGS += \
@@ -167,6 +168,7 @@ $(PLUGIN): CPPFLAGS += \
     -Isources \
     -Ithirdparty/gsl-lite/include \
     -Ithirdparty/libOPNMIDI/include \
+    -Ithirdparty/libOPNMIDI/src \
     -DOPNMIDI_DISABLE_MIDI_SEQUENCER \
     -DOPNMIDI_DISABLE_CPP_EXTRAS
 $(PLUGIN): LDFLAGS += \
