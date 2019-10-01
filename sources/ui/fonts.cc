@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "fonts.h"
+#include "utility/charset.h"
 #include <algorithm>
 
 const Font_Glyph *Font::glyph(uint32_t ch) const noexcept
@@ -15,36 +16,37 @@ const Font_Glyph *Font::glyph(uint32_t ch) const noexcept
 size_t Font::find_glyph(uint32_t ch) const noexcept
 {
     size_t index = ~size_t(0);
+    int flags = flags_;
+
+    uint32_t candidates[16];
+    size_t ncandidates = 0;
+
+    candidates[ncandidates++] = ch;
+    if (flags & Font::Glyph_Fallback_Upper)
+        candidates[ncandidates++] = unicode_toupper(ch);
+    if (flags & Font::Glyph_Fallback_Lower)
+        candidates[ncandidates++] = unicode_tolower(ch);
+
+    for (uint32_t nth = 0; nth < ncandidates && index == ~size_t(0); ++nth)
+        index = find_exact_glyph(candidates[nth]);
+
+    return index;
+}
+
+size_t Font::find_exact_glyph(uint32_t ch) const noexcept
+{
+    size_t index = ~size_t(0);
     if (ch > 0xFFFF)
         return index;
 
-    int flags = flags_;
+    Font_Glyph ref;
+    ref.unicode = static_cast<uint16_t>(ch);
 
-    bool retry;
-    do {
-        retry = false;
+    const Font_Glyph *first = g_, *last = first + gn_;
+    const Font_Glyph *pos = std::lower_bound(first, last, ref);
 
-        Font_Glyph ref;
-        ref.unicode = static_cast<uint16_t>(ch);
-
-        const Font_Glyph *first = g_, *last = first + gn_;
-        const Font_Glyph *pos = std::lower_bound(first, last, ref);
-
-        if (pos != last && pos->unicode == ch)
-            index = std::distance(first, pos);
-        else {
-            if ((flags & Font::Glyph_Fallback_Upper) && ch >= 'a' && ch <= 'z') {
-                ch = ch - 'a' + 'A';
-                flags ^= Font::Glyph_Fallback_Upper;
-                retry = true;
-            }
-            else if ((flags & Font::Glyph_Fallback_Lower) && ch >= 'A' && ch <= 'Z') {
-                ch = ch - 'A' + 'a';
-                flags ^= Font::Glyph_Fallback_Lower;
-                retry = true;
-            }
-        }
-    } while (retry);
+    if (pos != last && pos->unicode == ch)
+        index = std::distance(first, pos);
 
     return index;
 }

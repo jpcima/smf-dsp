@@ -34,6 +34,7 @@ public:
     uint8_t max_char_width() const noexcept;
     const Font_Glyph *glyph(uint32_t ch) const noexcept;
     size_t find_glyph(uint32_t ch) const noexcept;
+    size_t find_exact_glyph(uint32_t ch) const noexcept;
 
     size_t glyph_count() const noexcept
         { return gn_; }
