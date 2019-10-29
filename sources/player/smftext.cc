@@ -11,6 +11,7 @@
 #include <fmidi/fmidi.h>
 #include <gsl.hpp>
 #include <array>
+#include <cstring>
 
 std::string smf_text_encoding(const fmidi_smf &smf)
 {
@@ -62,6 +63,11 @@ std::string smf_text_encoding(const fmidi_smf &smf)
         Detection current = detections[p];
         bool valid = current.charset && current.charset[0] != '\0' &&
             has_valid_encoding(text, current.charset);
+        if (!valid && !strcmp(current.charset, "SHIFT_JIS")) {
+            // try Microsoft Shift-JIS variant :-)
+            if ((valid = has_valid_encoding(text, "CP932")))
+                detections[p].charset = "CP932";
+        }
         if (!valid)
             detections[p].confidence = current.confidence - 0.1f;
     }
