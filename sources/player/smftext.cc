@@ -58,6 +58,15 @@ std::string smf_text_encoding(const fmidi_smf &smf)
     }
 
     ///
+    for (size_t p = 0; p < num_probers; ++p) {
+        Detection current = detections[p];
+        bool valid = current.charset && current.charset[0] != '\0' &&
+            has_valid_encoding(text, current.charset);
+        if (!valid)
+            detections[p].confidence = current.confidence - 0.1f;
+    }
+
+    ///
     std::array<Detection, num_probers> winners = detections;
     std::sort(
         winners.begin(), winners.end(),
@@ -70,9 +79,7 @@ std::string smf_text_encoding(const fmidi_smf &smf)
 
     for (size_t p = 0; p < num_probers && enc.empty(); ++p) {
         Detection current = winners[p];
-        bool valid = current.charset && current.charset[0] != '\0' &&
-            has_valid_encoding(text, current.charset);
-        if (valid)
+        if (current.charset && current.charset[0] != '\0')
             enc.assign(current.charset);
     }
 
