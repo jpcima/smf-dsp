@@ -21,6 +21,7 @@ SOURCES := \
   sources/player/instrument.cc \
   sources/player/keystate.cc \
   sources/player/clock.cc \
+  sources/player/smftext.cc \
   sources/synth/synth_host.cc \
   sources/data/ins_names.cc \
   sources/ui/main_layout.cc \
@@ -52,7 +53,14 @@ SOURCES := \
   thirdparty/simpleini/ConvertUTF.cpp \
   thirdparty/rtaudio/RtAudio.cpp \
   thirdparty/rtmidi/RtMidi.cpp \
-  thirdparty/ring_buffer/ring_buffer.cpp
+  thirdparty/ring_buffer/ring_buffer.cpp \
+  thirdparty/uchardet/src/CharDistribution.cpp \
+  thirdparty/uchardet/src/JpCntx.cpp \
+  thirdparty/uchardet/src/nsCharSetProber.cpp \
+  thirdparty/uchardet/src/nsLatin1Prober.cpp \
+  thirdparty/uchardet/src/nsMBCSSM.cpp \
+  thirdparty/uchardet/src/nsSJISProber.cpp \
+  thirdparty/uchardet/src/nsUTF8Prober.cpp
 
 $(APP): CPPFLAGS += \
     -DPROGRAM_NAME='"fmidiplay"' \
@@ -66,11 +74,12 @@ $(APP): CPPFLAGS += \
     -Ithirdparty/rtmidi \
     -Ithirdparty/rtaudio \
     -Ithirdparty/ring_buffer \
+    -Ithirdparty/uchardet/src \
     -DSI_CONVERT_GENERIC \
     $(if $(LINUX),-D__LINUX_ALSA__=1 -D__LINUX_PULSE__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 -DHAVE_SEMAPHORE=1) \
     $(if $(MINGW),-D__WINDOWS_MM__=1 -D__WINDOWS_DS__=1) \
     $(if $(APPLE),-D__MACOSX_CORE__=1) \
-    $(call pkg_config_cflags,sdl2 libuv uchardet) \
+    $(call pkg_config_cflags,sdl2 libuv) \
     $(if $(LINUX),$(call pkg_config_cflags,jack alsa libpulse-simple)) \
     $(if $(MINGW),-DWINICONV_CONST=) \
     $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
@@ -78,7 +87,7 @@ $(APP): LDFLAGS += \
     $(if $(STATIC),-static) \
     $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
 $(APP): LIBS += \
-    $(call pkg_config_libs,sdl2 libuv uchardet) \
+    $(call pkg_config_libs,sdl2 libuv) \
     $(call pkg_config_libs,icu-uc icu-i18n) \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa libpulse-simple)) \
     $(if $(MINGW),-lwinmm -ldsound) \

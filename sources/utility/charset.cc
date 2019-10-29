@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive)
+static bool to_utf8_impl(gsl::cstring_span src, std::string *dst, const char *src_encoding, bool permissive)
 {
     iconv_t cd = iconv_open("UTF-8", src_encoding);
     if (!cd)
@@ -27,8 +27,10 @@ bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, 
     size_t src_size = src.size();
     const char *src_start = src.data();
 
-    dst.clear();
-    dst.reserve(2 * src_size);
+    if (dst) {
+        dst->clear();
+        dst->reserve(2 * src_size);
+    }
 
     while (src_index < src_size) {
         char b_out[4];
@@ -49,10 +51,21 @@ bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, 
         }
 
         src_index += sz_in;
-        dst.append(b_out, sz_out);
+        if (dst)
+            dst->append(b_out, sz_out);
     }
 
     return true;
+}
+
+bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive)
+{
+    return to_utf8_impl(src, &dst, src_encoding, permissive);
+}
+
+bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding)
+{
+    return to_utf8_impl(src, nullptr, src_encoding, false);
 }
 
 template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive)
@@ -204,7 +217,7 @@ int Dir::fd()
 #endif
 
 //
-#if 1
+#if 0
 #include <uchardet/uchardet.h>
 
 struct Encoding_Detector::Impl {
@@ -246,7 +259,7 @@ const char *Encoding_Detector::detected_encoding()
 }
 
 //
-#else
+#elif 0
 #include <unicode/ucsdet.h>
 
 struct Encoding_Detector::Impl {

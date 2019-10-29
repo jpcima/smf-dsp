@@ -11,6 +11,7 @@
 
 // conversion
 bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive);
+bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding);
 template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive);
 uint32_t unicode_tolower(uint32_t ch);
 uint32_t unicode_toupper(uint32_t ch);
@@ -39,6 +40,7 @@ private:
     std::unique_ptr<DirInfo, DirInfo_delete> dh_;
 };
 
+#if 0
 // detection
 class Encoding_Detector
 {
@@ -54,3 +56,4 @@ private:
     struct Impl;
     std::unique_ptr<Impl> P;
 };
+#endif

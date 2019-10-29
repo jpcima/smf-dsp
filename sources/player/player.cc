@@ -8,6 +8,7 @@
 #include "instrument.h"
 #include "command.h"
 #include "clock.h"
+#include "smftext.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include <uv.h>
@@ -369,24 +370,7 @@ void Player::extract_smf_metadata()
     sprintf(md.format, "SMF type %u", info->format);
     md.track_count = info->track_count;
 
-    //
-    Encoding_Detector ed;
-    ed.start();
-
-    //
-    fmidi_smf_track_begin(&it, 0);
-    while ((ev = fmidi_smf_track_next(&smf, &it)) && ev->type == fmidi_event_meta) {
-        uint8_t type = ev->data[0];
-        if (type >= 0x01 && type <= 0x05 && ev->datalen - 1 > 0) {
-            gsl::cstring_span text(reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1);
-            ed.feed(text);
-        }
-    }
-
-    //
-    ed.finish();
-    const char *enc = ed.detected_encoding();
-    //fprintf(stderr, "Detected encoding: %s\n", enc);
+    const std::string enc = smf_text_encoding(smf);
 
     //
     fmidi_smf_track_begin(&it, 0);
@@ -411,8 +395,8 @@ void Player::extract_smf_metadata()
         }
 
         if (dst) {
-            if (enc)
-                to_utf8(text, *dst, enc, true);
+            if (!enc.empty())
+                to_utf8(text, *dst, enc.c_str(), true);
             else
                 dst->assign(text.data(), text.size());
         }
