@@ -15,7 +15,7 @@
 std::string smf_text_encoding(const fmidi_smf &smf)
 {
     nsLatin1Prober prober_latin1;
-    nsSJISProber prober_sjis(PR_FALSE);
+    nsSJISProber prober_sjis(PR_TRUE);
     nsUTF8Prober prober_utf8;
 
     std::array<nsCharSetProber *, 3> probers {
