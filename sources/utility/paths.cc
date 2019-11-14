@@ -8,8 +8,11 @@
 #include <list>
 #include <algorithm>
 #include <stdexcept>
+#include <cstdlib>
 #include <cstring>
+#include <climits>
 #include <cerrno>
+#include <cassert>
 #include <unistd.h>
 #if defined(_WIN32)
 #include <windows.h>
@@ -17,6 +20,10 @@
 #include <mach-o/dyld.h>
 #elif defined(__HAIKU__)
 #include <KernelKit.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 std::string get_home_directory()
@@ -181,6 +188,37 @@ std::string normalize_path_separators(gsl::cstring_span path)
     return result;
 }
 
+#ifndef _WIN32
+std::string make_path_canonical(gsl::cstring_span path)
+{
+    char *buf = realpath(gsl::to_string(path).c_str(), nullptr);
+    if (!buf) {
+        if (errno == ENOMEM)
+            throw std::bad_alloc();
+        return std::string();
+    }
+    auto cleanup = gsl::finally([buf] { free(buf); });
+
+    assert(buf[0] != '\0');
+
+    struct stat st;
+    if (stat(buf, &st) == -1)
+        return std::string();
+
+    std::string real;
+    if (!S_ISDIR(st.st_mode))
+        real.assign(buf);
+    else {
+        size_t size = strlen(buf);
+        real.reserve(size + 1);
+        real.append(buf, size);
+        if (real.back() != '/')
+            real.push_back('/');
+    }
+
+    return real;
+}
+#else
 static std::list<gsl::cstring_span> split_path_components(gsl::cstring_span path)
 {
     std::list<gsl::cstring_span> parts;
@@ -219,7 +257,7 @@ static std::string join_path_components(const std::list<gsl::cstring_span> &part
     return result;
 }
 
-std::string make_path_absolute(gsl::cstring_span path)
+std::string make_path_canonical(gsl::cstring_span path)
 {
 #ifdef _WIN32
     while (!path.empty() && is_path_separator(path[0]))
@@ -253,6 +291,7 @@ std::string make_path_absolute(gsl::cstring_span path)
 
     return join_path_components(parts);
 }
+#endif
 
 gsl::cstring_span path_file_name(gsl::cstring_span path)
 {

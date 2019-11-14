@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     case 0:
         break;
     case 1:
-        initial_path = make_path_absolute(argv[optind]);
+        initial_path = make_path_canonical(argv[optind]);
         break;
     default:
         fprintf(stderr, "Error: invalid number of positional arguments\n");
