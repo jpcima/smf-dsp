@@ -5,16 +5,19 @@
 
 #include "smftext.h"
 #include "utility/charset.h"
+#include "utility/strings.h"
 #include <nsLatin1Prober.h>
 #include <nsSJISProber.h>
 #include <nsUTF8Prober.h>
 #include <fmidi/fmidi.h>
-#include <gsl.hpp>
 #include <array>
 #include <cstring>
 
-std::string smf_text_encoding(const fmidi_smf &smf)
+void SMF_Encoding_Detector::scan(const fmidi_smf &smf)
 {
+    std::string &enc = encoding_;
+    enc.clear();
+
     nsLatin1Prober prober_latin1;
     nsSJISProber prober_sjis(PR_TRUE);
     nsUTF8Prober prober_utf8;
@@ -34,26 +37,35 @@ std::string smf_text_encoding(const fmidi_smf &smf)
     };
     std::array<Detection, num_probers> detections;
 
-    std::string text;
-    text.reserve(1024);
+    std::string full_text;
+    full_text.reserve(1024);
 
     ///
     const fmidi_event_t *ev;
     fmidi_track_iter_t it;
     fmidi_smf_track_begin(&it, 0);
     while ((ev = fmidi_smf_track_next(&smf, &it)) && ev->type == fmidi_event_meta) {
+        gsl::cstring_span text;
+
         uint8_t type = ev->data[0];
         if (type >= 0x01 && type <= 0x05 && ev->datalen - 1 > 0)
-            text.append(reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1);
+            text = gsl::cstring_span{reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1};
+
+        // skip detection on text pieces of explicit encoding
+        gsl::cstring_span explicit_enc = encoding_from_marker(text);
+        if (!explicit_enc.empty())
+            continue;
+
+        full_text.append(text.data(), text.size());
     }
 
-    if (text.empty())
-        return std::string{};
+    if (full_text.empty())
+        return;
 
     ///
     for (size_t p = 0; p < num_probers; ++p) {
         nsCharSetProber &prober = *probers[p];
-        prober.HandleData(text.data(), text.size());
+        prober.HandleData(full_text.data(), full_text.size());
         detections[p].charset = prober.GetCharSetName();
         detections[p].confidence = prober.GetConfidence();
     }
@@ -62,10 +74,10 @@ std::string smf_text_encoding(const fmidi_smf &smf)
     for (size_t p = 0; p < num_probers; ++p) {
         Detection current = detections[p];
         bool valid = current.charset && current.charset[0] != '\0' &&
-            has_valid_encoding(text, current.charset);
+            has_valid_encoding(full_text, current.charset);
         if (!valid && !strcmp(current.charset, "SHIFT_JIS")) {
             // try Microsoft Shift-JIS variant :-)
-            if ((valid = has_valid_encoding(text, "CP932")))
+            if ((valid = has_valid_encoding(full_text, "CP932")))
                 detections[p].charset = "CP932";
         }
         if (!valid)
@@ -81,14 +93,74 @@ std::string smf_text_encoding(const fmidi_smf &smf)
         });
 
     //
-    std::string enc;
-
     for (size_t p = 0; p < num_probers && enc.empty(); ++p) {
         Detection current = winners[p];
         if (current.charset && current.charset[0] != '\0')
             enc.assign(current.charset);
     }
-
-    return enc;
 }
 
+std::string SMF_Encoding_Detector::general_encoding() const
+{
+    return encoding_;
+}
+
+std::string SMF_Encoding_Detector::encoding_for_text(gsl::cstring_span input) const
+{
+    gsl::cstring_span explicit_enc = encoding_from_marker(input);
+
+    if (!explicit_enc.empty())
+        return gsl::to_string(explicit_enc);
+
+    return encoding_;
+}
+
+std::string SMF_Encoding_Detector::decode_to_utf8(gsl::cstring_span input) const
+{
+    std::string output;
+
+    if (!input.empty()) {
+        std::string enc = encoding_for_text(input);
+        if (enc.empty())
+            output = gsl::to_string(strip_encoding_marker(input, "UTF-8"));
+        else
+            to_utf8(strip_encoding_marker(input, enc), output, enc.c_str(), true);
+    }
+
+    return output;
+}
+
+struct Encoding_Marker {
+    gsl::cstring_span encoding;
+    gsl::cstring_span marker;
+};
+
+static const std::array<Encoding_Marker, 3> all_encoding_markers {{
+    {"UTF-8", "\xef\xbb\xbf"},
+    {"UTF-16LE", "\xff\xfe"},
+    {"UTF-16BE", "\xfe\xff"},
+}};
+
+gsl::cstring_span SMF_Encoding_Detector::encoding_from_marker(gsl::cstring_span input)
+{
+    for (const Encoding_Marker &em : all_encoding_markers) {
+        if (string_starts_with(input, em.marker))
+            return em.encoding;
+    }
+    return gsl::cstring_span{};
+}
+
+gsl::cstring_span SMF_Encoding_Detector::strip_encoding_marker(gsl::cstring_span text, gsl::cstring_span enc)
+{
+    const Encoding_Marker *em = nullptr;
+
+    for (size_t i = 0; i < all_encoding_markers.size() && !em; ++i) {
+        if (all_encoding_markers[i].encoding == enc)
+            em = &all_encoding_markers[i];
+    }
+
+    if (em && string_starts_with(text, em->marker))
+        text = text.subspan(em->marker.size());
+
+    return text;
+}

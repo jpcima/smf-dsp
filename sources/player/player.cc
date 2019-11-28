@@ -370,7 +370,9 @@ void Player::extract_smf_metadata()
     sprintf(md.format, "SMF type %u", info->format);
     md.track_count = info->track_count;
 
-    const std::string enc = smf_text_encoding(smf);
+    //
+    SMF_Encoding_Detector det;
+    det.scan(smf);
 
     //
     fmidi_smf_track_begin(&it, 0);
@@ -394,12 +396,8 @@ void Player::extract_smf_metadata()
             break;
         }
 
-        if (dst) {
-            if (!enc.empty())
-                to_utf8(text, *dst, enc.c_str(), true);
-            else
-                dst->assign(text.data(), text.size());
-        }
+        if (dst)
+            *dst = det.decode_to_utf8(text);
     }
 }
 
