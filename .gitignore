@@ -1,2 +1,7 @@
 /obj/
 /Makefile.ini
+/fmidiplay
+*.so
+*.dll
+*.exe
+/trash/
