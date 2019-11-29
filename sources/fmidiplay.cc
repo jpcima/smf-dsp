@@ -63,9 +63,17 @@ Application::Application()
     Metadata_Display *mdd = new Metadata_Display(layout->info_box);
     metadata_display_.reset(mdd);
 
-    std::string home = get_home_directory();
-    if (!home.empty())
-        fb->set_cwd(home);
+    std::string initial_path;
+    if (const char *value = ini->GetValue("", "initial-path"))
+        initial_path = make_path_canonical(expand_path_tilde(value));
+
+    if (!initial_path.empty())
+        fb->set_current_file(initial_path);
+    else {
+        std::string home = get_home_directory();
+        if (!home.empty())
+            fb->set_cwd(home);
+    }
 
     Player *pl = new Player;
     player_.reset(pl);
@@ -816,6 +824,11 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
     if (!ini) ini = create_configuration();
 
     bool ini_update = false;
+
+    if (!ini->GetValue("", "initial-path")) {
+        ini->SetValue("", "initial-path", "", "; Path of directory opened initially");
+        ini_update = true;
+    }
 
     if (!ini->GetValue("", "midi-out-device")) {
         ini->SetValue("", "midi-out-device", "", "; Selected device for MIDI output");

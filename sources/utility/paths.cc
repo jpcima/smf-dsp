@@ -293,6 +293,24 @@ std::string make_path_canonical(gsl::cstring_span path)
 }
 #endif
 
+std::string expand_path_tilde(gsl::cstring_span path)
+{
+    if (path.empty())
+        return std::string{};
+
+    bool is_tilde_path = path[0] == '~' &&
+        (path.size() == 1 || is_path_separator(path[1]));
+
+    if (!is_tilde_path)
+        return normalize_path_separators(path);
+
+    std::string home = get_home_directory();
+    if (home.empty())
+        return std::string{};
+
+    return normalize_path_separators(home + gsl::to_string(path.subspan(1)));
+}
+
 gsl::cstring_span path_file_name(gsl::cstring_span path)
 {
     for (size_t i = path.size(); i-- > 0;) {
