@@ -30,6 +30,7 @@ void Piano::set_keys(const uint8_t *keys)
 void Piano::paint(SDL_Renderer *rr, int paint)
 {
     Rect bounds = bounds_;
+    const Color_Palette &pal = Color_Palette::get_current();
 
     int x = bounds.x;
     int y = bounds.y;
@@ -43,13 +44,13 @@ void Piano::paint(SDL_Renderer *rr, int paint)
         const unsigned wk[] = {0, 2, 4, 5, 7, 9, 11};
 
         for (int key_w = 0; key_w < 7; ++key_w) {
-            SDL_Color ck = Color_Palette::piano_white_key;
-            SDL_Color cs = Color_Palette::piano_white_shadow;
+            SDL_Color ck = pal.piano_white_key;
+            SDL_Color cs = pal.piano_white_shadow;
 
             if (paint & Pt_Foreground) {
                 unsigned kn = wk[key_w] + 12 * (oct + basic_octave);
                 if (kn < 128 && keys_[kn] > 0) {
-                    ck = Color_Palette::piano_pressed_key;
+                    ck = pal.piano_pressed_key;
                     cs = ck;
                 }
             }
@@ -63,12 +64,12 @@ void Piano::paint(SDL_Renderer *rr, int paint)
 
         //
         for (unsigned key_b = 0; key_b < 5; ++key_b) {
-            SDL_Color ck = Color_Palette::piano_black_key;
+            SDL_Color ck = pal.piano_black_key;
 
             if (paint & Pt_Foreground) {
                 unsigned kn = bk[key_b] + 12 * (oct + basic_octave);
                 if (kn < 128 && keys_[kn] > 0)
-                    ck = Color_Palette::piano_pressed_key;
+                    ck = pal.piano_pressed_key;
             }
 
             int key_x = 2 + 4 * key_b + ((key_b < 2) ? 0 : 4);

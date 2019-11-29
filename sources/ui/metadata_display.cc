@@ -27,6 +27,7 @@ void Metadata_Display::update_data(const Player_Song_Metadata &md)
 void Metadata_Display::paint(SDL_Renderer *rr)
 {
     const Rect bounds = bounds_;
+    const Color_Palette &pal = Color_Palette::get_current();
     const Player_Song_Metadata &md = *md_;
 
     if (0) {
@@ -51,7 +52,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
         tp.font = &font_fmdsp_medium;
         tp.pos = Point(row.x, row.y + 3);
-        tp.fg = Color_Palette::metadata_label;
+        tp.fg = pal.metadata_label;
 
         switch (i) {
         case 0:
@@ -72,7 +73,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
         tp.font = &font_s12;
         tp.pos = row.origin();
-        tp.fg = Color_Palette::metadata_value;
+        tp.fg = pal.metadata_value;
 
         SDLpp_ClipState clip;
         SDLpp_SaveClipState(rr, clip);
@@ -105,7 +106,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
             tp.font = &font_fmdsp_medium;
             tp.pos = Point(row.x, row.y + 3);
-            tp.fg = Color_Palette::metadata_label;
+            tp.fg = pal.metadata_label;
 
             tp.draw_utf8("Tracks:");
 
@@ -113,7 +114,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
             tp.font = &font_s12;
             tp.pos = row.origin();
-            tp.fg = Color_Palette::metadata_value;
+            tp.fg = pal.metadata_value;
 
             tp.draw_utf8(std::to_string(md.track_count));
         }
