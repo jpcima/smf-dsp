@@ -1,0 +1,29 @@
+//          Copyright Jean Pierre Cimalando 2019.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.md or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+#define COLOR_PALETTE_FOR_EACH_ITEM(F, X)                       \
+    F("background", background, X)                              \
+    F("info-box-background", info_box_background, X)            \
+    F("text-browser-foreground", text_browser_foreground, X)    \
+    F("metadata-label", metadata_label, X)                      \
+    F("metadata-value", metadata_value, X)                      \
+    F("text-min-brightness", text_min_brightness, X)            \
+    F("text-low-brightness", text_low_brightness, X)            \
+    F("text-high-brightness", text_high_brightness, X)          \
+    F("piano-white-key", piano_white_key, X)                    \
+    F("piano-white-shadow", piano_white_shadow, X)              \
+    F("piano-black-key", piano_black_key, X)                    \
+    F("piano-pressed-key", piano_pressed_key, X)                \
+    F("digit-on", digit_on, X)                                  \
+    F("digit-off", digit_off, X)
+
+#define COLOR_PALETTE_ITEM_COUNT (COLOR_PALETTE_FOR_EACH_ITEM(COLOR_PALETTE_ITEM_COUNT__I, ) 0)
+#define COLOR_PALETTE_ITEM_COUNT__I(name, id, arg) 1 +
+
+#define COLOR_PALETTE_DECLARE_ALL(type) COLOR_PALETTE_FOR_EACH_ITEM(COLOR_PALETTE_DECLARE_ALL__I, type)
+#define COLOR_PALETTE_DECLARE_ALL__I(name, id, arg) arg id;
+
+#define COLOR_PALETTE_NAME_ALL COLOR_PALETTE_FOR_EACH_ITEM(COLOR_PALETTE_NAME_ALL__I, )
+#define COLOR_PALETTE_NAME_ALL__I(name, id, arg) name,

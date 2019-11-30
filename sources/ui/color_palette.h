@@ -4,34 +4,24 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "color_palette.dat"
 #include <SDL_pixels.h>
+#include <gsl.hpp>
 
 struct Color_Palette
 {
-    static Color_Palette create_default();
+    Color_Palette() noexcept : color_by_index{} {}
 
+    static Color_Palette create_default();
     static Color_Palette &get_current();
 
-    SDL_Color background;
+    static constexpr size_t color_count = COLOR_PALETTE_ITEM_COUNT;
+    static const gsl::cstring_span color_name[color_count];
 
-    SDL_Color info_box_background;
-
-    SDL_Color text_browser_foreground;
-
-    SDL_Color metadata_label;
-    SDL_Color metadata_value;
-
-    SDL_Color text_min_brightness;
-    SDL_Color text_low_brightness;
-    SDL_Color text_high_brightness;
-
-    SDL_Color piano_white_key;
-    SDL_Color piano_white_shadow;
-    SDL_Color piano_black_key;
-    SDL_Color piano_pressed_key;
-
-    SDL_Color digit_on;
-    SDL_Color digit_off;
+    union {
+        SDL_Color color_by_index[color_count];
+        struct { COLOR_PALETTE_DECLARE_ALL(SDL_Color) };
+    };
 
     static constexpr SDL_Color transparent() noexcept
         { return SDL_Color{0, 0, 0, 0}; }

@@ -5,6 +5,9 @@
 
 #include "color_palette.h"
 
+constexpr size_t Color_Palette::color_count;
+const gsl::cstring_span Color_Palette::color_name[color_count] = { COLOR_PALETTE_NAME_ALL };
+
 Color_Palette Color_Palette::create_default()
 {
     Color_Palette pal;
