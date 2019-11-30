@@ -1222,7 +1222,7 @@ private:
         ) const;
     bool IsNewLineChar(SI_CHAR a_c) const;
 
-    bool OutputMultiLineText(
+    SI_Error OutputMultiLineText(
         OutputWriter &  a_oOutput,
         Converter &     a_oConverter,
         const SI_CHAR * a_pText
@@ -2426,9 +2426,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
     // write the file comment if we have one
     bool bNeedNewLine = false;
     if (m_pFileComment) {
-        if (!OutputMultiLineText(a_oOutput, convert, m_pFileComment)) {
-            return SI_FAIL;
-        }
+        SI_Error rc = OutputMultiLineText(a_oOutput, convert, m_pFileComment);
+        if (rc < 0) return rc;
         bNeedNewLine = true;
     }
 
@@ -2441,9 +2440,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
                 a_oOutput.Write(SI_NEWLINE_A);
                 a_oOutput.Write(SI_NEWLINE_A);
             }
-            if (!OutputMultiLineText(a_oOutput, convert, iSection->pComment)) {
-                return SI_FAIL;
-            }
+            SI_Error rc = OutputMultiLineText(a_oOutput, convert, iSection->pComment);
+            if (rc < 0) return rc;
             bNeedNewLine = false;
         }
 
@@ -2487,9 +2485,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
                 // write out the comment if there is one
                 if (iValue->pComment) {
                     a_oOutput.Write(SI_NEWLINE_A);
-                    if (!OutputMultiLineText(a_oOutput, convert, iValue->pComment)) {
-                        return SI_FAIL;
-                    }
+                    SI_Error rc = OutputMultiLineText(a_oOutput, convert, iValue->pComment);
+                    if (rc < 0) return rc;
                 }
 
                 // write the key
@@ -2507,9 +2504,8 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
                     // multi-line data needs to be processed specially to ensure
                     // that we use the correct newline format for the current system
                     a_oOutput.Write("<<<END_OF_TEXT" SI_NEWLINE_A);
-                    if (!OutputMultiLineText(a_oOutput, convert, iValue->pItem)) {
-                        return SI_FAIL;
-                    }
+                    SI_Error rc = OutputMultiLineText(a_oOutput, convert, iValue->pItem);
+                    if (rc < 0) return rc;
                     a_oOutput.Write("END_OF_TEXT");
                 }
                 else {
@@ -2526,7 +2522,7 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::Save(
 }
 
 template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
-bool
+SI_Error
 CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::OutputMultiLineText(
     OutputWriter &  a_oOutput,
     Converter &     a_oConverter,
@@ -2541,17 +2537,33 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::OutputMultiLineText(
         for (; *pEndOfLine && *pEndOfLine != '\n'; ++pEndOfLine) /*loop*/ ;
         cEndOfLineChar = *pEndOfLine;
 
-        // temporarily null terminate, convert and output the line
-        *const_cast<SI_CHAR*>(pEndOfLine) = 0;
-        if (!a_oConverter.ConvertToStore(a_pText)) {
-            return false;
+        const SI_CHAR * pLine = a_pText;
+        size_t uLen = pEndOfLine - pLine;
+
+        // if a null terminator is needed, create a copy
+        if (cEndOfLineChar != 0) {
+            SI_CHAR * pCopy = new(std::nothrow) SI_CHAR[uLen + 1];
+            if (!pCopy) {
+                return SI_NOMEM;
+            }
+            memcpy(pCopy, pLine, sizeof(SI_CHAR)*uLen);
+            pCopy[uLen] = 0;
+            pLine = pCopy;
         }
-        *const_cast<SI_CHAR*>(pEndOfLine) = cEndOfLineChar;
-        a_pText += (pEndOfLine - a_pText) + 1;
+
+        // convert and output the line
+        bool bConverted = a_oConverter.ConvertToStore(pLine);
+        if (cEndOfLineChar != 0) {
+            delete[] pLine;
+        }
+        if (!bConverted) {
+            return SI_FAIL;
+        }
+        a_pText += uLen + 1;
         a_oOutput.Write(a_oConverter.Data());
         a_oOutput.Write(SI_NEWLINE_A);
     }
-    return true;
+    return SI_OK;
 }
 
 template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
