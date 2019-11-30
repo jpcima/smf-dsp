@@ -135,8 +135,7 @@
       comment if there is no section name.
     - Comments are set at the time that the file, section or key is first
       created. The only way to modify a comment on a section or a key is to
-      delete that entry and recreate it with the new comment. There is no
-      way to change the file comment.
+      delete that entry and recreate it with the new comment.
 
     @section save SAVE ORDER
 
@@ -751,6 +750,21 @@ public:
     /*-----------------------------------------------------------------------*/
     /** @}
         @{ @name Accessing INI Data */
+
+    /** Retrieve the file comment. If the file comment is not present, the
+        function returns NULL;
+     */
+    const SI_CHAR * GetFileComment() const
+    {
+        return m_pFileComment;
+    }
+
+    /** Modify the file comment.
+
+        @param a_pFileComment   File comment to set. Set to NULL in order to
+                                remove the file comment.
+     */
+    SI_Error SetFileComment(const SI_CHAR * a_pFileComment);
 
     /** Retrieve all section names. The list is returned as an STL vector of
         names and can be iterated or searched as necessary. Note that the
@@ -2295,6 +2309,23 @@ CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::GetSection(
         }
     }
     return 0;
+}
+
+template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
+SI_Error
+CSimpleIniTempl<SI_CHAR,SI_STRLESS,SI_CONVERTER>::SetFileComment(
+    const SI_CHAR * a_pFileComment
+    )
+{
+    if (a_pFileComment) {
+        SI_Error rc = CopyString(a_pFileComment);
+        if (rc < 0) return rc;
+    }
+    if (m_pFileComment) {
+        DeleteString(m_pFileComment);
+    }
+    m_pFileComment = a_pFileComment;
+    return SI_OK;
 }
 
 template<class SI_CHAR, class SI_STRLESS, class SI_CONVERTER>
