@@ -22,6 +22,7 @@
 #include "ui/paint.h"
 #include "utility/SDL++.h"
 #include "utility/paths.h"
+#include <SDL_image.h>
 #include <gsl.hpp>
 #include <algorithm>
 #include <cstdio>
@@ -45,6 +46,11 @@ uint32_t timer_push_event(uint32_t interval, void *user_data)
 Application::Application()
 {
     std::unique_ptr<CSimpleIniA> ini = initialize_config();
+
+    if (const char *value = ini->GetValue("", "theme"))
+        load_theme(value);
+    else
+        load_default_theme();
 
     if (const char *value = ini->GetValue("", "midi-out-device"))
         last_midi_output_choice_.assign(value);
@@ -94,7 +100,6 @@ Application::~Application()
 {
     if (update_timer_)
         SDL_RemoveTimer(update_timer_);
-    SDL_DestroyTexture(cached_background_);
 }
 
 void Application::set_scale_factor(SDL_Window *win, unsigned sf)
@@ -132,17 +137,24 @@ void Application::paint(SDL_Renderer *rr, int paint)
         SDL_RenderClear(rr);
     }
 
-    #pragma message("XXX remove me")
-    if (paint & Pt_Background) {
-        Rect r = Rect(lo.logo_rect).take_from_top(10).chop_from_right(20).take_from_right(10);
-        SDL_SetRenderDrawColor(rr, 0xff, 0x00, 0x00, 0xff);
-        SDL_RenderDrawRect(rr, &r);
-        r = r.off_by(Point(10, 10));
-        SDL_SetRenderDrawColor(rr, 0x00, 0xff, 0x00, 0xff);
-        SDL_RenderDrawRect(rr, &r);
-        r = r.off_by(Point(10, 10));
-        SDL_SetRenderDrawColor(rr, 0x00, 0x00, 0xff, 0xff);
-        SDL_RenderDrawRect(rr, &r);
+    SDL_Surface *wallpaper_image = wallpaper_image_.get();
+    if ((paint & Pt_Background) && wallpaper_image) {
+        Rect bounds(0, 0, size_.x, size_.y);
+        Rect src = Rect(0, 0, wallpaper_image->w, wallpaper_image->h);
+        Rect dst = Rect((size_.x - src.w) / 2, (size_.y - src.h) / 2, src.w, src.h);
+        SDLpp_Texture_u wallpaper_tex{SDL_CreateTextureFromSurface(rr, wallpaper_image)};
+        if (wallpaper_tex)
+            SDL_RenderCopy(rr, wallpaper_tex.get(), &src, &dst);
+    }
+
+    SDL_Surface *logo_image = logo_image_.get();
+    if ((paint & Pt_Background) && logo_image) {
+        Rect r = lo.logo_rect;
+        Rect src = Rect(0, 0, logo_image->w, logo_image->h);
+        Rect dst = Rect(r.x + r.w - src.w, r.y, src.w, src.h);
+        SDLpp_Texture_u logo_tex{SDL_CreateTextureFromSurface(rr, logo_image)};
+        if (logo_tex)
+            SDL_RenderCopy(rr, logo_tex.get(), &src, &dst);
     }
 
     if (paint & Pt_Background) {
@@ -423,7 +435,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
 
 void Application::paint_cached_background(SDL_Renderer *rr)
 {
-    SDL_Texture *bg = cached_background_;
+    SDL_Texture *bg = cached_background_.get();
 
     if (!bg) {
         // clear font caches between paints on differents renderers
@@ -447,7 +459,7 @@ void Application::paint_cached_background(SDL_Renderer *rr)
         if (!bg)
             throw std::runtime_error("SDL_CreateTextureFromSurface");
 
-        cached_background_ = bg;
+        cached_background_.reset(bg);
     }
 
     Rect bounds(0, 0, size_.x, size_.y);
@@ -789,6 +801,63 @@ void Application::get_midi_outputs(std::vector<Midi_Output> &outputs)
     wait_cond.wait(lock);
 }
 
+void Application::load_theme(gsl::cstring_span theme)
+{
+    load_default_theme();
+
+    if (theme.empty() || theme == "default")
+        return;
+
+    std::unique_ptr<CSimpleIniA> ini = load_configuration("t_" + gsl::to_string(theme));
+    if (!ini) {
+        fprintf(stderr, "Theme: cannot load the configuration file.\n");
+        return;
+    }
+
+    Color_Palette &pal = Color_Palette::get_current();
+    if (!pal.load(*ini, "color"))
+        fprintf(stderr, "Theme: cannot load the color palette.\n");
+
+    //
+    struct Image_Assoc {
+        const char *key;
+        SDLpp_Surface_u *image;
+    };
+
+    const Image_Assoc image_assoc[] = {
+        {"logo", &logo_image_},
+        {"wallpaper", &wallpaper_image_},
+    };
+
+    for (const Image_Assoc &ia : image_assoc) {
+        std::string path;
+        if (const char *value = ini->GetValue("image", ia.key))
+            path.assign(value);
+        if (!path.empty()) {
+            if (!is_path_absolute(path))
+                path = get_configuration_dir() + path;
+            SDL_Surface *image = IMG_Load_RW(SDL_RWFromFile(path.c_str(), "rb"), true);
+            ia.image->reset(image);
+        }
+    }
+}
+
+void Application::load_default_theme()
+{
+    cached_background_.reset();
+
+    Color_Palette &pal = Color_Palette::get_current();
+    pal = Color_Palette::create_default();
+
+    static const uint8_t png_data[] = {
+        #include "icon.dat"
+    };
+    size_t png_size = sizeof(png_data);
+
+    logo_image_.reset(IMG_Load_RW(SDL_RWFromConstMem(png_data, png_size), true));
+    wallpaper_image_.reset();
+}
+
 void Application::engage_shutdown()
 {
     if (!fadeout_engaged_) {
@@ -840,8 +909,25 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
         ini_update = true;
     }
 
+    if (!ini->GetValue("", "theme")) {
+        ini->SetValue("", "theme", "default", "; Theme of the graphical interface");
+        ini_update = true;
+    }
+
     if (ini_update)
         save_global_configuration(*ini);
+
+    {
+        std::unique_ptr<CSimpleIniA> theme_ini = create_configuration();
+        theme_ini->SetFileComment(
+            "; This document describes the default theme." "\n"
+            "; Important: do not edit this file directly! changes will be lost." "\n"
+            "; If you want to design a theme, duplicate this file with a different name.");
+        theme_ini->SetValue("image", "logo", "", "; Image file to use as a logo");
+        theme_ini->SetValue("image", "wallpaper", "", "; Image file to use as a wallpaper");
+        Color_Palette::create_default().save(*theme_ini, "color");
+        save_configuration("t_default", *theme_ini);
+    }
 
     return ini;
 }

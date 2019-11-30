@@ -67,7 +67,7 @@ $(APP): CPPFLAGS += \
     -DPROGRAM_DISPLAY_NAME='"FMidiPlay"' \
     -DPROGRAM_AUTHOR='"JPC"' \
     -DPROGRAM_VERSION='"0.10a"' \
-    -Isources -Ifontdata \
+    -Isources -Ifontdata -Iimagedata \
     -Ithirdparty/gsl-lite/include -Ithirdparty/bst \
     -Ithirdparty/fmidi/sources -DFMIDI_STATIC=1 -DFMIDI_DISABLE_DESCRIBE_API=1 \
     -Ithirdparty/simpleini \
@@ -79,7 +79,7 @@ $(APP): CPPFLAGS += \
     $(if $(LINUX),-D__LINUX_ALSA__=1 -D__LINUX_PULSE__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 -DHAVE_SEMAPHORE=1) \
     $(if $(MINGW),-D__WINDOWS_MM__=1 -D__WINDOWS_DS__=1) \
     $(if $(APPLE),-D__MACOSX_CORE__=1) \
-    $(call pkg_config_cflags,sdl2 libuv) \
+    $(call pkg_config_cflags,sdl2 SDL2_image libuv) \
     $(if $(LINUX),$(call pkg_config_cflags,jack alsa libpulse-simple)) \
     $(if $(MINGW),-DWINICONV_CONST=) \
     $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
@@ -87,7 +87,7 @@ $(APP): LDFLAGS += \
     $(if $(STATIC),-static) \
     $(if $(LINUX)$(MINGW)$(APPLE),-pthread)
 $(APP): LIBS += \
-    $(call pkg_config_libs,sdl2 libuv) \
+    $(call pkg_config_libs,sdl2 SDL2_image libuv) \
     $(call pkg_config_libs,icu-uc icu-i18n) \
     $(if $(LINUX),$(call pkg_config_libs,jack alsa libpulse-simple)) \
     $(if $(MINGW),-lwinmm -ldsound) \

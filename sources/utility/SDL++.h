@@ -6,8 +6,23 @@
 #pragma once
 #include "utility/geometry.h"
 #include <SDL.h>
+#include <memory>
 #include <cstdint>
 
+struct SDLpp_Surface_Deleter {
+    void operator()(SDL_Surface *x) { SDL_FreeSurface(x); }
+};
+
+typedef std::unique_ptr<SDL_Surface, SDLpp_Surface_Deleter> SDLpp_Surface_u;
+
+///
+struct SDLpp_Texture_Deleter {
+    void operator()(SDL_Texture *x) { SDL_DestroyTexture(x); }
+};
+
+typedef std::unique_ptr<SDL_Texture, SDLpp_Texture_Deleter> SDLpp_Texture_u;
+
+///
 inline void SDLpp_SetRenderDrawColor(SDL_Renderer *rr, const SDL_Color &color)
 {
     SDL_SetRenderDrawColor(rr, color.r, color.g, color.b, color.a);

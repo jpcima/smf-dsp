@@ -9,7 +9,7 @@
 #include <string>
 #include <memory>
 
-std::string get_configuration_dir();
+const std::string &get_configuration_dir();
 std::string get_configuration_file(gsl::cstring_span name);
 
 std::unique_ptr<CSimpleIniA> create_configuration();

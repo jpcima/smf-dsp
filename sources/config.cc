@@ -12,38 +12,45 @@
 #define mkdir(path, mode) _mkdir(path)
 #endif
 
-std::string get_configuration_dir()
+const std::string &get_configuration_dir()
 {
+    static const std::string path = []() -> std::string {
+        std::string path;
 #if defined(_WIN32)
-    std::string path = get_executable_path();
-    while (!path.empty() && path.back() != '/') path.pop_back();
-    path.append("config/");
-    mkdir(path.c_str(), 0755);
+        path = get_executable_path();
+        while (!path.empty() && path.back() != '/') path.pop_back();
+        path.append("config/");
+        mkdir(path.c_str(), 0755);
 #elif defined(__HAIKU__)
-    std::string path = get_home_directory();
-    if (path.empty())
-        return std::string();
-    path.append("config/");
-    mkdir(path.c_str(), 0755);
-    path.append("settings/");
-    mkdir(path.c_str(), 0755);
-    path.append(PROGRAM_DISPLAY_NAME "/");
-    mkdir(path.c_str(), 0755);
+        path = get_home_directory();
+        if (path.empty())
+            return std::string();
+        path.append("config/");
+        mkdir(path.c_str(), 0755);
+        path.append("settings/");
+        mkdir(path.c_str(), 0755);
+        path.append(PROGRAM_DISPLAY_NAME "/");
+        mkdir(path.c_str(), 0755);
 #else
-    std::string path = get_home_directory();
-    if (path.empty())
-        return std::string();
-    path.append(".config/");
-    mkdir(path.c_str(), 0755);
-    path.append(PROGRAM_DISPLAY_NAME "/");
-    mkdir(path.c_str(), 0755);
+        path = get_home_directory();
+        if (path.empty())
+            return std::string();
+        path.append(".config/");
+        mkdir(path.c_str(), 0755);
+        path.append(PROGRAM_DISPLAY_NAME "/");
+        mkdir(path.c_str(), 0755);
 #endif
+        path.shrink_to_fit();
+        return path;
+    }();
     return path;
 }
 
 std::string get_configuration_file(gsl::cstring_span name)
 {
     std::string path = get_configuration_dir();
+    if (path.empty())
+        return std::string{};
     path.append(name.data(), name.size());
     path.append(".ini");
     return path;

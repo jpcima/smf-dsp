@@ -6,6 +6,7 @@
 #pragma once
 #include "config.h"
 #include "utility/geometry.h"
+#include "utility/SDL++.h"
 #include <SDL.h>
 #include <gsl.hpp>
 #include <mutex>
@@ -45,6 +46,9 @@ public:
     void choose_midi_output(bool ask, gsl::cstring_span choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
+    void load_theme(gsl::cstring_span theme);
+    void load_default_theme();
+
     void engage_shutdown();
     void advance_shutdown();
     bool should_quit() const;
@@ -60,7 +64,10 @@ private:
 
     std::unique_ptr<Main_Layout> layout_;
     std::vector<std::unique_ptr<Modal_Box>> modal_;
-    SDL_Texture *cached_background_ = nullptr;
+    SDLpp_Texture_u cached_background_;
+
+    SDLpp_Surface_u logo_image_;
+    SDLpp_Surface_u wallpaper_image_;
 
     bool fadeout_engaged_ = false;
     int fadeout_time_ = 0;

@@ -5,6 +5,7 @@
 
 #pragma once
 #include "color_palette.dat"
+#include <SimpleIni.h>
 #include <SDL_pixels.h>
 #include <gsl.hpp>
 
@@ -14,6 +15,9 @@ struct Color_Palette
 
     static Color_Palette create_default();
     static Color_Palette &get_current();
+
+    bool load(CSimpleIniA &ini, const char *section);
+    void save(CSimpleIniA &ini, const char *section) const;
 
     static constexpr size_t color_count = COLOR_PALETTE_ITEM_COUNT;
     static const gsl::cstring_span color_name[color_count];
