@@ -104,7 +104,7 @@ private:
 #else
     static void audio_callback(void *user_data, void *output_buffer, size_t size, const media_raw_audio_format &);
 #endif
-    void process_midi();
+    void process_midi(double time_incr);
 
     bool extract_next_message();
 

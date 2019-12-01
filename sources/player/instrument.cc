@@ -268,6 +268,8 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     audio_ = std::move(audio);
 
+    time_delta_ = -audio_latency;
+
 #if !defined(__HAIKU__)
     audio_->startStream();
 #else
@@ -287,7 +289,6 @@ void Midi_Synth_Instrument::close_midi_output()
     Ring_Buffer &midibuf = *midibuf_;
     midibuf.discard(midibuf.size_used());
 
-    time_delta_ = -audio_latency_;
     have_next_message_ = false;
     message_count_.store(0);
 }
@@ -329,8 +330,7 @@ void Midi_Synth_Instrument::audio_callback(void *user_data, void *output_buffer,
 
     while (frame_index < nframes) {
         unsigned nframes_current = std::min(nframes - frame_index, midi_interval_max);
-        self->time_delta_ += nframes_current * (1.0 / srate);
-        self->process_midi();
+        self->process_midi(nframes_current * (1.0 / srate));
         host.generate(&frame_buffer[2 * frame_index], nframes_current);
         frame_index += nframes_current;
     }
@@ -340,18 +340,18 @@ void Midi_Synth_Instrument::audio_callback(void *user_data, void *output_buffer,
 #endif
 }
 
-void Midi_Synth_Instrument::process_midi()
+void Midi_Synth_Instrument::process_midi(double time_incr)
 {
     Synth_Host &host = *host_;
-    double audio_latency = audio_latency_;
+
+    time_delta_ += time_incr;
 
     while (extract_next_message()) {
         Message_Header hdr = next_header_;
 
         if (hdr.flags & Midi_Message_Is_First) {
-            time_delta_ = -audio_latency;
+            time_delta_ = time_incr - audio_latency_;
             next_header_.flags = hdr.flags & ~Midi_Message_Is_First;
-            break;
         }
 
         if (time_delta_ < hdr.timestamp)
