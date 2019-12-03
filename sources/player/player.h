@@ -20,6 +20,9 @@ class Midi_Port_Instrument;
 class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
 class Synth_Host;
+class Basic_Sequencer;
+class Sequencer_Message_Event;
+class Sequencer_Meta_Event;
 typedef struct uv_async_s uv_async_t;
 
 class Player {
@@ -41,7 +44,8 @@ private:
     void resume_play_list();
 
     void tick(uint64_t elapsed);
-    void play_event(const fmidi_event_t &event);
+    void play_message(const Sequencer_Message_Event &event);
+    void play_meta(const Sequencer_Meta_Event &event);
     void file_finished();
 
     void extract_smf_metadata();
@@ -65,7 +69,7 @@ private:
 
     // current playback
     fmidi_smf_u smf_;
-    fmidi_player_u pl_;
+    std::unique_ptr<Basic_Sequencer> seq_;
     double smf_duration_ = 0;
     Player_Song_Metadata smf_md_;
     double current_tempo_ = 0;

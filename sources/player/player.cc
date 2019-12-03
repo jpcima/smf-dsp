@@ -9,6 +9,7 @@
 #include "command.h"
 #include "clock.h"
 #include "smftext.h"
+#include "sequencer.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include <uv.h>
@@ -129,7 +130,7 @@ void Player::process_command_queue()
             break;
         }
         case PC_Pause:
-            if (pl_) {
+            if (seq_) {
                 Player_Clock &c = *clock_;
                 Midi_Instrument &ins = *ins_;
                 if (!c.active())
@@ -144,30 +145,30 @@ void Player::process_command_queue()
             rewind();
             break;
         case PC_Seek_End: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl)
-                fmidi_player_goto_time(pl, smf_duration_);
+            Basic_Sequencer *seq = seq_.get();
+            if (seq)
+                seq->goto_time(smf_duration_);
             break;
         }
         case PC_Seek_Cur: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl) {
+            Basic_Sequencer *seq = seq_.get();
+            if (seq) {
                 double o = static_cast<Pcmd_Seek_Cur &>(*cmd).time_offset;
-                double t = fmidi_player_current_time(pl) + o;
+                double t = seq->get_current_time() + o;
                 t = std::max(t, 0.0);
                 t = std::min(t, smf_duration_);
-                fmidi_player_goto_time(pl, t);
+                seq->goto_time(t);
             }
             break;
         }
         case PC_Speed: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl) {
-                unsigned cur = (unsigned)(0.5 + fmidi_player_current_speed(pl) * 100);
+            Basic_Sequencer *seq = seq_.get();
+            if (seq) {
+                unsigned cur = (unsigned)(0.5 + seq->get_current_speed() * 100);
                 int speed = static_cast<int>(cur) + static_cast<Pcmd_Speed &>(*cmd).increment;
                 speed = std::max(speed, 1);
                 speed = std::min(speed, 500);
-                fmidi_player_set_speed(pl, speed * 0.01);
+                seq->set_speed(speed * 0.01);
                 current_speed_ = speed;
             }
             break;
@@ -222,11 +223,11 @@ void Player::process_command_queue()
 
 void Player::rewind()
 {
-    fmidi_player_t *pl = pl_.get();
-    if (!pl)
+    Basic_Sequencer *seq = seq_.get();
+    if (!seq)
         return;
 
-    fmidi_player_rewind(pl);
+    seq->rewind();
 
     Midi_Instrument &ins = *ins_;
     ins.initialize();
@@ -235,7 +236,7 @@ void Player::rewind()
 
 void Player::reset_current_playback()
 {
-    pl_.reset();
+    seq_.reset();
     smf_.reset();
 
     Midi_Instrument &ins = *ins_;
@@ -268,12 +269,18 @@ void Player::resume_play_list()
     }
 
     if (smf) {
-        fmidi_player_t *pl = fmidi_player_new(smf.get());
-        pl_.reset(pl);
+        #warning TODO: select sequencer by config
+        Sequencer_Type seq_type = Sequencer_Type::Model_W;
 
-        fmidi_player_set_speed(pl, current_speed_ * 0.01);
-        fmidi_player_event_callback(pl, [](const fmidi_event_t *ev, void *ud) { static_cast<Player *>(ud)->play_event(*ev); }, this);
-        fmidi_player_finish_callback(pl, [](void *ud) { static_cast<Player *>(ud)->file_finished(); }, this);
+        Basic_Sequencer *seq = Basic_Sequencer::create_sequencer(seq_type, *smf);
+        seq_.reset(seq);
+
+        seq->set_speed(current_speed_ * 0.01);
+
+        seq->set_message_callback([](const Sequencer_Message_Event &ev, void *ud) { static_cast<Player *>(ud)->play_message(ev); }, this);
+        seq->set_meta_callback([](const Sequencer_Meta_Event &ev, void *ud) { static_cast<Player *>(ud)->play_meta(ev); }, this);
+
+        seq->set_finished_callback([](void *ud) { static_cast<Player *>(ud)->file_finished(); }, this);
 
         smf_ = std::move(smf);
         extract_smf_metadata();
@@ -283,47 +290,41 @@ void Player::resume_play_list()
 
 void Player::tick(uint64_t elapsed)
 {
-    fmidi_player_t *pl = pl_.get();
-    if (!pl)
+    Basic_Sequencer *seq = seq_.get();
+    if (!seq)
         return;
 
     double delta = elapsed * 1e-9;
-    fmidi_player_tick(pl, delta);
+    seq->tick(delta);
 }
 
-void Player::play_event(const fmidi_event_t &event)
+void Player::play_message(const Sequencer_Message_Event &event)
 {
-    switch (event.type) {
-    case fmidi_event_message: {
-        Midi_Instrument &ins = *ins_;
-        uint64_t now = uv_hrtime();
-        double ts = 0;
-        int flags = 0;
-        if (ts_started_)
-            ts = 1e-9 * (now - ts_last_);
+    Midi_Instrument &ins = *ins_;
+    uint64_t now = uv_hrtime();
+    double ts = 0;
+    int flags = 0;
+    if (ts_started_)
+        ts = 1e-9 * (now - ts_last_);
+    else {
+        flags |= Midi_Message_Is_First;
+        ts_started_ = true;
+    }
+    ins.send_message(event.data, event.length, ts, flags);
+    ts_last_ = now;
+}
+
+void Player::play_meta(const Sequencer_Meta_Event &event)
+{
+    uint8_t type = event.type;
+    if (type == 0x51 && event.length == 3) {
+        uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
+        if (unit & (1 << 15))
+            current_tempo_ = 0; // not tempo-based file
         else {
-            flags |= Midi_Message_Is_First;
-            ts_started_ = true;
+            unsigned midi_tempo = (event.data[0] << 16) | (event.data[1] << 8) | event.data[2];
+            current_tempo_ = 60e6 / midi_tempo;
         }
-        ins.send_message(event.data, event.datalen, ts, flags);
-        ts_last_ = now;
-        break;
-    }
-    case fmidi_event_meta: {
-        uint8_t type = event.data[0];
-        if (type == 0x51 && event.datalen - 1 == 3) {
-            uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
-            if (unit & (1 << 15))
-                current_tempo_ = 0; // not tempo-based file
-            else {
-                unsigned midi_tempo = (event.data[1] << 16) | (event.data[2] << 8) | event.data[3];
-                current_tempo_ = 60e6 / midi_tempo;
-            }
-        }
-        break;
-    }
-    default:
-        break;
     }
 }
 
@@ -408,9 +409,9 @@ Player_State Player::make_state() const
     ps.kb = ins.keyboard_state();
     ps.repeat_mode = repeat_mode_;
 
-    fmidi_player_t *pl = pl_.get();
-    if (pl) {
-        ps.time_position = fmidi_player_current_time(pl);
+    Basic_Sequencer *seq = seq_.get();
+    if (seq) {
+        ps.time_position = seq->get_current_time();
         ps.duration = smf_duration_;
         ps.tempo = current_tempo_;
         ps.speed = current_speed_;

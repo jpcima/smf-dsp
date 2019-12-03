@@ -22,6 +22,9 @@ SOURCES := \
   sources/player/keystate.cc \
   sources/player/clock.cc \
   sources/player/smftext.cc \
+  sources/player/sequencer.cc \
+  sources/player/sequencer_j.cc \
+  sources/player/sequencer_w.cc \
   sources/synth/synth_host.cc \
   sources/data/ins_names.cc \
   sources/ui/main_layout.cc \
@@ -70,6 +73,7 @@ $(APP): CPPFLAGS += \
     -Isources -Ifontdata -Iimagedata \
     -Ithirdparty/gsl-lite/include -Ithirdparty/bst \
     -Ithirdparty/fmidi/sources -DFMIDI_STATIC=1 -DFMIDI_DISABLE_DESCRIBE_API=1 \
+    -Ithirdparty/BW_Midi_Sequencer/include \
     -Ithirdparty/simpleini \
     -Ithirdparty/rtmidi \
     -Ithirdparty/rtaudio \

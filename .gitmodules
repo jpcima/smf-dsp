@@ -10,3 +10,6 @@
 [submodule "thirdparty/munt"]
 	path = thirdparty/munt
 	url = https://github.com/munt/munt.git
+[submodule "thirdparty/BW_Midi_Sequencer"]
+	path = thirdparty/BW_Midi_Sequencer
+	url = https://github.com/Wohlstand/BW_Midi_Sequencer.git
