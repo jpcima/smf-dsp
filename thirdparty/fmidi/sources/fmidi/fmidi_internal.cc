@@ -34,6 +34,8 @@ const char *fmidi_strerror(fmidi_status_t status)
 void Memory_Writer::put(uint8_t byte)
 {
     size_t size = mem.size();
+    size_t index = this->index;
+
     if (index < size)
         mem[index] = byte;
     else
@@ -41,6 +43,8 @@ void Memory_Writer::put(uint8_t byte)
         assert(index == size);
         mem.push_back(byte);
     }
+
+    this->index = index + 1;
 }
 
 void Memory_Writer::write(const void *data, size_t size)

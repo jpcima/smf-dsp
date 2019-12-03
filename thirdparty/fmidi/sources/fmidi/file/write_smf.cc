@@ -6,6 +6,8 @@
 #include "fmidi/fmidi.h"
 #include "fmidi/fmidi_internal.h"
 #include "fmidi/u_stdio.h"
+#include <cstring>
+#include <cassert>
 
 static void write_vlq(uint32_t value, Writer &writer)
 {
@@ -102,7 +104,7 @@ static bool fmidi_smf_write(const fmidi_smf_t *smf, Writer &writer)
     return true;
 }
 
-bool fmidi_smf_mem_write(const fmidi_smf_t *smf, const uint8_t *data, size_t length)
+bool fmidi_smf_mem_write(const fmidi_smf_t *smf, uint8_t **data, size_t *length)
 {
     std::vector<uint8_t> mem;
     mem.reserve(8192);
@@ -110,6 +112,15 @@ bool fmidi_smf_mem_write(const fmidi_smf_t *smf, const uint8_t *data, size_t len
     Memory_Writer writer(mem);
     if (!fmidi_smf_write(smf, writer))
         return false;
+
+    assert(data);
+    assert(length);
+
+    if (!(*data = (uint8_t *)malloc(mem.size())))
+        throw std::bad_alloc();
+
+    memcpy(*data, mem.data(), mem.size());
+    *length = mem.size();
 
     return true;
 }

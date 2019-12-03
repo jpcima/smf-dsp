@@ -54,7 +54,7 @@ FMIDI_API double fmidi_smf_compute_duration(const fmidi_smf_t *smf);
 // OUTPUT //
 ////////////
 
-FMIDI_API bool fmidi_smf_mem_write(const fmidi_smf_t *smf, const uint8_t *data, size_t length);
+FMIDI_API bool fmidi_smf_mem_write(const fmidi_smf_t *smf, uint8_t **data, size_t *length);
 FMIDI_API bool fmidi_smf_file_write(const fmidi_smf_t *smf, const char *filename);
 FMIDI_API bool fmidi_smf_stream_write(const fmidi_smf_t *smf, FILE *stream);
 
