@@ -7,6 +7,7 @@
 #include "player/player.h"
 #include "player/playlist.h"
 #include "player/instrument.h"
+#include "player/sequencer.h"
 #include "player/command.h"
 #include "synth/synth_host.h"
 #include "data/ins_names.h"
@@ -83,6 +84,24 @@ Application::Application()
 
     Player *pl = new Player;
     player_.reset(pl);
+
+    if (const char *value = ini->GetValue("", "sequencer-engine")) {
+        Sequencer_Type seq_type = (Sequencer_Type)'\0';
+
+        switch (value[0]) {
+        case 'w': case 'W':
+            seq_type = Sequencer_Type::Model_W;
+            break;
+        case 'j': case 'J':
+            seq_type = Sequencer_Type::Model_J;
+            break;
+        }
+
+        if (seq_type == (Sequencer_Type)'\0')
+            fprintf(stderr, "Unrecognized value for sequencer engine: %s\n", value);
+        else
+            pl->set_sequencer_type(seq_type);
+    }
 
     ps_.reset(new Player_State);
     pl->StateCallback = [this](const Player_State &ps)
@@ -906,6 +925,11 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
 
     if (!ini->GetValue("", "synth-audio-latency")) {
         ini->SetDoubleValue("", "synth-audio-latency", 50, "; Latency of synthesized audio stream (ms) [1:500]");
+        ini_update = true;
+    }
+
+    if (!ini->GetValue("", "sequencer-engine")) {
+        ini->SetValue("", "sequencer-engine", "w", "; MIDI sequencer engine [w=Wohlstand, j=JPC]");
         ini_update = true;
     }
 

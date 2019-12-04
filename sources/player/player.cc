@@ -9,7 +9,6 @@
 #include "command.h"
 #include "clock.h"
 #include "smftext.h"
-#include "sequencer.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include <uv.h>
@@ -269,10 +268,7 @@ void Player::resume_play_list()
     }
 
     if (smf) {
-        #warning TODO: select sequencer by config
-        Sequencer_Type seq_type = Sequencer_Type::Model_W;
-
-        Basic_Sequencer *seq = Basic_Sequencer::create_sequencer(seq_type, *smf);
+        Basic_Sequencer *seq = Basic_Sequencer::create_sequencer(seq_type_, *smf);
         seq_.reset(seq);
 
         seq->set_speed(current_speed_ * 0.01);

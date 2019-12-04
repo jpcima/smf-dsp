@@ -5,6 +5,7 @@
 
 #pragma once
 #include "state.h"
+#include "sequencer.h"
 #include <fmidi/fmidi.h>
 #include <thread>
 #include <mutex>
@@ -20,15 +21,15 @@ class Midi_Port_Instrument;
 class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
 class Synth_Host;
-class Basic_Sequencer;
-class Sequencer_Message_Event;
-class Sequencer_Meta_Event;
 typedef struct uv_async_s uv_async_t;
 
 class Player {
 public:
     Player();
     ~Player();
+
+    Sequencer_Type sequencer_type() const { return seq_type_; }
+    void set_sequencer_type(Sequencer_Type seq_type) { seq_type_ = seq_type; }
 
     void push_command(std::unique_ptr<Player_Command> cmd);
 
@@ -70,6 +71,7 @@ private:
     // current playback
     fmidi_smf_u smf_;
     std::unique_ptr<Basic_Sequencer> seq_;
+    Sequencer_Type seq_type_ = Sequencer_Type::Model_W;
     double smf_duration_ = 0;
     Player_Song_Metadata smf_md_;
     double current_tempo_ = 0;
