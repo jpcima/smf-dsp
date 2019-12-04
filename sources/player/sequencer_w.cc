@@ -20,6 +20,7 @@ public:
     void goto_time(double time) override;
     void tick(double delta) override;
     void rewind() override;
+    void set_loop_enabled(bool loop) override;
 
 private:
     std::unique_ptr<BW_MidiSequencer> seq_;
@@ -158,6 +159,12 @@ void Sequencer_W::rewind()
 {
     BW_MidiSequencer &seq = *seq_;
     seq.rewind();
+}
+
+void Sequencer_W::set_loop_enabled(bool loop)
+{
+    BW_MidiSequencer &seq = *seq_;
+    seq.setLoopEnabled(loop);
 }
 
 ///

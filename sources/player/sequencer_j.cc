@@ -18,6 +18,7 @@ public:
     void goto_time(double time) override;
     void tick(double delta) override;
     void rewind() override;
+    void set_loop_enabled(bool loop) override;
 
 private:
     static void on_event(const fmidi_event_t *event, void *userdata);
@@ -69,6 +70,11 @@ void Sequencer_J::rewind()
 {
     fmidi_player_t *pl = pl_.get();
     return fmidi_player_rewind(pl);
+}
+
+void Sequencer_J::set_loop_enabled(bool loop)
+{
+    // not supported
 }
 
 void Sequencer_J::on_event(const fmidi_event_t *event, void *userdata)

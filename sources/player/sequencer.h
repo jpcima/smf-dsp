@@ -42,6 +42,7 @@ public:
     virtual void goto_time(double time) = 0;
     virtual void tick(double delta) = 0;
     virtual void rewind() = 0;
+    virtual void set_loop_enabled(bool loop) = 0;
 
     void set_message_callback(Sequencer_Message_Callback *cb, void *ud);
     void set_meta_callback(Sequencer_Meta_Callback *cb, void *ud);

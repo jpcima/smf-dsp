@@ -44,6 +44,8 @@ private:
 
     void resume_play_list();
 
+    void update_sequencer_loop_mode();
+
     void tick(uint64_t elapsed);
     void play_message(const Sequencer_Message_Event &event);
     void play_meta(const Sequencer_Meta_Event &event);

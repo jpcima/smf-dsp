@@ -172,9 +172,12 @@ void Player::process_command_queue()
             }
             break;
         }
-        case PC_Repeat_Mode:
-            repeat_mode_ = Repeat_Mode((repeat_mode_ + 1) % (Repeat_Mode_Max + 1));
+        case PC_Repeat_Mode: {
+            Repeat_Mode rm = Repeat_Mode((repeat_mode_ + 1) % (Repeat_Mode_Max + 1));
+            repeat_mode_ = rm;
+            update_sequencer_loop_mode();
             break;
+        }
         case PC_Request_State:
             if (StateCallback)
                 StateCallback(make_state());
@@ -271,6 +274,8 @@ void Player::resume_play_list()
         Basic_Sequencer *seq = Basic_Sequencer::create_sequencer(seq_type_, *smf);
         seq_.reset(seq);
 
+        update_sequencer_loop_mode();
+
         seq->set_speed(current_speed_ * 0.01);
 
         seq->set_message_callback([](const Sequencer_Message_Event &ev, void *ud) { static_cast<Player *>(ud)->play_message(ev); }, this);
@@ -282,6 +287,20 @@ void Player::resume_play_list()
         extract_smf_metadata();
         start_ticking();
     }
+}
+
+void Player::update_sequencer_loop_mode()
+{
+    Basic_Sequencer *seq = seq_.get();
+    if (!seq)
+        return;
+
+    Repeat_Mode rm = repeat_mode_;
+
+    // enable MIDI file loops when on single track repeat, otherwise disable
+    seq->set_loop_enabled(
+        ((rm & (Repeat_On|Repeat_Off)) == Repeat_On) &&
+        ((rm & (Repeat_Multi|Repeat_Single)) == Repeat_Single));
 }
 
 void Player::tick(uint64_t elapsed)
