@@ -17,6 +17,7 @@ SOURCES := \
   sources/fmidiplay.cc \
   sources/main.cc \
   sources/player/player.cc \
+  sources/player/seeker.cc \
   sources/player/playlist.cc \
   sources/player/instrument.cc \
   sources/player/keystate.cc \

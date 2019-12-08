@@ -15,6 +15,7 @@
 struct Player_Command;
 class Player_Clock;
 class Play_List;
+class Seek_State;
 class Midi_Instrument;
 class Midi_Port_Instrument;
 class Midi_Synth_Instrument;
@@ -36,12 +37,20 @@ private:
     void process_command_queue();
 
     void rewind();
+    void goto_time(double t);
+    void goto_relative_time(double o);
     void reset_current_playback();
+
+    void begin_seeking();
+    void end_seeking();
 
     void resume_play_list();
 
     void tick(uint64_t elapsed);
-    void play_event(const fmidi_event_t &event);
+    void on_sequence_event(const fmidi_event_t &event);
+    void play_message(const uint8_t *msg, uint32_t len);
+    void play_meta(uint8_t type, const uint8_t *msg, uint32_t len);
+    void seeker_play_message(const uint8_t *msg, uint32_t len);
     void file_finished();
 
     void extract_smf_metadata();
@@ -70,6 +79,10 @@ private:
     Player_Song_Metadata smf_md_;
     double current_tempo_ = 0;
     unsigned current_speed_ = 100;
+
+    // seek state
+    bool seeking_ = false;
+    std::unique_ptr<Seek_State> seek_state_;
 
     // instrument
     Midi_Instrument *ins_ = nullptr;

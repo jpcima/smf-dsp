@@ -5,6 +5,7 @@
 
 #include "player.h"
 #include "playlist.h"
+#include "seeker.h"
 #include "instrument.h"
 #include "command.h"
 #include "clock.h"
@@ -15,10 +16,12 @@
 #include <gsl.hpp>
 #include <stdexcept>
 #include <cstdio>
+#include <cstring>
 
 Player::Player()
     : quit_(false),
       play_list_(new Linear_Play_List),
+      seek_state_(new Seek_State),
       midiport_ins_(new Midi_Port_Instrument),
       synth_ins_(new Midi_Synth_Instrument)
 {
@@ -26,6 +29,11 @@ Player::Player()
 
     // scan and initialize plugins
     Synth_Host::plugins();
+
+    // initialize seeker
+    seek_state_->set_message_callback(+[](const uint8_t *msg, uint32_t len, void *ptr) {
+        reinterpret_cast<Player *>(ptr)->seeker_play_message(msg, len);
+    }, this);
 
     std::unique_lock<std::mutex> ready_lock(ready_mutex_);
     thread_ = std::thread([this] { thread_exec(); });
@@ -143,21 +151,12 @@ void Player::process_command_queue()
         case PC_Rewind:
             rewind();
             break;
-        case PC_Seek_End: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl)
-                fmidi_player_goto_time(pl, smf_duration_);
+        case PC_Seek_End:
+            goto_time(smf_duration_);
             break;
-        }
         case PC_Seek_Cur: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl) {
-                double o = static_cast<Pcmd_Seek_Cur &>(*cmd).time_offset;
-                double t = fmidi_player_current_time(pl) + o;
-                t = std::max(t, 0.0);
-                t = std::min(t, smf_duration_);
-                fmidi_player_goto_time(pl, t);
-            }
+            double o = static_cast<Pcmd_Seek_Cur &>(*cmd).time_offset;
+            goto_relative_time(o);
             break;
         }
         case PC_Speed: {
@@ -210,6 +209,7 @@ void Player::process_command_queue()
 
             reset_current_playback();
             ins.initialize();
+            ins.flush_events();
             stop_ticking();
 
             std::unique_lock<std::mutex> lock(*wait_mutex);
@@ -233,6 +233,32 @@ void Player::rewind()
     ins.flush_events();
 }
 
+void Player::goto_time(double t)
+{
+    fmidi_player_t *pl = pl_.get();
+    if (!pl)
+        return;
+
+    begin_seeking();
+    fmidi_player_goto_time(pl, t);
+    end_seeking();
+}
+
+void Player::goto_relative_time(double o)
+{
+    fmidi_player_t *pl = pl_.get();
+    if (!pl)
+        return;
+
+    double t = fmidi_player_current_time(pl) + o;
+    t = std::max(t, 0.0);
+    t = std::min(t, smf_duration_);
+
+    begin_seeking();
+    fmidi_player_goto_time(pl, t);
+    end_seeking();
+}
+
 void Player::reset_current_playback()
 {
     pl_.reset();
@@ -241,6 +267,26 @@ void Player::reset_current_playback()
     Midi_Instrument &ins = *ins_;
     ins.initialize();
     ins.flush_events();
+}
+
+void Player::begin_seeking()
+{
+    Midi_Instrument &ins = *ins_;
+    // trust the sequencer to send initialization events, don't do it ourselves
+    ins.flush_events();
+
+    Seek_State &sks = *seek_state_;
+    sks.clear();
+
+    seeking_ = true;
+}
+
+void Player::end_seeking()
+{
+    Seek_State &sks = *seek_state_;
+    sks.flush_state();
+
+    seeking_ = false;
 }
 
 void Player::resume_play_list()
@@ -272,7 +318,7 @@ void Player::resume_play_list()
         pl_.reset(pl);
 
         fmidi_player_set_speed(pl, current_speed_ * 0.01);
-        fmidi_player_event_callback(pl, [](const fmidi_event_t *ev, void *ud) { static_cast<Player *>(ud)->play_event(*ev); }, this);
+        fmidi_player_event_callback(pl, [](const fmidi_event_t *ev, void *ud) { static_cast<Player *>(ud)->on_sequence_event(*ev); }, this);
         fmidi_player_finish_callback(pl, [](void *ud) { static_cast<Player *>(ud)->file_finished(); }, this);
 
         smf_ = std::move(smf);
@@ -291,40 +337,105 @@ void Player::tick(uint64_t elapsed)
     fmidi_player_tick(pl, delta);
 }
 
-void Player::play_event(const fmidi_event_t &event)
+void Player::on_sequence_event(const fmidi_event_t &event)
 {
     switch (event.type) {
-    case fmidi_event_message: {
-        Midi_Instrument &ins = *ins_;
-        uint64_t now = uv_hrtime();
-        double ts = 0;
-        int flags = 0;
-        if (ts_started_)
-            ts = 1e-9 * (now - ts_last_);
+    case fmidi_event_message:
+        if (!seeking_)
+            play_message(event.data, event.datalen);
         else {
-            flags |= Midi_Message_Is_First;
-            ts_started_ = true;
+            Seek_State &sks = *seek_state_;
+            sks.add_event(event.data, event.datalen);
         }
-        ins.send_message(event.data, event.datalen, ts, flags);
-        ts_last_ = now;
         break;
-    }
     case fmidi_event_meta: {
-        uint8_t type = event.data[0];
-        if (type == 0x51 && event.datalen - 1 == 3) {
-            uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
-            if (unit & (1 << 15))
-                current_tempo_ = 0; // not tempo-based file
-            else {
-                unsigned midi_tempo = (event.data[1] << 16) | (event.data[2] << 8) | event.data[3];
-                current_tempo_ = 60e6 / midi_tempo;
-            }
-        }
+        play_meta(event.data[0], event.data + 1, event.datalen - 1);
         break;
     }
     default:
         break;
     }
+}
+
+void Player::play_message(const uint8_t *msg, uint32_t len)
+{
+    Midi_Instrument &ins = *ins_;
+    uint64_t now = uv_hrtime();
+    double ts = 0;
+    int flags = 0;
+    if (ts_started_)
+        ts = 1e-9 * (now - ts_last_);
+    else {
+        flags |= Midi_Message_Is_First;
+        ts_started_ = true;
+    }
+    ins.send_message(msg, len, ts, flags);
+    ts_last_ = now;
+}
+
+void Player::play_meta(uint8_t type, const uint8_t *msg, uint32_t len)
+{
+    if (type == 0x51 && len == 3) {
+        uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
+        if (unit & (1 << 15))
+            current_tempo_ = 0; // not tempo-based file
+        else {
+            unsigned midi_tempo = (msg[0] << 16) | (msg[1] << 8) | msg[2];
+            current_tempo_ = 60e6 / midi_tempo;
+        }
+    }
+}
+
+///
+static bool is_midi_reset_message(const uint8_t *msg, uint32_t len)
+{
+    if (len >= 1 && msg[0] == 0xff) // GM system reset
+        return true;
+
+    if (len >= 4 && msg[0] == 0xf0 && msg[len - 1] == 0xf7) { // sysex resets
+        uint8_t manufacturer = msg[1];
+        uint8_t device_id = msg[2];
+        const uint8_t *payload = msg + 3;
+        uint8_t paysize = len - 4;
+
+        switch (manufacturer) {
+        case 0x7e: { // GM system messages
+            const uint8_t gm_on[] = {0x09, 0x01};
+            if (paysize >= 2 && !memcmp(gm_on, payload, 2))
+                return true;
+            break;
+        }
+        case 0x43: { // Yamaha XG
+            const uint8_t xg_on[] = {0x4c, 0x00, 0x00, 0x7e};
+            const uint8_t all_reset[] = {0x4c, 0x00, 0x00, 0x7f};
+            if ((device_id & 0xf0) == 0x10 && paysize >= 4 &&
+                (!memcmp(xg_on, payload, 4) || !memcmp(all_reset, payload, 4)))
+                return true;
+            break;
+        }
+        case 0x41: { // Roland GS / Roland MT-32
+            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f};
+            const uint8_t mt32_reset[] = {0x16, 0x12, 0x7f};
+            if ((device_id & 0xf0) == 0x10 &&
+                ((paysize >= 5 && !memcmp(gs_on, payload, 5)) ||
+                 (paysize >= 3 && !memcmp(mt32_reset, payload, 3))))
+                return true;
+            break;
+        }
+        }
+    }
+
+    return false;
+}
+
+///
+void Player::seeker_play_message(const uint8_t *msg, uint32_t len)
+{
+    play_message(msg, len);
+
+    // add a delay if the message may reset the device
+    if (is_midi_reset_message(msg, len))
+        uv_sleep(100);
 }
 
 void Player::file_finished()
