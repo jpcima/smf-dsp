@@ -117,39 +117,13 @@ void fmidi_player_goto_time(fmidi_player_t *plr, double time)
     fmidi_player_context &ctx = plr->ctx;
     fmidi_seq_t &seq = *ctx.seq;
 
-    uint8_t programs[16];
-    uint8_t controls[16 * 128];
-    std::fill_n(programs, 16, 0);
-    std::fill_n(controls, 16 * 128, 255);
-
     fmidi_player_rewind(plr);
 
-    for (fmidi_seq_event_t sqevt;
-         fmidi_seq_peek_event(&seq, &sqevt) && sqevt.time < time;) {
-        const fmidi_event_t &evt = *sqevt.event;
-        if (evt.type == fmidi_event_message) {
-            uint8_t status = evt.data[0];
-            if (status >> 4 == 0b1100 && evt.datalen == 2) {  // program change
-                uint8_t channel = status & 0xf;
-                programs[channel] = evt.data[1] & 127;
-            }
-            else if (status >> 4 == 0b1011 && evt.datalen == 3) {  // control change
-                uint8_t channel = status & 0xf;
-                uint8_t id = evt.data[1] & 127;
-                controls[channel * 128 + id] = evt.data[2] & 127;
-            }
-        }
-        fmidi_seq_next_event(&seq, nullptr);
-    }
-
-    ctx.timepos = time;
-
     if (ctx.cbfn) {
-        uint8_t evtbuf[fmidi_event_sizeof(3)];
+        alignas(fmidi_event_t) uint8_t evtbuf[fmidi_event_sizeof(3)];
         fmidi_event_t *evt = (fmidi_event_t *)evtbuf;
         evt->type = fmidi_event_message;
         evt->delta = 0;
-
         for (unsigned c = 0; c < 16; ++c) {
             // all sound off
             evt->datalen = 3;
@@ -166,21 +140,20 @@ void fmidi_player_goto_time(fmidi_player_t *plr, double time)
             // program change
             evt->datalen = 2;
             evt->data[0] = (0b1100 << 4) | c;
-            evt->data[1] = programs[c];
+            evt->data[1] = 0;
             ctx.cbfn(evt, ctx.cbdata);
-            // control change
-            for (unsigned id = 0; id < 128; ++id) {
-                uint8_t val = controls[c * 128 + id];
-                if (val < 128) {
-                    evt->datalen = 3;
-                    evt->data[0] = (0b1011 << 4) | c;
-                    evt->data[1] = id;
-                    evt->data[2] = val;
-                    ctx.cbfn(evt, ctx.cbdata);
-                }
-            }
         }
     }
+
+    for (fmidi_seq_event_t sqevt;
+         fmidi_seq_peek_event(&seq, &sqevt) && sqevt.time < time;) {
+        const fmidi_event_t &evt = *sqevt.event;
+        if (ctx.cbfn)
+            ctx.cbfn(&evt, ctx.cbdata);
+        fmidi_seq_next_event(&seq, nullptr);
+    }
+
+    ctx.timepos = time;
 }
 
 double fmidi_player_current_speed(const fmidi_player_t *plr)
