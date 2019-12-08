@@ -208,8 +208,6 @@ void Player::process_command_queue()
             std::condition_variable *wait_cond = static_cast<Pcmd_Shutdown &>(*cmd).wait_cond;
 
             reset_current_playback();
-            ins.initialize();
-            ins.flush_events();
             stop_ticking();
 
             std::unique_lock<std::mutex> lock(*wait_mutex);
