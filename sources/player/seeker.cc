@@ -222,30 +222,54 @@ void Seek_State::flush_state()
             emit_cc(id.channel, id.cc(), value);
             break;
         }
+
+        // RPN/NRPN note: if value is a MSB/LSB pair, send both of them along
+        // and avoid repeating 2 CC messages.
+
         case Control_RPN_MSB: {
             emit_cc(id.channel, 101, id.rpn_msb());
             emit_cc(id.channel, 100, id.rpn_lsb());
             emit_cc(id.channel, 6, value);
+            Seek_Control_Id id_lsb = id;
+            id_lsb.type = Control_RPN_LSB;
+            auto it_lsb = storage.find(id_lsb.raw);
+            if (it_lsb != storage.end())
+                emit_cc(id.channel, 38, it_lsb->second);
             break;
         }
         case Control_RPN_LSB: {
-            emit_cc(id.channel, 101, id.rpn_msb());
-            emit_cc(id.channel, 100, id.rpn_lsb());
-            emit_cc(id.channel, 38, value);
+            Seek_Control_Id id_msb = id;
+            id_msb.type = Control_RPN_MSB;
+            if (storage.find(id_msb.raw) == storage.end()) {
+                emit_cc(id.channel, 101, id.rpn_msb());
+                emit_cc(id.channel, 100, id.rpn_lsb());
+                emit_cc(id.channel, 38, value);
+            }
             break;
         }
+
         case Control_NRPN_MSB: {
             emit_cc(id.channel, 99, id.rpn_msb());
             emit_cc(id.channel, 98, id.rpn_lsb());
             emit_cc(id.channel, 6, value);
+            Seek_Control_Id id_lsb = id;
+            id_lsb.type = Control_NRPN_LSB;
+            auto it_lsb = storage.find(id_lsb.raw);
+            if (it_lsb != storage.end())
+                emit_cc(id.channel, 38, it_lsb->second);
             break;
         }
         case Control_NRPN_LSB: {
-            emit_cc(id.channel, 99, id.rpn_msb());
-            emit_cc(id.channel, 98, id.rpn_lsb());
-            emit_cc(id.channel, 38, value);
+            Seek_Control_Id id_msb = id;
+            id_msb.type = Control_NRPN_MSB;
+            if (storage.find(id_msb.raw) == storage.end()) {
+                emit_cc(id.channel, 99, id.rpn_msb());
+                emit_cc(id.channel, 98, id.rpn_lsb());
+                emit_cc(id.channel, 38, value);
+            }
             break;
         }
+
         case Control_BEND: {
             emit_bend(id.channel, value);
             break;
