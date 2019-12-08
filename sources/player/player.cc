@@ -203,7 +203,6 @@ void Player::process_command_queue()
             break;
         }
         case PC_Shutdown: {
-            Midi_Instrument &ins = *ins_;
             std::mutex *wait_mutex = static_cast<Pcmd_Shutdown &>(*cmd).wait_mutex;
             std::condition_variable *wait_cond = static_cast<Pcmd_Shutdown &>(*cmd).wait_cond;
 
