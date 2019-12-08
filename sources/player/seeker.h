@@ -4,7 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <map>
+#include <unordered_map>
+#include <vector>
 #include <cstdint>
 
 class Seek_State {
@@ -21,12 +22,26 @@ public:
     void set_message_callback(Message_Callback *cb, void *cbdata);
 
 private:
-    typedef std::map<uint32_t, uint32_t> storage_t;
+    struct Storage {
+        void clear();
+        void reserve(size_t capacity);
+        void put(uint32_t raw_id, uint32_t value);
+        uint32_t *find(uint32_t raw_id);
+        const uint32_t *find(uint32_t raw_id) const;
+
+        struct Assoc {
+            uint32_t raw_id;
+            uint32_t value;
+        };
+
+        std::vector<Assoc> assoc;
+        std::unordered_map<uint32_t /*raw_id*/, size_t /*index*/> index_of;
+    };
 
     void emit_message(const uint8_t *msg, uint32_t len);
 
 private:
-    storage_t storage_;
+    Storage storage_;
     int is_nrpn_[16] = {};
     int rpn_msb_[16] = {};
     int rpn_lsb_[16] = {};

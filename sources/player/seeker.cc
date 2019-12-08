@@ -31,8 +31,11 @@ union Seek_Control_Id {
     void set_rpn(uint8_t msb, uint8_t lsb) noexcept { identifier = ((msb & 127) << 7) | (lsb & 127); }
 };
 
+static constexpr size_t initial_capacity = 256;
+
 Seek_State::Seek_State()
 {
+    storage_.reserve(initial_capacity);
     clear();
 }
 
@@ -73,7 +76,7 @@ void Seek_State::add_event(const uint8_t *msg, uint32_t len)
         return;
     }
 
-    storage_t &storage = storage_;
+    Storage &stor = storage_;
 
     switch (status & 0xf0) {
     case 0xb0: // controller change
@@ -94,7 +97,7 @@ void Seek_State::add_event(const uint8_t *msg, uint32_t len)
                 (is_nrpn ? Control_NRPN_LSB : Control_RPN_LSB);
             id.channel = channel;
             id.set_rpn(msb, lsb);
-            storage[id.raw] = data2;
+            stor.put(id.raw, data2);
             break;
         }
         case 98: // NRPN LSB
@@ -117,7 +120,7 @@ void Seek_State::add_event(const uint8_t *msg, uint32_t len)
             id.type = Control_CC;
             id.channel = channel;
             id.set_cc(data1);
-            storage[id.raw] = data2;
+            stor.put(id.raw, data2);
             break;
         }
         }
@@ -126,14 +129,14 @@ void Seek_State::add_event(const uint8_t *msg, uint32_t len)
         Seek_Control_Id id;
         id.type = Control_PROGRAM;
         id.channel = channel;
-        storage[id.raw] = data1;
+        stor.put(id.raw, data1);
         break;
     }
     case 0xe0: { // pitch bend change
         Seek_Control_Id id;
         id.type = Control_BEND;
         id.channel = channel;
-        storage[id.raw] = data1 | (data2 << 7);
+        stor.put(id.raw, data1 | (data2 << 7));
         break;
     }
     }
@@ -141,14 +144,18 @@ void Seek_State::add_event(const uint8_t *msg, uint32_t len)
 
 void Seek_State::add_reset_all_controllers(unsigned channel)
 {
-    storage_t &storage = storage_;
-    storage_t old = std::move(storage);
+    Storage &stor = storage_;
+    Storage temp;
+    temp.reserve(initial_capacity);
 
-    storage.clear();
+    std::swap(stor.assoc, temp.assoc);
+    std::swap(stor.index_of, temp.index_of);
 
-    for (storage_t::value_type item : old) {
+    stor.clear();
+
+    for (Storage::Assoc item : temp.assoc) {
         Seek_Control_Id id;
-        id.raw = item.first;
+        id.raw = item.raw_id;
 
         // remove all changes in the channel which are affected by
         // the reset-all-controllers CC
@@ -177,7 +184,7 @@ void Seek_State::add_reset_all_controllers(unsigned channel)
         }
 
         if (!removed)
-            storage[id.raw] = item.second;
+            stor.put(id.raw, item.value);
     }
 
     reset_all_cc[channel] = true;
@@ -188,7 +195,7 @@ void Seek_State::add_reset_all_controllers(unsigned channel)
 
 void Seek_State::flush_state()
 {
-    const storage_t &storage = storage_;
+    const Storage &stor = storage_;
 
     ///
     auto emit_cc = [this](unsigned ch, unsigned cc, unsigned val) {
@@ -211,11 +218,11 @@ void Seek_State::flush_state()
     }
 
     ///
-    for (storage_t::value_type item : storage) {
+    for (Storage::Assoc item : stor.assoc) {
         Seek_Control_Id id;
-        id.raw = item.first;
+        id.raw = item.raw_id;
 
-        uint32_t value = item.second;
+        uint32_t value = item.value;
 
         switch (id.type) {
         case Control_CC: {
@@ -232,15 +239,14 @@ void Seek_State::flush_state()
             emit_cc(id.channel, 6, value);
             Seek_Control_Id id_lsb = id;
             id_lsb.type = Control_RPN_LSB;
-            auto it_lsb = storage.find(id_lsb.raw);
-            if (it_lsb != storage.end())
-                emit_cc(id.channel, 38, it_lsb->second);
+            if (const uint32_t *value_lsb = stor.find(id_lsb.raw))
+                emit_cc(id.channel, 38, *value_lsb);
             break;
         }
         case Control_RPN_LSB: {
             Seek_Control_Id id_msb = id;
             id_msb.type = Control_RPN_MSB;
-            if (storage.find(id_msb.raw) == storage.end()) {
+            if (!stor.find(id_msb.raw)) {
                 emit_cc(id.channel, 101, id.rpn_msb());
                 emit_cc(id.channel, 100, id.rpn_lsb());
                 emit_cc(id.channel, 38, value);
@@ -254,15 +260,14 @@ void Seek_State::flush_state()
             emit_cc(id.channel, 6, value);
             Seek_Control_Id id_lsb = id;
             id_lsb.type = Control_NRPN_LSB;
-            auto it_lsb = storage.find(id_lsb.raw);
-            if (it_lsb != storage.end())
-                emit_cc(id.channel, 38, it_lsb->second);
+            if (const uint32_t *value_lsb = stor.find(id_lsb.raw))
+                emit_cc(id.channel, 38, *value_lsb);
             break;
         }
         case Control_NRPN_LSB: {
             Seek_Control_Id id_msb = id;
             id_msb.type = Control_NRPN_MSB;
-            if (storage.find(id_msb.raw) == storage.end()) {
+            if (!stor.find(id_msb.raw)) {
                 emit_cc(id.channel, 99, id.rpn_msb());
                 emit_cc(id.channel, 98, id.rpn_lsb());
                 emit_cc(id.channel, 38, value);
@@ -309,4 +314,47 @@ void Seek_State::emit_message(const uint8_t *msg, uint32_t len)
     Message_Callback *cb = cb_;
     if (cb)
         cb(msg, len, cbdata_);
+}
+
+///
+void Seek_State::Storage::clear()
+{
+    assoc.clear();
+    index_of.clear();
+}
+
+void Seek_State::Storage::reserve(size_t capacity)
+{
+    assoc.reserve(capacity);
+    index_of.reserve(capacity);
+}
+
+void Seek_State::Storage::put(uint32_t raw_id, uint32_t value)
+{
+    Assoc *entry = nullptr;
+
+    auto it = index_of.find(raw_id);
+    if (it != index_of.end())
+        entry = &assoc[it->second];
+    else {
+        size_t index = assoc.size();
+        assoc.emplace_back();
+        index_of[raw_id] = index;
+        entry = &assoc[index];
+        entry->raw_id = raw_id;
+    }
+
+    entry->value = value;
+}
+
+uint32_t *Seek_State::Storage::find(uint32_t raw_id)
+{
+    return const_cast<uint32_t *>(
+        const_cast<const Storage *>(this)->find(raw_id));
+}
+
+const uint32_t *Seek_State::Storage::find(uint32_t raw_id) const
+{
+    auto it = index_of.find(raw_id);
+    return (it != index_of.end()) ? &assoc[it->second].value : nullptr;
 }
