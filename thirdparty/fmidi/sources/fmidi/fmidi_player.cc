@@ -137,6 +137,26 @@ void fmidi_player_goto_time(fmidi_player_t *plr, double time)
             evt->data[1] = 121;
             evt->data[2] = 0;
             ctx.cbfn(evt, ctx.cbdata);
+            // volume
+            evt->datalen = 3;
+            evt->data[0] = (0b1011 << 4) | c;
+            evt->data[1] = 7;
+            evt->data[2] = 100;
+            ctx.cbfn(evt, ctx.cbdata);
+            // pan
+            evt->datalen = 3;
+            evt->data[0] = (0b1011 << 4) | c;
+            evt->data[1] = 10;
+            evt->data[2] = 64;
+            ctx.cbfn(evt, ctx.cbdata);
+            // bank select
+            evt->datalen = 3;
+            evt->data[0] = (0b1011 << 4) | c;
+            evt->data[1] = 0;
+            evt->data[2] = 0;
+            ctx.cbfn(evt, ctx.cbdata);
+            evt->data[1] = 32;
+            ctx.cbfn(evt, ctx.cbdata);
             // program change
             evt->datalen = 2;
             evt->data[0] = (0b1100 << 4) | c;
