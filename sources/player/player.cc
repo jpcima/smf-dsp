@@ -5,6 +5,7 @@
 
 #include "player.h"
 #include "playlist.h"
+#include "seeker.h"
 #include "instrument.h"
 #include "command.h"
 #include "clock.h"
@@ -19,6 +20,7 @@
 Player::Player()
     : quit_(false),
       play_list_(new Linear_Play_List),
+      seek_state_(new Seek_State),
       midiport_ins_(new Midi_Port_Instrument),
       synth_ins_(new Midi_Synth_Instrument)
 {
@@ -26,6 +28,11 @@ Player::Player()
 
     // scan and initialize plugins
     Synth_Host::plugins();
+
+    // initialize seeker
+    seek_state_->set_message_callback(+[](const uint8_t *msg, uint32_t len, void *ptr) {
+        reinterpret_cast<Player *>(ptr)->seeker_play_message(msg, len);
+    }, this);
 
     std::unique_lock<std::mutex> ready_lock(ready_mutex_);
     thread_ = std::thread([this] { thread_exec(); });
@@ -143,21 +150,12 @@ void Player::process_command_queue()
         case PC_Rewind:
             rewind();
             break;
-        case PC_Seek_End: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl)
-                fmidi_player_goto_time(pl, smf_duration_);
+        case PC_Seek_End:
+            goto_time(smf_duration_);
             break;
-        }
         case PC_Seek_Cur: {
-            fmidi_player_t *pl = pl_.get();
-            if (pl) {
-                double o = static_cast<Pcmd_Seek_Cur &>(*cmd).time_offset;
-                double t = fmidi_player_current_time(pl) + o;
-                t = std::max(t, 0.0);
-                t = std::min(t, smf_duration_);
-                fmidi_player_goto_time(pl, t);
-            }
+            double o = static_cast<Pcmd_Seek_Cur &>(*cmd).time_offset;
+            goto_relative_time(o);
             break;
         }
         case PC_Speed: {
@@ -233,6 +231,32 @@ void Player::rewind()
     ins.flush_events();
 }
 
+void Player::goto_time(double t)
+{
+    fmidi_player_t *pl = pl_.get();
+    if (!pl)
+        return;
+
+    begin_seeking();
+    fmidi_player_goto_time(pl, t);
+    end_seeking();
+}
+
+void Player::goto_relative_time(double o)
+{
+    fmidi_player_t *pl = pl_.get();
+    if (!pl)
+        return;
+
+    double t = fmidi_player_current_time(pl) + o;
+    t = std::max(t, 0.0);
+    t = std::min(t, smf_duration_);
+
+    begin_seeking();
+    fmidi_player_goto_time(pl, t);
+    end_seeking();
+}
+
 void Player::reset_current_playback()
 {
     pl_.reset();
@@ -241,6 +265,26 @@ void Player::reset_current_playback()
     Midi_Instrument &ins = *ins_;
     ins.initialize();
     ins.flush_events();
+}
+
+void Player::begin_seeking()
+{
+    Midi_Instrument &ins = *ins_;
+    // trust the sequencer to send initialization events, don't do it ourselves
+    ins.flush_events();
+
+    Seek_State &sks = *seek_state_;
+    sks.clear();
+
+    seeking_ = true;
+}
+
+void Player::end_seeking()
+{
+    Seek_State &sks = *seek_state_;
+    sks.flush_state();
+
+    seeking_ = false;
 }
 
 void Player::resume_play_list()
@@ -294,21 +338,26 @@ void Player::tick(uint64_t elapsed)
 void Player::play_event(const fmidi_event_t &event)
 {
     switch (event.type) {
-    case fmidi_event_message: {
-        Midi_Instrument &ins = *ins_;
-        uint64_t now = uv_hrtime();
-        double ts = 0;
-        int flags = 0;
-        if (ts_started_)
-            ts = 1e-9 * (now - ts_last_);
-        else {
-            flags |= Midi_Message_Is_First;
-            ts_started_ = true;
+    case fmidi_event_message:
+        if (seeking_) {
+            Seek_State &sks = *seek_state_;
+            sks.add_event(event.data, event.datalen);
         }
-        ins.send_message(event.data, event.datalen, ts, flags);
-        ts_last_ = now;
+        else {
+            Midi_Instrument &ins = *ins_;
+            uint64_t now = uv_hrtime();
+            double ts = 0;
+            int flags = 0;
+            if (ts_started_)
+                ts = 1e-9 * (now - ts_last_);
+            else {
+                flags |= Midi_Message_Is_First;
+                ts_started_ = true;
+            }
+            ins.send_message(event.data, event.datalen, ts, flags);
+            ts_last_ = now;
+        }
         break;
-    }
     case fmidi_event_meta: {
         uint8_t type = event.data[0];
         if (type == 0x51 && event.datalen - 1 == 3) {
@@ -325,6 +374,15 @@ void Player::play_event(const fmidi_event_t &event)
     default:
         break;
     }
+}
+
+void Player::seeker_play_message(const uint8_t *msg, uint32_t len)
+{
+    Midi_Instrument &ins = *ins_;
+
+    #pragma message("TODO: should delay after the message if it is a reset")
+
+    ins.send_message(msg, len, 0, 0);
 }
 
 void Player::file_finished()
