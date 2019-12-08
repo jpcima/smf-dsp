@@ -16,6 +16,7 @@
 #include <gsl.hpp>
 #include <stdexcept>
 #include <cstdio>
+#include <cstring>
 
 Player::Player()
     : quit_(false),
@@ -208,6 +209,7 @@ void Player::process_command_queue()
 
             reset_current_playback();
             ins.initialize();
+            ins.flush_events();
             stop_ticking();
 
             std::unique_lock<std::mutex> lock(*wait_mutex);
@@ -316,7 +318,7 @@ void Player::resume_play_list()
         pl_.reset(pl);
 
         fmidi_player_set_speed(pl, current_speed_ * 0.01);
-        fmidi_player_event_callback(pl, [](const fmidi_event_t *ev, void *ud) { static_cast<Player *>(ud)->play_event(*ev); }, this);
+        fmidi_player_event_callback(pl, [](const fmidi_event_t *ev, void *ud) { static_cast<Player *>(ud)->on_sequence_event(*ev); }, this);
         fmidi_player_finish_callback(pl, [](void *ud) { static_cast<Player *>(ud)->file_finished(); }, this);
 
         smf_ = std::move(smf);
@@ -335,40 +337,19 @@ void Player::tick(uint64_t elapsed)
     fmidi_player_tick(pl, delta);
 }
 
-void Player::play_event(const fmidi_event_t &event)
+void Player::on_sequence_event(const fmidi_event_t &event)
 {
     switch (event.type) {
     case fmidi_event_message:
-        if (seeking_) {
+        if (!seeking_)
+            play_message(event.data, event.datalen);
+        else {
             Seek_State &sks = *seek_state_;
             sks.add_event(event.data, event.datalen);
         }
-        else {
-            Midi_Instrument &ins = *ins_;
-            uint64_t now = uv_hrtime();
-            double ts = 0;
-            int flags = 0;
-            if (ts_started_)
-                ts = 1e-9 * (now - ts_last_);
-            else {
-                flags |= Midi_Message_Is_First;
-                ts_started_ = true;
-            }
-            ins.send_message(event.data, event.datalen, ts, flags);
-            ts_last_ = now;
-        }
         break;
     case fmidi_event_meta: {
-        uint8_t type = event.data[0];
-        if (type == 0x51 && event.datalen - 1 == 3) {
-            uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
-            if (unit & (1 << 15))
-                current_tempo_ = 0; // not tempo-based file
-            else {
-                unsigned midi_tempo = (event.data[1] << 16) | (event.data[2] << 8) | event.data[3];
-                current_tempo_ = 60e6 / midi_tempo;
-            }
-        }
+        play_meta(event.data[0], event.data + 1, event.datalen - 1);
         break;
     }
     default:
@@ -376,13 +357,85 @@ void Player::play_event(const fmidi_event_t &event)
     }
 }
 
-void Player::seeker_play_message(const uint8_t *msg, uint32_t len)
+void Player::play_message(const uint8_t *msg, uint32_t len)
 {
     Midi_Instrument &ins = *ins_;
+    uint64_t now = uv_hrtime();
+    double ts = 0;
+    int flags = 0;
+    if (ts_started_)
+        ts = 1e-9 * (now - ts_last_);
+    else {
+        flags |= Midi_Message_Is_First;
+        ts_started_ = true;
+    }
+    ins.send_message(msg, len, ts, flags);
+    ts_last_ = now;
+}
 
-    #pragma message("TODO: should delay after the message if it is a reset")
+void Player::play_meta(uint8_t type, const uint8_t *msg, uint32_t len)
+{
+    if (type == 0x51 && len == 3) {
+        uint16_t unit = fmidi_smf_get_info(smf_.get())->delta_unit;
+        if (unit & (1 << 15))
+            current_tempo_ = 0; // not tempo-based file
+        else {
+            unsigned midi_tempo = (msg[0] << 16) | (msg[1] << 8) | msg[2];
+            current_tempo_ = 60e6 / midi_tempo;
+        }
+    }
+}
 
-    ins.send_message(msg, len, 0, 0);
+///
+static bool is_midi_reset_message(const uint8_t *msg, uint32_t len)
+{
+    if (len >= 1 && msg[0] == 0xff) // GM system reset
+        return true;
+
+    if (len >= 4 && msg[0] == 0xf0 && msg[len - 1] == 0xf7) { // sysex resets
+        uint8_t manufacturer = msg[1];
+        uint8_t device_id = msg[2];
+        const uint8_t *payload = msg + 3;
+        uint8_t paysize = len - 4;
+
+        switch (manufacturer) {
+        case 0x7e: { // GM system messages
+            const uint8_t gm_on[] = {0x09, 0x01};
+            if (paysize >= 2 && !memcmp(gm_on, payload, 2))
+                return true;
+            break;
+        }
+        case 0x43: { // Yamaha XG
+            const uint8_t xg_on[] = {0x4c, 0x00, 0x00, 0x7e};
+            const uint8_t all_reset[] = {0x4c, 0x00, 0x00, 0x7f};
+            if ((device_id & 0xf0) == 0x10 && paysize >= 4 &&
+                (!memcmp(xg_on, payload, 4) || !memcmp(all_reset, payload, 4)))
+                return true;
+            break;
+        }
+        case 0x41: { // Roland GS / Roland MT-32
+            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f};
+            const uint8_t mt32_reset[] = {0x16, 0x12, 0x7f};
+            if ((device_id & 0xf0) == 0x10 &&
+                ((paysize >= 5 && !memcmp(gs_on, payload, 5)) ||
+                 (paysize >= 3 && !memcmp(mt32_reset, payload, 3))))
+                return true;
+            break;
+        }
+        }
+    }
+
+    return false;
+}
+
+///
+void Player::seeker_play_message(const uint8_t *msg, uint32_t len)
+{
+    play_message(msg, len);
+
+    // add a delay if the message may reset the device
+    if (is_midi_reset_message(msg, len))
+        uv_sleep(100);
 }
 
 void Player::file_finished()

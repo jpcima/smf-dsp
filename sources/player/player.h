@@ -47,7 +47,9 @@ private:
     void resume_play_list();
 
     void tick(uint64_t elapsed);
-    void play_event(const fmidi_event_t &event);
+    void on_sequence_event(const fmidi_event_t &event);
+    void play_message(const uint8_t *msg, uint32_t len);
+    void play_meta(uint8_t type, const uint8_t *msg, uint32_t len);
     void seeker_play_message(const uint8_t *msg, uint32_t len);
     void file_finished();
 
