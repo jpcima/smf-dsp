@@ -1,6 +1,6 @@
 ###
-CC = $(TARGET)gcc
-CXX = $(TARGET)g++
+CC ?= $(TARGET)gcc
+CXX ?= $(TARGET)g++
 CCLD = $(CC)
 CXXLD = $(CXX)
 CFLAGS = -O2 -g -Wall -fvisibility=hidden
@@ -13,12 +13,15 @@ _CC_PLATFORM = $(shell $(CC) -dumpmachine)
 $(eval $(if $(findstring linux,$(_CC_PLATFORM)),LINUX = 1,$(if \
             $(findstring mingw,$(_CC_PLATFORM)),MINGW = 1,$(if \
             $(findstring apple,$(_CC_PLATFORM)),APPLE = 1,$(if \
-            $(findstring haiku,$(_CC_PLATFORM)),HAIKU = 1, \
-            $(error unrecognized platform: $(_CC_PLATFORM)))))))
+            $(findstring haiku,$(_CC_PLATFORM)),HAIKU = 1,$(if \
+            $(findstring wasm,$(_CC_PLATFORM)),WASM = 1, \
+            $(error unrecognized platform: $(_CC_PLATFORM))))))))
+
+NOT_WASM = $(if $(WASM),,1)
 
 ###
 APP_EXT = $(if $(MINGW),.exe,)
-LIB_EXT = $(if $(MINGW),.dll,$(if $(APPLE),.dylib,.so))
+LIB_EXT = $(if $(MINGW),.dll,$(if $(APPLE),.dylib,$(if $(NOT_WASM),.so)))
 
 ###
 define color_warning
