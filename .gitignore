@@ -1,4 +1,5 @@
 /obj/
+/gen/
 /Makefile.ini
 /fmidiplay
 *.so

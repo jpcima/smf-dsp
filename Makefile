@@ -222,8 +222,6 @@ $(call color_warning,munt sources are missing from thirdparty/munt; skipping plu
 endif
 
 ifeq ($(S_MT32EMU_ENABLE),1)
-$(shell touch -a thirdparty/munt/mt32emu/src/config.h)
-
 PLUGIN := s_mt32emu$(LIB_EXT)
 SOURCES := \
   sources/synth/plugins/mt32emu.cc \
@@ -240,6 +238,7 @@ $(PLUGIN): CPPFLAGS += \
     -Isources \
     -Ithirdparty/gsl-lite/include \
     -Ithirdparty/munt/mt32emu/src \
+    -Igen/s_mt32emu$(LIB_EXT) \
     -DMT32EMU_WITH_INTERNAL_RESAMPLER \
     -DMT32EMU_EXPORTS_TYPE=1 \
     -DMT32EMU_VERSION='"0.0.0"' \
@@ -249,6 +248,11 @@ $(PLUGIN): CPPFLAGS += \
 $(PLUGIN): LDFLAGS += \
     $(if $(STATIC),-static) \
     $(if $(LINUX),-Xlinker -no-undefined)
+
+$(_OBJS): gen/s_mt32emu$(LIB_EXT)/config.h
+gen/s_mt32emu$(LIB_EXT)/config.h:
+	@mkdir -p $(dir $@)
+	touch $@
 endif
 
 ###

@@ -7,6 +7,7 @@ clean-app-$(APP): APP := $(APP)
 clean-app-$(APP):
 	rm -f $(APP)
 	rm -rf obj/$(notdir $(APP))
+	rm -rf gen/$(notdir $(APP))
 .PHONY: clean-app-$(APP)
 
 $(APP): $(_OBJS)

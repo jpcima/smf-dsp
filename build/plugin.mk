@@ -7,6 +7,7 @@ clean-plugin-$(PLUGIN): PLUGIN := $(PLUGIN)
 clean-plugin-$(PLUGIN):
 	rm -f $(PLUGIN)
 	rm -rf obj/$(notdir $(PLUGIN))
+	rm -rf gen/$(notdir $(PLUGIN))
 .PHONY: clean-plugin-$(PLUGIN)
 
 $(PLUGIN): $(_OBJS)
