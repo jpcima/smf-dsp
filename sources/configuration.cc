@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include "config.h"
+#include "configuration.h"
 #include "utility/paths.h"
 #include <sys/stat.h>
 #include <sys/types.h>

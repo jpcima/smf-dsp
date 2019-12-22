@@ -13,7 +13,7 @@ override LDFLAGS += $(if $(STATIC),-static)
 ###
 APP := fmidiplay$(APP_EXT)
 SOURCES := \
-  sources/config.cc \
+  sources/configuration.cc \
   sources/fmidiplay.cc \
   sources/main.cc \
   sources/player/player.cc \

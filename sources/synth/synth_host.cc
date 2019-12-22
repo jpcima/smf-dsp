@@ -5,7 +5,7 @@
 
 #include "synth_host.h"
 #include "synth_utility.h"
-#include "config.h"
+#include "configuration.h"
 #include "utility/paths.h"
 #include "utility/charset.h"
 #include <algorithm>

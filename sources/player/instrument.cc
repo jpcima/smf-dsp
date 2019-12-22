@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "instrument.h"
-#include "config.h"
+#include "configuration.h"
 #include "synth/synth_host.h"
 #include <RtMidi.h>
 #if !defined(__HAIKU__)

@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "config.h"
+#include "configuration.h"
 #include "utility/geometry.h"
 #include "utility/SDL++.h"
 #include <SDL.h>
