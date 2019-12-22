@@ -68,10 +68,11 @@ std::string File_Browser_Model::current_path() const
 
 void File_Browser_Model::set_current_path(gsl::cstring_span path)
 {
-    auto it = std::find(path.rbegin(), path.rend(), '/').base();
-    if (it == path.end())
+    size_t pos = path.size() - 1;
+    while ((ssize_t)pos != -1 && path[pos] != '/')
+        --pos;
+    if ((ssize_t)pos == -1)
         return;
-    size_t pos = std::distance(path.begin(), it);
     gsl::cstring_span filename = gsl::cstring_span(path).subspan(pos + 1);
 
     cwd_ = gsl::to_string(path.subspan(0, pos + 1));
