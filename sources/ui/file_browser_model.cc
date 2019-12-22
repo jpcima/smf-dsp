@@ -32,16 +32,12 @@ File_Browser_Model::File_Browser_Model(gsl::cstring_span cwd)
     refresh();
 }
 
-std::string File_Browser_Model::current_file() const
+std::string File_Browser_Model::current_filename() const
 {
-    const File_Entry *ent = current_entry();
-    if (!ent)
-        return std::string{};
-
-    return (ent->type != 'D') ? ent->name : (ent->name + '/');
+    return filename(sel_);
 }
 
-void File_Browser_Model::set_current_file(gsl::cstring_span file)
+void File_Browser_Model::set_current_filename(gsl::cstring_span file)
 {
     const std::vector<File_Entry> &entries = entries_;
     size_t index = ~size_t{0};
@@ -55,9 +51,19 @@ void File_Browser_Model::set_current_file(gsl::cstring_span file)
         sel_ = index;
 }
 
+std::string File_Browser_Model::filename(size_t index) const
+{
+    size_t sel = sel_;
+    if (sel >= entries_.size())
+        return std::string{};
+
+    const File_Entry &ent = entries_[index];
+    return (ent.type != 'D') ? ent.name : (ent.name + '/');
+}
+
 std::string File_Browser_Model::current_path() const
 {
-    return cwd_ + current_file();
+    return cwd_ + current_filename();
 }
 
 void File_Browser_Model::set_current_path(gsl::cstring_span path)

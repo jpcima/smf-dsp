@@ -16,8 +16,9 @@ public:
     File_Browser_Model();
     explicit File_Browser_Model(gsl::cstring_span cwd);
 
-    std::string current_file() const;
-    void set_current_file(gsl::cstring_span file);
+    std::string current_filename() const;
+    void set_current_filename(gsl::cstring_span file);
+    std::string filename(size_t index) const;
 
     std::string current_path() const;
     void set_current_path(gsl::cstring_span path);
