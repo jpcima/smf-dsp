@@ -22,6 +22,8 @@
 #include "ui/paint.h"
 #include "utility/SDL++.h"
 #include "utility/paths.h"
+#include "utility/charset.h"
+#include "utility/strings.h"
 #include <SDL_image.h>
 #include <gsl.hpp>
 #include <algorithm>
@@ -601,6 +603,12 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
             return true;
         }
         break;
+    case SDL_SCANCODE_F9:
+        if (keymod == KMOD_NONE) {
+            choose_theme(last_theme_choice_);
+            return true;
+        }
+        break;
     case SDL_SCANCODE_ESCAPE:
         if (keymod == KMOD_NONE && !event.repeat) {
             engage_shutdown();
@@ -801,45 +809,76 @@ void Application::get_midi_outputs(std::vector<Midi_Output> &outputs)
     wait_cond.wait(lock);
 }
 
+void Application::choose_theme(gsl::cstring_span choice)
+{
+    std::vector<std::string> themes;
+    get_themes(themes);
+
+    size_t default_index = ~size_t(0);
+    for (size_t i = 0, n = themes.size(); i < n && default_index == ~size_t(0); ++i) {
+        if (themes[i] == choice)
+            default_index = i;
+    }
+
+    Modal_Selection_Box *modal = new Modal_Selection_Box(
+        Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100)), "Theme", themes);
+    modal_.emplace_back(modal);
+
+    if (default_index != ~size_t(0))
+        modal->set_selection_index(default_index);
+
+    modal->CompletionCallback =
+        [this, modal, themes] {
+            size_t index;
+            modal->get_completion_result(0, &index);
+
+            if (index >= themes.size())
+                return;
+
+            load_theme(themes[index]);
+        };
+}
+
+void Application::get_themes(std::vector<std::string> &themes)
+{
+    std::string dir_path = get_configuration_dir();
+    Dir dir{dir_path};
+
+    if (!dir)
+        return;
+
+    std::string file_name;
+    while (dir.read_next(file_name)) {
+        bool is_theme = string_starts_with<char>(file_name, "t_") &&
+            string_ends_with<char>(file_name, ".ini");
+        if (is_theme)
+            themes.push_back(file_name.substr(2, file_name.size() - 6));
+    }
+}
+
 void Application::load_theme(gsl::cstring_span theme)
 {
     load_default_theme();
 
-    if (theme.empty() || theme == "default")
-        return;
+    if (theme.empty())
+        theme = "default";
 
-    std::unique_ptr<CSimpleIniA> ini = load_configuration("t_" + gsl::to_string(theme));
-    if (!ini) {
-        fprintf(stderr, "Theme: cannot load the configuration file.\n");
-        return;
-    }
-
-    Color_Palette &pal = Color_Palette::get_current();
-    if (!pal.load(*ini, "color"))
-        fprintf(stderr, "Theme: cannot load the color palette.\n");
-
-    //
-    struct Image_Assoc {
-        const char *key;
-        SDLpp_Surface_u *image;
-    };
-
-    const Image_Assoc image_assoc[] = {
-        {"logo", &logo_image_},
-        {"wallpaper", &wallpaper_image_},
-    };
-
-    for (const Image_Assoc &ia : image_assoc) {
-        std::string path;
-        if (const char *value = ini->GetValue("image", ia.key))
-            path.assign(value);
-        if (!path.empty()) {
-            if (!is_path_absolute(path))
-                path = get_configuration_dir() + path;
-            SDL_Surface *image = IMG_Load_RW(SDL_RWFromFile(path.c_str(), "rb"), true);
-            ia.image->reset(image);
+    if (theme != "default") {
+        std::unique_ptr<CSimpleIniA> ini = load_configuration("t_" + gsl::to_string(theme));
+        if (!ini) {
+            fprintf(stderr, "Theme: cannot load the configuration file.\n");
+            return;
         }
+
+        load_theme_configuration(*ini);
     }
+
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+    ini->SetValue("", "theme", gsl::to_string(theme).c_str(), nullptr, true);
+    save_global_configuration(*ini);
+
+    last_theme_choice_ = gsl::to_string(theme);
 }
 
 void Application::load_default_theme()
@@ -856,6 +895,36 @@ void Application::load_default_theme()
 
     logo_image_.reset(IMG_Load_RW(SDL_RWFromConstMem(png_data, png_size), true));
     wallpaper_image_.reset();
+}
+
+void Application::load_theme_configuration(const CSimpleIniA &ini)
+{
+    Color_Palette &pal = Color_Palette::get_current();
+    if (!pal.load(ini, "color"))
+        fprintf(stderr, "Theme: cannot load the color palette.\n");
+
+    //
+    struct Image_Assoc {
+        const char *key;
+        SDLpp_Surface_u *image;
+    };
+
+    const Image_Assoc image_assoc[] = {
+        {"logo", &logo_image_},
+        {"wallpaper", &wallpaper_image_},
+    };
+
+    for (const Image_Assoc &ia : image_assoc) {
+        std::string path;
+        if (const char *value = ini.GetValue("image", ia.key))
+            path.assign(value);
+        if (!path.empty()) {
+            if (!is_path_absolute(path))
+                path = get_configuration_dir() + path;
+            SDL_Surface *image = IMG_Load_RW(SDL_RWFromFile(path.c_str(), "rb"), true);
+            ia.image->reset(image);
+        }
+    }
 }
 
 void Application::engage_shutdown()

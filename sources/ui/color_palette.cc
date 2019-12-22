@@ -90,7 +90,7 @@ static std::string hex_from_color(SDL_Color color)
 }
 
 ///
-bool Color_Palette::load(CSimpleIniA &ini, const char *section)
+bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
 {
     const CSimpleIniA::TKeyVal *dict = ini.GetSection(section);
 

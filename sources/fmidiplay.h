@@ -46,8 +46,12 @@ public:
     void choose_midi_output(bool ask, gsl::cstring_span choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
+    void choose_theme(gsl::cstring_span choice);
+    void get_themes(std::vector<std::string> &themes);
+
     void load_theme(gsl::cstring_span theme);
     void load_default_theme();
+    void load_theme_configuration(const CSimpleIniA &ini);
 
     void engage_shutdown();
     void advance_shutdown();
@@ -78,6 +82,7 @@ private:
     std::unique_ptr<Player> player_;
 
     std::string last_midi_output_choice_;
+    std::string last_theme_choice_;
 
     std::unique_ptr<Player_State> ps_;
     std::mutex ps_mutex_;
