@@ -40,7 +40,7 @@ public:
 
     void play_file(const std::string &dir, const File_Entry *entries, size_t index, size_t count);
     void play_random(const std::string &dir, const File_Entry &entry);
-    void set_current_file(const std::string &path);
+    void set_current_path(const std::string &path);
     static bool filter_file_name(const std::string &name);
     static bool filter_file_entry(const File_Entry &ent);
 

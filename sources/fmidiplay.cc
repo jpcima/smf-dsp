@@ -76,7 +76,7 @@ Application::Application()
         initial_path = make_path_canonical(expand_path_tilde(value));
 
     if (!initial_path.empty())
-        fb->set_current_file(initial_path);
+        fb->set_current_path(initial_path);
     else {
         std::string home = get_home_directory();
         if (!home.empty())
@@ -505,8 +505,10 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         File_Browser &fb = *file_browser_;
         if (fb.handle_key_pressed(event))
             return true;
-        if (keymod == KMOD_NONE && event.keysym.scancode == SDL_SCANCODE_SLASH)
-            play_random(fb.cwd(), fb.entry(fb.current_index()));
+        if (keymod == KMOD_NONE && event.keysym.scancode == SDL_SCANCODE_SLASH) {
+            if (const File_Entry *ent = fb.current_entry())
+                play_random(fb.cwd(), *ent);
+        }
         break;
     }
     default:
@@ -703,9 +705,9 @@ void Application::play_random(const std::string &dir, const File_Entry &entry)
     player_->push_command(std::move(cmd));
 }
 
-void Application::set_current_file(const std::string &path)
+void Application::set_current_path(const std::string &path)
 {
-    file_browser_->set_current_file(path);
+    file_browser_->set_current_path(path);
 }
 
 bool Application::filter_file_name(const std::string &name)

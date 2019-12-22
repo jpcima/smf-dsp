@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     // Initialize App and Window
     Application app;
     if (!initial_path.empty())
-        app.set_current_file(initial_path);
+        app.set_current_path(initial_path);
 
     SDL_Window *win = app.init_window();
     if (!win) {

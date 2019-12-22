@@ -33,6 +33,7 @@ SOURCES := \
   sources/ui/color_palette.cc \
   sources/ui/piano.cc \
   sources/ui/file_browser.cc \
+  sources/ui/file_browser_model.cc \
   sources/ui/file_entry.cc \
   sources/ui/metadata_display.cc \
   sources/ui/modal_box.cc \
