@@ -15,12 +15,12 @@ void Modal_Box::paint(SDL_Renderer *rr)
     Rect bounds = bounds_;
     const Color_Palette &pal = Color_Palette::get_current();
 
-    SDLpp_SetRenderDrawColor(rr, pal.text_low_brightness); // TODO color
+    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
     SDLpp_RenderDrawRect(rr, bounds);
 
     bounds = bounds.reduced(1);
 
-    SDLpp_SetRenderDrawColor(rr, pal.info_box_background); // TODO color
+    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_background]);
     SDLpp_RenderFillRect(rr, bounds);
 
     bounds.chop_from_top(4);
@@ -29,12 +29,12 @@ void Modal_Box::paint(SDL_Renderer *rr)
     tp.rr = rr;
     tp.font = &font_fmdsp_medium;
     tp.pos = bounds.origin().off_by(Point(2, 0));
-    tp.fg = pal.text_low_brightness; // TODO color
+    tp.fg = pal[Colors::box_title];
     tp.draw_utf8(title_);
 
     bounds.chop_from_top(tp.font->height() + 3);
 
-    SDLpp_SetRenderDrawColor(rr, pal.text_low_brightness); // TODO color
+    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
     SDL_RenderDrawLine(rr, bounds.x, bounds.y, bounds.x + bounds.w - 1, bounds.y);
 
     bounds.chop_from_top(1);
@@ -169,10 +169,10 @@ void Modal_Selection_Box::paint_contents(SDL_Renderer *rr, const Rect &bounds)
         Rect row = r.take_from_top(fh);
         tp.pos = row.origin();
 
-        tp.fg = pal.text_browser_foreground; // TODO color
+        tp.fg = pal[Colors::box_foreground];
         if (index == sel) {
-            tp.fg = pal.info_box_background;
-            SDLpp_SetRenderDrawColor(rr, pal.text_browser_foreground);
+            tp.fg = pal[Colors::box_active_item_foreground];
+            SDLpp_SetRenderDrawColor(rr, pal[Colors::box_active_item_background]);
             SDL_RenderFillRect(rr, &row);
         }
 

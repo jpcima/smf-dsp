@@ -157,7 +157,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
                           };
 
     if (paint & Pt_Background) {
-        SDLpp_SetRenderDrawColor(rr, pal.background);
+        SDLpp_SetRenderDrawColor(rr, pal[Colors::background]);
         SDL_RenderClear(rr);
     }
 
@@ -182,12 +182,12 @@ void Application::paint(SDL_Renderer *rr, int paint)
     }
 
     if (paint & Pt_Background) {
-        draw_text_rect(lo.author_label, lo.author_label.text, pal.text_low_brightness);
-        draw_text_rect(lo.version_label, lo.version_label.text, pal.text_low_brightness);
+        draw_text_rect(lo.author_label, lo.author_label.text, pal[Colors::text_low_brightness]);
+        draw_text_rect(lo.version_label, lo.version_label.text, pal[Colors::text_low_brightness]);
     }
 
     if (paint & Pt_Background)
-        RenderFillAlternating(rr, lo.info_box, pal.info_box_background, pal.transparent());
+        RenderFillAlternating(rr, lo.info_box, pal[Colors::info_box_background], pal.transparent());
 
     std::unique_lock<std::mutex> ps_lock(ps_mutex_);
     Player_State ps = *ps_;
@@ -209,79 +209,79 @@ void Application::paint(SDL_Renderer *rr, int paint)
 
     // Draw top
     if (paint & Pt_Background) {
-        draw_text_rect(lo.time_label, lo.time_label.text, pal.text_low_brightness);
-        draw_text_rect(lo.time_value, lo.time_value.text, pal.digit_off);
+        draw_text_rect(lo.time_label, lo.time_label.text, pal[Colors::text_low_brightness]);
+        draw_text_rect(lo.time_value, lo.time_value.text, pal[Colors::digit_off]);
     }
     if (paint & Pt_Foreground)
-        draw_text_rect(lo.time_value, hms(buf_hms, ps.time_position), pal.digit_on);
+        draw_text_rect(lo.time_value, hms(buf_hms, ps.time_position), pal[Colors::digit_on]);
 
     if (paint & Pt_Background) {
-        draw_text_rect(lo.length_label, lo.length_label.text, pal.text_low_brightness);
-        draw_text_rect(lo.length_value, lo.length_value.text, pal.digit_off);
+        draw_text_rect(lo.length_label, lo.length_label.text, pal[Colors::text_low_brightness]);
+        draw_text_rect(lo.length_value, lo.length_value.text, pal[Colors::digit_off]);
     }
     if (paint & Pt_Foreground)
-        draw_text_rect(lo.length_value, hms(buf_hms, ps.duration), pal.digit_on);
+        draw_text_rect(lo.length_value, hms(buf_hms, ps.duration), pal[Colors::digit_on]);
     if (paint & Pt_Background)
-        draw_text_rect(lo.playing_label, lo.playing_label.text, pal.text_low_brightness);
+        draw_text_rect(lo.playing_label, lo.playing_label.text, pal[Colors::text_low_brightness]);
     if (paint & Pt_Foreground) {
         SDLpp_SaveClipState(rr, clip);
         SDL_RenderSetClipRect(rr, &lo.playing_value.bounds);
-        draw_text_rect(lo.playing_value, path_file_name(ps.file_path), pal.text_high_brightness);
+        draw_text_rect(lo.playing_value, path_file_name(ps.file_path), pal[Colors::text_high_brightness]);
         SDLpp_RestoreClipState(rr, clip);
     }
     if (paint & Pt_Background) {
-        SDLpp_SetRenderDrawColor(rr, pal.text_min_brightness);
+        SDLpp_SetRenderDrawColor(rr, pal[Colors::text_min_brightness]);
         SDL_RenderFillRect(rr, &lo.playing_progress);
     }
     if (paint & Pt_Foreground) {
-        SDLpp_SetRenderDrawColor(rr, pal.text_high_brightness);
+        SDLpp_SetRenderDrawColor(rr, pal[Colors::text_high_brightness]);
         Rect r = lo.playing_progress;
         r.w = int(lo.playing_progress.w * ps.time_position / ps.duration + 0.5);
         SDL_RenderFillRect(rr, &r);
     }
     if (paint & Pt_Background) {
-        draw_text_rect(lo.tempo_label, lo.tempo_label.text, pal.text_low_brightness);
-        draw_text_rect(lo.tempo_value, lo.tempo_value.text, pal.digit_off);
+        draw_text_rect(lo.tempo_label, lo.tempo_label.text, pal[Colors::text_low_brightness]);
+        draw_text_rect(lo.tempo_value, lo.tempo_value.text, pal[Colors::digit_off]);
     }
     if (paint & Pt_Foreground) {
         char tempo_str[4] = "---";
         long tempo_val = long(ps.tempo + 0.5);
         if (tempo_val >= 0 && tempo_val < 1000)
             sprintf(tempo_str, "%03ld", tempo_val);
-        draw_text_rect(lo.tempo_value, tempo_str, pal.digit_on);
+        draw_text_rect(lo.tempo_value, tempo_str, pal[Colors::digit_on]);
     }
     if (paint & Pt_Background) {
-        draw_text_rect(lo.speed_label, lo.speed_label.text, pal.text_low_brightness);
-        draw_text_rect(lo.speed_value, lo.speed_value.text, pal.digit_off);
+        draw_text_rect(lo.speed_label, lo.speed_label.text, pal[Colors::text_low_brightness]);
+        draw_text_rect(lo.speed_value, lo.speed_value.text, pal[Colors::digit_off]);
     }
     if (paint & Pt_Foreground) {
         char speed_str[4] = "---";
         unsigned speed_val = ps.speed;
         if (speed_val < 1000)
             sprintf(speed_str, "%03u", speed_val);
-        draw_text_rect(lo.speed_value, speed_str, pal.digit_on);
+        draw_text_rect(lo.speed_value, speed_str, pal[Colors::digit_on]);
     }
     if (paint & Pt_Background) {
-        draw_text_rect(lo.repeat_label, lo.repeat_label.text, pal.digit_off);
-        draw_text_rect(lo.multi_label, lo.multi_label.text, pal.digit_off);
+        draw_text_rect(lo.repeat_label, lo.repeat_label.text, pal[Colors::digit_off]);
+        draw_text_rect(lo.multi_label, lo.multi_label.text, pal[Colors::digit_off]);
     }
     if (paint & Pt_Foreground) {
         if ((ps.repeat_mode & (Repeat_On|Repeat_Off)) == Repeat_On)
-            draw_text_rect(lo.repeat_label, lo.repeat_label.text, pal.digit_on);
+            draw_text_rect(lo.repeat_label, lo.repeat_label.text, pal[Colors::digit_on]);
         if ((ps.repeat_mode & (Repeat_Multi|Repeat_Single)) == Repeat_Multi)
-            draw_text_rect(lo.multi_label, lo.multi_label.text, pal.digit_on);
+            draw_text_rect(lo.multi_label, lo.multi_label.text, pal[Colors::digit_on]);
     }
 
     // Draw MIDI channel info heading
     {
         if (paint & Pt_Background) {
-            SDLpp_SetRenderDrawColor(rr, pal.text_min_brightness);
+            SDLpp_SetRenderDrawColor(rr, pal[Colors::text_min_brightness]);
             SDLpp_RenderDrawLine(rr, lo.channel_heading_underline.p1, lo.channel_heading_underline.p2);
 
-            draw_text_rect(lo.octkb_label, lo.octkb_label.text, pal.text_low_brightness);
-            draw_text_rect(lo.volume_label, lo.volume_label.text, pal.text_low_brightness);
-            draw_text_rect(lo.pan_label, lo.pan_label.text, pal.text_low_brightness);
-            draw_text_rect(lo.instrument_label, lo.instrument_label.text, pal.text_low_brightness);
+            draw_text_rect(lo.octkb_label, lo.octkb_label.text, pal[Colors::text_low_brightness]);
+            draw_text_rect(lo.volume_label, lo.volume_label.text, pal[Colors::text_low_brightness]);
+            draw_text_rect(lo.pan_label, lo.pan_label.text, pal[Colors::text_low_brightness]);
+            draw_text_rect(lo.instrument_label, lo.instrument_label.text, pal[Colors::text_low_brightness]);
         }
     }
 
@@ -294,7 +294,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
         piano.paint(rr, paint);
 
         if (paint & Pt_Background) {
-            SDLpp_SetRenderDrawColor(rr, pal.text_min_brightness);
+            SDLpp_SetRenderDrawColor(rr, pal[Colors::text_min_brightness]);
             SDLpp_RenderDrawDottedHLine(rr, lo.channel_underline[ch].p1.x, lo.channel_underline[ch].p2.x, lo.channel_underline[ch].p1.y);
         }
 
@@ -304,7 +304,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
             tp.rr = rr;
             tp.font = &font_fmdsp_small;
 
-            tp.fg = pal.text_high_brightness;
+            tp.fg = pal[Colors::text_high_brightness];
             tp.font = &font_fmdsp_small;
             tp.pos = Point(r.x, r.y - 1);
             tp.draw_utf8("CH");
@@ -353,7 +353,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
                     patch_name = pgm ? pgm->patch_name : nullptr;
                 }
 
-                tp.fg = pal.text_high_brightness;
+                tp.fg = pal[Colors::text_high_brightness];
                 tp.font = &font_fmdsp_small;
                 tp.pos = r.origin();
                 switch (patch_spec) {
@@ -390,9 +390,9 @@ void Application::paint(SDL_Renderer *rr, int paint)
             if (paint & Pt_Foreground) {
                 char text[8];
                 sprintf(text, "%3u", cs.ctl[0x07]);
-                draw_text_rect(lo.channel_volume_value[ch], text, pal.text_high_brightness);
+                draw_text_rect(lo.channel_volume_value[ch], text, pal[Colors::text_high_brightness]);
                 sprintf(text, "%3d", cs.ctl[0x0a] - 64);
-                draw_text_rect(lo.channel_pan_value[ch], text, pal.text_high_brightness);
+                draw_text_rect(lo.channel_pan_value[ch], text, pal[Colors::text_high_brightness]);
             }
         }
     }
@@ -402,26 +402,26 @@ void Application::paint(SDL_Renderer *rr, int paint)
     Metadata_Display &mdd = *metadata_display_;
 
     if (paint & Pt_Background)
-        draw_text_rect(lo.file_label, lo.file_label.text, pal.text_low_brightness);
+        draw_text_rect(lo.file_label, lo.file_label.text, pal[Colors::text_low_brightness]);
 
     if (paint & Pt_Foreground) {
         SDLpp_SaveClipState(rr, clip);
         SDL_RenderSetClipRect(rr, &lo.file_dir_path.bounds);
         if (info_mode_ == Info_File)
-            draw_text_rect(lo.file_dir_path, get_display_path(fb.cwd()), pal.text_high_brightness);
+            draw_text_rect(lo.file_dir_path, get_display_path(fb.cwd()), pal[Colors::text_high_brightness]);
         else {
             gsl::cstring_span file_dir = path_directory(ps.file_path);
-            draw_text_rect(lo.file_dir_path, get_display_path(file_dir), pal.text_high_brightness);
+            draw_text_rect(lo.file_dir_path, get_display_path(file_dir), pal[Colors::text_high_brightness]);
         }
         SDLpp_RestoreClipState(rr, clip);
 
         SDLpp_SaveClipState(rr, clip);
         SDL_RenderSetClipRect(rr, &lo.file_num_label.bounds);
-        draw_text_rect(lo.file_num_label, std::to_string(fb.current_index() + 1) + " / " + std::to_string(fb.current_count()), pal.text_high_brightness);
+        draw_text_rect(lo.file_num_label, std::to_string(fb.current_index() + 1) + " / " + std::to_string(fb.current_count()), pal[Colors::text_high_brightness]);
         SDLpp_RestoreClipState(rr, clip);
     }
     if (paint & Pt_Background) {
-        SDLpp_SetRenderDrawColor(rr, pal.text_low_brightness);
+        SDLpp_SetRenderDrawColor(rr, pal[Colors::text_low_brightness]);
         SDLpp_RenderDrawLine(rr, lo.info_underline.p1, lo.info_underline.p2);
     }
 
@@ -1017,7 +1017,7 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
             "; If you want to design a theme, duplicate this file with a different name.");
         theme_ini->SetValue("image", "logo", "", "; Image file to use as a logo");
         theme_ini->SetValue("image", "wallpaper", "", "; Image file to use as a wallpaper");
-        Color_Palette::create_default().save(*theme_ini, "color");
+        Color_Palette::save_defaults(*theme_ini, "color", true);
         save_configuration("t_default", *theme_ini);
     }
 

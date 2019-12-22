@@ -123,10 +123,10 @@ void File_Browser::paint(SDL_Renderer *rr)
         tp.pos.x = ib.x;
         tp.pos.y = ib.y;
 
-        tp.fg = pal.text_browser_foreground;
+        tp.fg = pal[Colors::text_browser_foreground];
         if (entno == sel_) {
-            tp.fg = pal.info_box_background;
-            SDLpp_SetRenderDrawColor(rr, pal.text_browser_foreground);
+            tp.fg = pal[Colors::info_box_background];
+            SDLpp_SetRenderDrawColor(rr, pal[Colors::text_browser_foreground]);
             SDL_RenderFillRect(rr, &ib);
         }
 

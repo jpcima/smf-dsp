@@ -4,35 +4,22 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "color_palette.h"
+#include "configuration.h"
+#include <unordered_set>
 #include <cstdio>
 
-constexpr size_t Color_Palette::color_count;
-const gsl::cstring_span Color_Palette::color_name[color_count] = { COLOR_PALETTE_NAME_ALL };
+Color_Palette::Color_Palette()
+    : colors_{new SDL_Color[Colors::Count]{}}
+{
+}
 
 Color_Palette Color_Palette::create_default()
 {
+    std::unique_ptr<CSimpleIniA> ini = create_configuration();
+    Color_Palette::save_defaults(*ini, "color", true);
+
     Color_Palette pal;
-
-    pal.background = {0x00, 0x00, 0x00, 0xff};
-
-    pal.info_box_background = {0x11, 0x33, 0x55, 0xff};
-
-    pal.text_browser_foreground = {0x77, 0xaa, 0xff, 0xff};
-
-    pal.metadata_label = {0x33, 0x77, 0xbb, 0xff};
-    pal.metadata_value = {0x77, 0xaa, 0xff, 0xff};
-
-    pal.text_min_brightness = {0x11, 0x33, 0x55, 0xff};
-    pal.text_low_brightness = {0x33, 0x77, 0xbb, 0xff};
-    pal.text_high_brightness = {0x77, 0xaa, 0xff, 0xff};
-
-    pal.piano_white_key = {0xdd, 0xdd, 0xdd, 0xff};
-    pal.piano_white_shadow = {0x77, 0x77, 0x77, 0xff};
-    pal.piano_black_key = {0x00, 0x00, 0x00, 0xff};
-    pal.piano_pressed_key = {0xff, 0x00, 0x00, 0xff};
-
-    pal.digit_on = {0x99, 0xaa, 0xff, 0xff};
-    pal.digit_off = {0x66, 0x66, 0x66, 0xff};
+    pal.load(*ini, "color");
 
     return pal;
 }
@@ -40,6 +27,7 @@ Color_Palette Color_Palette::create_default()
 Color_Palette &Color_Palette::get_current()
 {
     static Color_Palette palette = create_default();
+
     return palette;
 }
 
@@ -79,6 +67,7 @@ static bool color_from_hex(gsl::cstring_span hex, SDL_Color &color)
     return true;
 }
 
+#if 0
 static std::string hex_from_color(SDL_Color color)
 {
     char rgb_string[16];
@@ -88,6 +77,7 @@ static std::string hex_from_color(SDL_Color color)
         sprintf(rgb_string, "#%02X%02X%02X%02X", color.r, color.g, color.b, color.a);
     return rgb_string;
 }
+#endif
 
 ///
 bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
@@ -97,7 +87,7 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
     if (!dict)
         return false;
 
-    bool is_color_set[color_count] = {};
+    bool is_color_set[Colors::Count] = {};
     size_t num_colors_set = 0;
 
     CSimpleIniA::TKeyVal::const_iterator it = dict->begin(), end = dict->end();
@@ -106,18 +96,32 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
         gsl::cstring_span value = it->second;
 
         unsigned index = ~0u;
-        for (unsigned i = 0; i < color_count && index == ~0u; ++i) {
-            if (key == color_name[i])
+        for (unsigned i = 0; i < Colors::Count && index == ~0u; ++i) {
+            if (key == Colors::Name[i])
                 index = i;
         }
 
-        if (index == ~0u) {
-            fprintf(stderr, "Colors: unknown color entry \"%s\"\n", key.data());
+        if (index == ~0u)
             continue;
+
+        bool found = false;
+        if (color_from_hex(value, colors_[index]))
+            found = true;
+        else {
+            // try to look it up from another key
+            std::unordered_set<std::string> met;
+            gsl::cstring_span key = value;
+            while (!found) {
+                auto it = dict->find(key.data());
+                if (it == dict->end() || !met.insert(gsl::to_string(key)).second)
+                    break;
+                key = it->second;
+                found = color_from_hex(key, colors_[index]);
+            }
         }
 
-        if (!color_from_hex(value, color_by_index[index])) {
-            fprintf(stderr, "Colors: cannot parse hexadecimal RGBA.\n");
+        if (!found) {
+            fprintf(stderr, "Colors: cannot interpret the color value \"%s\" for \"%s\".\n", value.data(), key.data());
             continue;
         }
 
@@ -127,17 +131,44 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
         }
     }
 
-    if (num_colors_set != color_count)
+    if (num_colors_set != Colors::Count)
         fprintf(stderr, "Colors: the color palette is incomplete.\n");
 
     return true;
 }
 
-void Color_Palette::save(CSimpleIniA &ini, const char *section) const
+void Color_Palette::save_defaults(CSimpleIniA &ini, const char *section, bool overwrite)
 {
-    for (unsigned index = 0; index < color_count; ++index) {
-        SDL_Color color = color_by_index[index];
-        std::string value = hex_from_color(color);
-        ini.SetValue(section, color_name[index].data(), value.c_str());
-    }
+    auto fill_color = [&ini, section, overwrite](int color, const char *value) {
+        ini.SetValue(section, Colors::Name[color].data(), value, nullptr, overwrite);
+    };
+
+    fill_color(Colors::background, "#000000");
+
+    fill_color(Colors::info_box_background, "text-min-brightness");
+
+    fill_color(Colors::text_browser_foreground, "text-high-brightness");
+
+    fill_color(Colors::metadata_label, "text-low-brightness");
+    fill_color(Colors::metadata_value, "text-high-brightness");
+
+    fill_color(Colors::text_min_brightness, "#113355");
+    fill_color(Colors::text_low_brightness, "#3377bb");
+    fill_color(Colors::text_high_brightness, "#77aaff");
+
+    fill_color(Colors::piano_white_key, "#dddddd");
+    fill_color(Colors::piano_white_shadow, "#777777");
+    fill_color(Colors::piano_black_key, "#000000");
+    fill_color(Colors::piano_pressed_key, "#ff0000");
+
+    fill_color(Colors::digit_on, "#99aaff");
+    fill_color(Colors::digit_off, "#666666");
+
+    fill_color(Colors::box_frame, "text-low-brightness");
+    fill_color(Colors::box_background, "text-min-brightness");
+    fill_color(Colors::box_title, "text-low-brightness");
+    fill_color(Colors::box_foreground, "text-high-brightness");
+
+    fill_color(Colors::box_active_item_background, "box-foreground");
+    fill_color(Colors::box_active_item_foreground, "box-background");
 }

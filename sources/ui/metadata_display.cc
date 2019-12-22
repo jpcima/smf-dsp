@@ -52,7 +52,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
         tp.font = &font_fmdsp_medium;
         tp.pos = Point(row.x, row.y + 3);
-        tp.fg = pal.metadata_label;
+        tp.fg = pal[Colors::metadata_label];
 
         switch (i) {
         case 0:
@@ -73,7 +73,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
         tp.font = &font_s12;
         tp.pos = row.origin();
-        tp.fg = pal.metadata_value;
+        tp.fg = pal[Colors::metadata_value];
 
         SDLpp_ClipState clip;
         SDLpp_SaveClipState(rr, clip);
@@ -106,7 +106,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
             tp.font = &font_fmdsp_medium;
             tp.pos = Point(row.x, row.y + 3);
-            tp.fg = pal.metadata_label;
+            tp.fg = pal[Colors::metadata_label];
 
             tp.draw_utf8("Tracks:");
 
@@ -114,7 +114,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
 
             tp.font = &font_s12;
             tp.pos = row.origin();
-            tp.fg = pal.metadata_value;
+            tp.fg = pal[Colors::metadata_value];
 
             tp.draw_utf8(std::to_string(md.track_count));
         }
