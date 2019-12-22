@@ -7,7 +7,7 @@
 #include "synth.h"
 #include "utility/load_library.h"
 #include <SimpleIni.h>
-#include <gsl/gsl>
+#include <gsl.hpp>
 #include <string>
 #include <vector>
 #include <memory>

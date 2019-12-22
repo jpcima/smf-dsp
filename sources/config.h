@@ -5,7 +5,7 @@
 
 #pragma once
 #include <SimpleIni.h>
-#include <gsl/gsl>
+#include <gsl.hpp>
 #include <string>
 #include <memory>
 
