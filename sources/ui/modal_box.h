@@ -8,7 +8,10 @@
 #include <SDL.h>
 #include <vector>
 #include <string>
+#include <memory>
 #include <functional>
+
+class File_Browser_Model;
 
 class Modal_Box {
 public:
@@ -32,15 +35,17 @@ protected:
 
 protected:
     const Rect bounds_;
-    const std::string title_;
+    std::string title_;
 
 private:
     bool complete_ = false;
 };
 
+///
 class Modal_Selection_Box : public Modal_Box {
 public:
     Modal_Selection_Box(const Rect &bounds, std::string title, std::vector<std::string> items);
+    virtual ~Modal_Selection_Box() {}
 
     size_t selection_index() const noexcept { return sel_; }
     void set_selection_index(size_t index) noexcept;
@@ -49,13 +54,27 @@ public:
        1: (gsl::cstring_span)  selection text  */
     bool get_completion_result(size_t index, void *dst) override;
 
-    bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
-    bool handle_key_released(const SDL_KeyboardEvent &event) override;
+    virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
+    virtual bool handle_key_released(const SDL_KeyboardEvent &event) override;
 
 protected:
     void paint_contents(SDL_Renderer *rr, const Rect &bounds) override;
 
-private:
+protected:
     size_t sel_ = 0;
-    const std::vector<std::string> items_;
+    std::vector<std::string> items_;
+};
+
+///
+class Modal_File_Selection_Box : public Modal_Selection_Box {
+public:
+    Modal_File_Selection_Box(const Rect &bounds, std::string path);
+
+    bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
+
+private:
+    void update_file_entries();
+
+private:
+    std::unique_ptr<File_Browser_Model> model_;
 };

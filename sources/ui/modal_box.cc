@@ -7,6 +7,8 @@
 #include "color_palette.h"
 #include "fonts.h"
 #include "text.h"
+#include "file_browser_model.h"
+#include "utility/paths.h"
 #include "utility/SDL++.h"
 #include <algorithm>
 
@@ -116,10 +118,22 @@ bool Modal_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
     case SDL_SCANCODE_PAGEUP: {
         size_t sel = sel_;
         if (sel != ~size_t(0))
-            sel_ = 0;
+            sel_ = std::max<ssize_t>(0, sel - 10);
         return true;
     }
     case SDL_SCANCODE_PAGEDOWN: {
+        size_t sel = sel_;
+        if (sel != ~size_t(0))
+            sel_ = std::min(items_.size() - 1, sel + 10);
+        return true;
+    }
+    case SDL_SCANCODE_HOME: {
+        size_t sel = sel_;
+        if (sel != ~size_t(0))
+            sel_ = 0;
+        return true;
+    }
+    case SDL_SCANCODE_END: {
         size_t sel = sel_;
         if (sel != ~size_t(0))
             sel_ = items_.size() - 1;
@@ -182,4 +196,72 @@ void Modal_Selection_Box::paint_contents(SDL_Renderer *rr, const Rect &bounds)
         tp.draw_utf8(items[index]);
         SDLpp_RestoreClipState(rr, clip);
     }
+}
+
+///
+Modal_File_Selection_Box::Modal_File_Selection_Box(const Rect &bounds, std::string path)
+    : Modal_Selection_Box(bounds, std::string{}, std::vector<std::string>{}),
+      model_(new File_Browser_Model)
+{
+    File_Browser_Model &model = *model_;
+
+    model.set_current_path(path);
+    update_file_entries();
+}
+
+void Modal_File_Selection_Box::update_file_entries()
+{
+    File_Browser_Model &model = *model_;
+    size_t count = model.count();
+
+    if (count == 0)
+        sel_ = ~size_t{0};
+    else {
+        sel_ = model.selection();
+        items_.clear();
+        for (size_t i = 0; i < count; ++i)
+            items_.push_back(model.filename(i));
+    }
+
+    title_ = "File: " + get_display_path(model.cwd());
+}
+
+bool Modal_File_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
+{
+    if (has_completed())
+        return false;
+
+    File_Browser_Model &model = *model_;
+
+    int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
+
+    switch (event.keysym.scancode) {
+    case SDL_SCANCODE_RETURN:
+        if (keymod == KMOD_NONE) {
+            if (const File_Entry *ent = model.current_entry()) {
+                if (ent->type == 'D') {
+                    model.trigger_entry(model.selection());
+                    update_file_entries();
+                }
+                else
+                    finish();
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_BACKSPACE:
+        if (keymod == KMOD_NONE) {
+            model.trigger_entry(model.find_entry(".."));
+            update_file_entries();
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    bool ret = Modal_Selection_Box::handle_key_pressed(event);
+    model.set_selection(sel_);
+
+    return ret;
 }
