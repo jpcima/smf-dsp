@@ -9,6 +9,20 @@
 #include <memory>
 #include <cstdint>
 
+struct SDLpp_Window_Deleter {
+    void operator()(SDL_Window *x) { SDL_DestroyWindow(x); }
+};
+
+typedef std::unique_ptr<SDL_Window, SDLpp_Window_Deleter> SDLpp_Window_u;
+
+///
+struct SDLpp_Renderer_Deleter {
+    void operator()(SDL_Renderer *x) { SDL_DestroyRenderer(x); }
+};
+
+typedef std::unique_ptr<SDL_Renderer, SDLpp_Renderer_Deleter> SDLpp_Renderer_u;
+
+///
 struct SDLpp_Surface_Deleter {
     void operator()(SDL_Surface *x) { SDL_FreeSurface(x); }
 };

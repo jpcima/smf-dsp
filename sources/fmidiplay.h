@@ -29,6 +29,9 @@ public:
     Application();
     ~Application();
 
+    SDL_Window *init_window();
+    SDL_Renderer *init_renderer();
+
     void set_scale_factor(SDL_Window *win, unsigned sf);
     void paint(SDL_Renderer *rr, int paint);
     void paint_cached_background(SDL_Renderer *rr);
@@ -64,6 +67,9 @@ private:
     void receive_state_in_other_thread(const Player_State &ps);
 
 private:
+    SDLpp_Window_u window_;
+    SDLpp_Renderer_u renderer_;
+
     SDL_TimerID update_timer_ = 0;
 
     std::unique_ptr<Main_Layout> layout_;

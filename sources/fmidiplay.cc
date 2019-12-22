@@ -104,6 +104,28 @@ Application::~Application()
         SDL_RemoveTimer(update_timer_);
 }
 
+SDL_Window *Application::init_window()
+{
+    SDL_Window *win = SDL_CreateWindow(
+        PROGRAM_DISPLAY_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        size_.x, size_.y, 0);
+    if (!win)
+        return nullptr;
+
+    window_.reset(win);
+    return win;
+}
+
+SDL_Renderer *Application::init_renderer()
+{
+    SDL_Renderer *rr = SDL_CreateRenderer(window_.get(), -1, 0);
+    if (!rr)
+        return nullptr;
+
+    renderer_.reset(rr);
+    return rr;
+}
+
 void Application::set_scale_factor(SDL_Window *win, unsigned sf)
 {
     if (sf < 1) sf = 1;
@@ -442,7 +464,6 @@ void Application::paint_cached_background(SDL_Renderer *rr)
     if (!bg) {
         // clear font caches between paints on differents renderers
         Text_Painter::clear_font_caches();
-        auto font_cache_cleanup = gsl::finally([] { Text_Painter::clear_font_caches(); });
 
         SDL_Surface *su = SDLpp_CreateRGBA32Surface(size_.x, size_.y);
         if (!su)
@@ -460,6 +481,8 @@ void Application::paint_cached_background(SDL_Renderer *rr)
         bg = SDL_CreateTextureFromSurface(rr, su);
         if (!bg)
             throw std::runtime_error("SDL_CreateTextureFromSurface");
+
+        Text_Painter::clear_font_caches();
 
         cached_background_.reset(bg);
     }

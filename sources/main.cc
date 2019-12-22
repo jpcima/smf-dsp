@@ -44,21 +44,18 @@ int main(int argc, char *argv[])
     Application app;
     if (!initial_path.empty())
         app.set_current_file(initial_path);
-    SDL_Window *win = SDL_CreateWindow(
-        PROGRAM_DISPLAY_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        Application::size_.x, Application::size_.y, 0);
+
+    SDL_Window *win = app.init_window();
     if (!win) {
         fprintf(stderr, "Error creating window.\n");
         return 1;
     }
-    auto window_cleanup = gsl::finally([win] { SDL_DestroyWindow(win); });
 
-    SDL_Renderer *rr = SDL_CreateRenderer(win, -1, 0);
+    SDL_Renderer *rr = app.init_renderer();
     if (!rr) {
         fprintf(stderr, "Error creating window renderer.\n");
         return 1;
     }
-    auto renderer_cleanup = gsl::finally([rr] { SDL_DestroyRenderer(rr); });
 
     // Initial painting
     app.paint_cached_background(rr);
