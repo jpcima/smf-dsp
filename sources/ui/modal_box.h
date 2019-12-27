@@ -6,6 +6,7 @@
 #pragma once
 #include "utility/geometry.h"
 #include <SDL.h>
+#include <nonstd/any.hpp>
 #include <vector>
 #include <string>
 #include <memory>
@@ -23,13 +24,19 @@ public:
     bool has_completed() const noexcept { return complete_; }
     void paint(SDL_Renderer *rr);
 
-    virtual bool get_completion_result(size_t index, void *dst) { return false; }
+    template <class T> T completion_result(size_t index)
+    {
+        return nonstd::any_cast<T>(get_completion_result(index));
+    }
 
     virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) { return false; };
     virtual bool handle_key_released(const SDL_KeyboardEvent &event) { return false; };
     virtual bool handle_text_input(const SDL_TextInputEvent &event) { return false; };
 
     std::function<void ()> CompletionCallback;
+
+protected:
+    virtual nonstd::any get_completion_result(size_t index) { return nonstd::any{}; }
 
 protected:
     void finish();
@@ -55,12 +62,13 @@ public:
     size_t selection_index() const noexcept { return sel_; }
     void set_selection_index(size_t index) noexcept;
 
-    /* 0: (size_t)             selection index
-       1: (gsl::cstring_span)  selection text  */
-    bool get_completion_result(size_t index, void *dst) override;
-
     virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
     virtual bool handle_key_released(const SDL_KeyboardEvent &event) override;
+
+protected:
+    /* 0: (size_t)       selection index
+       1: (std::string)  selection text  */
+    nonstd::any get_completion_result(size_t index) override;
 
 protected:
     void paint_contents(SDL_Renderer *rr) override;
@@ -90,13 +98,14 @@ class Modal_Text_Input_Box : public Modal_Box {
 public:
     Modal_Text_Input_Box(const Rect &bounds, std::string title);
 
-    /* 0: (bool)         accepted
-       1: (std::string)  input text  */
-    bool get_completion_result(size_t index, void *dst) override;
-
     bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
     bool handle_key_released(const SDL_KeyboardEvent &event) override;
     bool handle_text_input(const SDL_TextInputEvent &event) override;
+
+protected:
+    /* 0: (bool)         accepted
+       1: (std::string)  input text  */
+    nonstd::any get_completion_result(size_t index) override;
 
 protected:
     void paint_contents(SDL_Renderer *rr) override;

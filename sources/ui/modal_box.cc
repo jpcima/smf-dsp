@@ -82,21 +82,6 @@ void Modal_Selection_Box::set_selection_index(size_t index) noexcept
         sel_ = index;
 }
 
-bool Modal_Selection_Box::get_completion_result(size_t index, void *dst)
-{
-    switch (index) {
-    case 0:
-        *static_cast<size_t *>(dst) = sel_;
-        return true;
-    case 1:
-        *static_cast<gsl::cstring_span *>(dst) = (sel_ != ~size_t(0)) ?
-            items_[sel_] : gsl::cstring_span();
-        return true;
-    default:
-        return false;
-    }
-}
-
 bool Modal_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
 {
     if (has_completed())
@@ -167,6 +152,18 @@ bool Modal_Selection_Box::handle_key_released(const SDL_KeyboardEvent &event)
         return false;
 
     return false;
+}
+
+nonstd::any Modal_Selection_Box::get_completion_result(size_t index)
+{
+    switch (index) {
+    case 0:
+        return sel_;
+    case 1:
+        return (sel_ != ~size_t(0)) ? items_[sel_] : std::string{};
+    default:
+        return nonstd::any{};
+    }
 }
 
 void Modal_Selection_Box::paint_contents(SDL_Renderer *rr)
@@ -292,23 +289,6 @@ Modal_Text_Input_Box::Modal_Text_Input_Box(const Rect &bounds, std::string title
 {
 }
 
-bool Modal_Text_Input_Box::get_completion_result(size_t index, void *dst)
-{
-    switch (index) {
-    case 0:
-        *static_cast<bool *>(dst) = accepted_;
-        return true;
-    case 1: {
-        std::string utf8;
-        convert_utf<char32_t>(input_text_, utf8, true);
-        *static_cast<std::string *>(dst) = utf8;
-        return true;
-    }
-    default:
-        return false;
-    }
-}
-
 bool Modal_Text_Input_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
 {
     if (has_completed())
@@ -424,6 +404,22 @@ bool Modal_Text_Input_Box::handle_text_input(const SDL_TextInputEvent &event)
     offset_to_right();
 
     return true;
+}
+
+
+nonstd::any Modal_Text_Input_Box::get_completion_result(size_t index)
+{
+    switch (index) {
+    case 0:
+        return accepted_;
+    case 1: {
+        std::string utf8;
+        convert_utf<char32_t>(input_text_, utf8, true);
+        return std::move(utf8);
+    }
+    default:
+        return nonstd::any{};
+    }
 }
 
 void Modal_Text_Input_Box::paint_contents(SDL_Renderer *rr)

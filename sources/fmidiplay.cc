@@ -831,8 +831,7 @@ void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
 
         modal->CompletionCallback =
             [modal, choose] {
-                size_t index;
-                modal->get_completion_result(0, &index);
+                size_t index = modal->completion_result<size_t>(0);
                 choose(index);
             };
     }
@@ -873,12 +872,9 @@ void Application::choose_theme(gsl::cstring_span choice)
 
     modal->CompletionCallback =
         [this, modal, themes] {
-            size_t index;
-            modal->get_completion_result(0, &index);
-
+            size_t index = modal->completion_result<size_t>(0);
             if (index >= themes.size())
                 return;
-
             load_theme(themes[index]);
         };
 }

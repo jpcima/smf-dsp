@@ -11,6 +11,7 @@
 -Iimagedata
 
 -Ithirdparty/gsl-lite/include
+-Ithirdparty/any-lite/include
 -Ithirdparty/bst
 -Ithirdparty/fmidi/sources
 -DFMIDI_STATIC=1

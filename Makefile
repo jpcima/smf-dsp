@@ -70,7 +70,9 @@ $(APP): CPPFLAGS += \
     -DPROGRAM_AUTHOR='"JPC"' \
     -DPROGRAM_VERSION='"0.10a"' \
     -Isources -Ifontdata -Iimagedata \
-    -Ithirdparty/gsl-lite/include -Ithirdparty/bst \
+    -Ithirdparty/gsl-lite/include \
+    -Ithirdparty/any-lite/include \
+    -Ithirdparty/bst \
     -Ithirdparty/fmidi/sources -DFMIDI_STATIC=1 -DFMIDI_DISABLE_DESCRIBE_API=1 \
     -Ithirdparty/simpleini \
     -Ithirdparty/rtmidi \
