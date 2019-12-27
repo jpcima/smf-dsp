@@ -51,6 +51,7 @@ namespace Colors {
         box_background,
         box_title,
         box_foreground,
+        box_foreground_secondary,
         box_active_item_background,
         box_active_item_foreground,
     };
@@ -74,6 +75,7 @@ namespace Colors {
         "box-background",
         "box-title",
         "box-foreground",
+        "box-foreground-secondary",
         "box-active-item-background",
         "box-active-item-foreground",
     };

@@ -168,6 +168,7 @@ void Color_Palette::save_defaults(CSimpleIniA &ini, const char *section, bool ov
     fill_color(Colors::box_background, "text-min-brightness");
     fill_color(Colors::box_title, "text-low-brightness");
     fill_color(Colors::box_foreground, "text-high-brightness");
+    fill_color(Colors::box_foreground_secondary, "text-low-brightness");
 
     fill_color(Colors::box_active_item_background, "box-foreground");
     fill_color(Colors::box_active_item_foreground, "box-background");

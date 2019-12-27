@@ -9,39 +9,46 @@
 #include "text.h"
 #include "file_browser_model.h"
 #include "utility/paths.h"
+#include "utility/charset.h"
 #include "utility/SDL++.h"
+#include <bst/utf.hpp>
 #include <algorithm>
+
+static constexpr int title_top_padding = 4;
+static constexpr int title_bottom_padding = 3;
+static constexpr int title_left_padding = 3;
+static constexpr int content_padding = 2;
+
+Modal_Box::Modal_Box(const Rect &bounds, std::string title)
+    : bounds_(bounds), title_(std::move(title)), font_title_(&font_fmdsp_medium)
+{
+}
 
 void Modal_Box::paint(SDL_Renderer *rr)
 {
-    Rect bounds = bounds_;
+    const Rect bounds = bounds_;
     const Color_Palette &pal = Color_Palette::get_current();
-
-    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
-    SDLpp_RenderDrawRect(rr, bounds);
-
-    bounds = bounds.reduced(1);
 
     SDLpp_SetRenderDrawColor(rr, pal[Colors::box_background]);
     SDLpp_RenderFillRect(rr, bounds);
 
-    bounds.chop_from_top(4);
+    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
+    SDLpp_RenderDrawRect(rr, bounds);
 
     Text_Painter tp;
     tp.rr = rr;
-    tp.font = &font_fmdsp_medium;
-    tp.pos = bounds.origin().off_by(Point(2, 0));
+    tp.font = font_title_;
+    tp.pos = bounds.origin().off_by(Point(title_left_padding, title_top_padding));
     tp.fg = pal[Colors::box_title];
     tp.draw_utf8(title_);
 
-    bounds.chop_from_top(tp.font->height() + 3);
+    int texth = tp.font->height();
+    int ybottom = bounds.y + title_top_padding + texth + title_bottom_padding;
 
     SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
-    SDL_RenderDrawLine(rr, bounds.x, bounds.y, bounds.x + bounds.w - 1, bounds.y);
+    SDL_RenderDrawLine(rr, bounds.x, ybottom, bounds.right(), ybottom);
 
-    bounds.chop_from_top(1);
-
-    paint_contents(rr, bounds.reduced(2));
+    paint_contents(rr);
 }
 
 void Modal_Box::finish()
@@ -51,6 +58,14 @@ void Modal_Box::finish()
         if (CompletionCallback)
             CompletionCallback();
     }
+}
+
+Rect Modal_Box::get_content_bounds() const
+{
+    int texth = font_title_->height();
+    return Rect(bounds_)
+        .chop_from_top(title_top_padding + texth + title_bottom_padding)
+        .reduced(content_padding);
 }
 
 ///
@@ -154,8 +169,10 @@ bool Modal_Selection_Box::handle_key_released(const SDL_KeyboardEvent &event)
     return false;
 }
 
-void Modal_Selection_Box::paint_contents(SDL_Renderer *rr, const Rect &bounds)
+void Modal_Selection_Box::paint_contents(SDL_Renderer *rr)
 {
+    const Rect bounds = get_content_bounds();
+
     const std::vector<std::string> &items = items_;
     size_t sel = sel_;
 
@@ -264,4 +281,245 @@ bool Modal_File_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event
     model.set_selection(sel_);
 
     return ret;
+}
+
+///
+static constexpr int text_input_horiz_margin = 4;
+static constexpr int text_input_vert_margin = 4;
+
+Modal_Text_Input_Box::Modal_Text_Input_Box(const Rect &bounds, std::string title)
+    : Modal_Box{bounds, std::move(title)}, font_text_input_(&font_s12)
+{
+}
+
+bool Modal_Text_Input_Box::get_completion_result(size_t index, void *dst)
+{
+    switch (index) {
+    case 0:
+        *static_cast<bool *>(dst) = accepted_;
+        return true;
+    case 1: {
+        std::string utf8;
+        convert_utf<char32_t>(input_text_, utf8, true);
+        *static_cast<std::string *>(dst) = utf8;
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+bool Modal_Text_Input_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
+{
+    if (has_completed())
+        return false;
+
+    int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
+
+    switch (event.keysym.scancode) {
+    case SDL_SCANCODE_ESCAPE:
+        if (keymod == KMOD_NONE) {
+            accepted_ = false;
+            finish();
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_RETURN:
+        if (keymod == KMOD_NONE) {
+            accepted_ = true;
+            finish();
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_LEFT:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ > 0) {
+                --cursor_;
+                offset_to_left();
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_RIGHT:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ < input_text_.size()) {
+                ++cursor_;
+                offset_to_right();
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_HOME:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ != 0) {
+                cursor_ = 0;
+                offset_to_left();
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_END:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ != input_text_.size()) {
+                cursor_ = input_text_.size();
+                offset_to_right();
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_DELETE:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ < input_text_.size()) {
+                input_text_.erase(input_text_.begin() + cursor_);
+                input_gsize_.erase(input_gsize_.begin() + cursor_);
+            }
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_BACKSPACE:
+        if (keymod == KMOD_NONE) {
+            if (cursor_ > 0) {
+                --cursor_;
+                input_text_.erase(input_text_.begin() + cursor_);
+                input_gsize_.erase(input_gsize_.begin() + cursor_);
+                offset_to_left();
+            }
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
+bool Modal_Text_Input_Box::handle_key_released(const SDL_KeyboardEvent &event)
+{
+    if (has_completed())
+        return false;
+
+    return false;
+}
+
+bool Modal_Text_Input_Box::handle_text_input(const SDL_TextInputEvent &event)
+{
+    if (has_completed())
+        return false;
+
+    gsl::cstring_span str = event.text;
+    uint32_t cursor = cursor_;
+
+    for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
+        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
+        if (ch == bst::utf::incomplete) break;
+        if (ch == bst::utf::illegal) continue;
+        input_text_.insert(input_text_.begin() + cursor, ch);
+        const Font_Glyph *g = font_text_input_->glyph(ch);
+        input_gsize_.insert(input_gsize_.begin() + cursor, g ? g->size : 1);
+        ++cursor;
+    }
+
+    cursor_ = cursor;
+    offset_to_right();
+
+    return true;
+}
+
+void Modal_Text_Input_Box::paint_contents(SDL_Renderer *rr)
+{
+    unsigned maxchars = get_max_display_chars();
+    if (maxchars == 0)
+        return;
+
+    const Rect bounds = get_content_bounds();
+    const Color_Palette &pal = Color_Palette::get_current();
+
+    Text_Painter tp;
+    tp.rr = rr;
+    tp.font = font_text_input_;
+
+    Rect frame;
+    frame.w = maxchars * tp.font->width() + 2 * text_input_horiz_margin;
+    frame.h = tp.font->height() + 2 * text_input_vert_margin;
+
+    frame.x = bounds.x + (bounds.w - frame.w) / 2;
+    frame.y = bounds.y + (bounds.h - frame.h) / 2;
+
+    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
+    SDL_RenderDrawRect(rr, &frame);
+
+    Rect textbounds = frame.reduced({4, 4});
+    tp.pos = textbounds.origin();
+
+    ///
+    const std::u32string &text = this->input_text_;
+    size_t glyphs_drawn = 0;
+    const uint32_t cursor = cursor_;
+
+    for (size_t i = display_offset_, n = text.size();; ++i) {
+        char32_t ch = (i < n) ? text[i] : U'_';
+        const Font_Glyph *g = tp.font->glyph(ch);
+        unsigned gsize = g ? g->size : 1;
+        if (glyphs_drawn + gsize > maxchars)
+            break;
+        tp.fg = pal[Colors::box_foreground];
+        if (i >= n)
+            tp.fg = pal[Colors::box_foreground_secondary];
+        if (i == cursor) {
+            Rect cr{tp.pos.x, tp.pos.y, (int)(gsize * tp.font->width()), tp.font->height()};
+            SDLpp_SetRenderDrawColor(rr, pal[Colors::box_foreground]);
+            SDL_RenderFillRect(rr, &cr);
+            tp.fg = pal[Colors::box_background];
+        }
+        tp.draw_char(ch);
+        glyphs_drawn += gsize;
+    }
+
+    ///
+    Rect labelbounds = textbounds
+        .off_by({0, -2 * text_input_vert_margin - tp.font->height()});
+    tp.font = &font_fmdsp_medium;
+    tp.pos = labelbounds.origin();
+    tp.fg = pal[Colors::box_foreground];
+    gsl::cstring_span label = label_;
+    if (label.empty())
+        label = "Please enter a value:";
+    tp.draw_utf8(label);
+}
+
+unsigned Modal_Text_Input_Box::get_max_display_chars() const
+{
+    const Rect bounds = get_content_bounds();
+    int charw = font_text_input_->width();
+    int maxchars = (bounds.w - 16 - 2 * text_input_horiz_margin) / charw;
+    return (maxchars > 0) ? maxchars : 0;
+}
+
+size_t Modal_Text_Input_Box::char_display_size(size_t index) const
+{
+    return (index < input_text_.size()) ? input_gsize_[index] : 1;
+}
+
+void Modal_Text_Input_Box::offset_to_left()
+{
+    display_offset_ = std::min(display_offset_, cursor_);
+}
+
+void Modal_Text_Input_Box::offset_to_right()
+{
+    size_t c_cur = cursor_;
+    size_t c_off = display_offset_;
+
+    const size_t d_max = get_max_display_chars();
+    size_t d_size = 0;
+    for (size_t i = c_off; i < c_cur; ++i)
+        d_size += char_display_size(i);
+
+    while (d_size >= d_max && c_off < c_cur) {
+        d_size -= char_display_size(c_off);
+        ++c_off;
+    }
+
+    display_offset_ = c_off;
 }

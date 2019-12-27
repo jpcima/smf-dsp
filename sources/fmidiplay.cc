@@ -666,6 +666,25 @@ bool Application::handle_key_released(const SDL_KeyboardEvent &event)
     return false;
 }
 
+bool Application::handle_text_input(const SDL_TextInputEvent &event)
+{
+    if (!modal_.empty()) {
+        Modal_Box &modal = *modal_.back();
+        return modal.handle_text_input(event);
+    }
+
+    switch (info_mode_) {
+    case Info_File:
+        if (file_browser_->handle_text_input(event))
+            return true;
+        break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
 void Application::play_file(const std::string &dir, const File_Entry *entries, size_t index, size_t count)
 {
     std::unique_ptr<Pcmd_Play> cmd(new Pcmd_Play);

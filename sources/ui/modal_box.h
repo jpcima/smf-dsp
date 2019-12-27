@@ -10,13 +10,14 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <cstdint>
 
 class File_Browser_Model;
+struct Font;
 
 class Modal_Box {
 public:
-    Modal_Box(const Rect &bounds, std::string title)
-        : bounds_(bounds), title_(std::move(title)) {}
+    Modal_Box(const Rect &bounds, std::string title);
     virtual ~Modal_Box() {}
 
     bool has_completed() const noexcept { return complete_; }
@@ -24,18 +25,22 @@ public:
 
     virtual bool get_completion_result(size_t index, void *dst) { return false; }
 
-    virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) = 0;
-    virtual bool handle_key_released(const SDL_KeyboardEvent &event) = 0;
+    virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) { return false; };
+    virtual bool handle_key_released(const SDL_KeyboardEvent &event) { return false; };
+    virtual bool handle_text_input(const SDL_TextInputEvent &event) { return false; };
 
     std::function<void ()> CompletionCallback;
 
 protected:
     void finish();
-    virtual void paint_contents(SDL_Renderer *rr, const Rect &bounds) = 0;
+    virtual void paint_contents(SDL_Renderer *rr) = 0;
 
 protected:
     const Rect bounds_;
     std::string title_;
+    Font *font_title_ = nullptr;
+
+    Rect get_content_bounds() const;
 
 private:
     bool complete_ = false;
@@ -58,7 +63,7 @@ public:
     virtual bool handle_key_released(const SDL_KeyboardEvent &event) override;
 
 protected:
-    void paint_contents(SDL_Renderer *rr, const Rect &bounds) override;
+    void paint_contents(SDL_Renderer *rr) override;
 
 protected:
     size_t sel_ = 0;
@@ -77,4 +82,38 @@ private:
 
 private:
     std::unique_ptr<File_Browser_Model> model_;
+};
+
+
+///
+class Modal_Text_Input_Box : public Modal_Box {
+public:
+    Modal_Text_Input_Box(const Rect &bounds, std::string title);
+
+    /* 0: (bool)         accepted
+       1: (std::string)  input text  */
+    bool get_completion_result(size_t index, void *dst) override;
+
+    bool handle_key_pressed(const SDL_KeyboardEvent &event) override;
+    bool handle_key_released(const SDL_KeyboardEvent &event) override;
+    bool handle_text_input(const SDL_TextInputEvent &event) override;
+
+protected:
+    void paint_contents(SDL_Renderer *rr) override;
+
+private:
+    unsigned get_max_display_chars() const;
+    size_t char_display_size(size_t index) const;
+
+    void offset_to_left();
+    void offset_to_right();
+
+private:
+    size_t cursor_ = 0;
+    size_t display_offset_ = 0;
+    std::u32string input_text_;
+    std::vector<uint8_t> input_gsize_;
+    std::string label_;
+    Font *font_text_input_ = nullptr;
+    bool accepted_ = false;
 };

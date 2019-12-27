@@ -32,6 +32,7 @@ public:
     void paint(SDL_Renderer *rr);
     bool handle_key_pressed(const SDL_KeyboardEvent &event);
     bool handle_key_released(const SDL_KeyboardEvent &event);
+    bool handle_text_input(const SDL_TextInputEvent &event) { return false; }
 
     std::function<void (const std::string &, const File_Entry *, size_t, size_t)> &FileOpenCallback;
     std::function<bool (const File_Entry &)> &FileFilterCallback;

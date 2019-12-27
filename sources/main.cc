@@ -77,6 +77,10 @@ int main(int argc, char *argv[])
             if (!shutting_down)
                 update = app.handle_key_released(event.key);
             break;
+        case SDL_TEXTINPUT:
+            if (!shutting_down)
+                update = app.handle_text_input(event.text);
+            break;
         case SDL_WINDOWEVENT:
             update = true;
             break;
