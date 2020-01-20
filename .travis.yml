@@ -1,0 +1,21 @@
+language: c++
+
+matrix:
+  include:
+    - os: linux
+      dist: xenial
+      env:
+        - Build=linux64
+      script:
+        - make
+        - make install DESTDIR=install-prefix
+      addons:
+        apt:
+          packages:
+            - libsdl2-dev
+            - libsdl2-image-dev
+            - libuv1-dev
+            - libjack-jackd2-dev
+            - libpulse-dev
+            - libasound2-dev
+            - libfluidsynth-dev
