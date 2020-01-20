@@ -1,0 +1,38 @@
+language: c++
+
+matrix:
+  include:
+    - os: linux
+      dist: xenial
+      env:
+        - Build=linux64
+      script:
+        - make
+        - make install DESTDIR=install-prefix
+      addons:
+        apt:
+          packages:
+            - libsdl2-dev
+            - libsdl2-image-dev
+            - libuv1-dev
+            - libjack-jackd2-dev
+            - libpulse-dev
+            - libasound2-dev
+            - libfluidsynth-dev
+    - os: osx
+      osx_image: xcode9.4
+      env:
+        - Build=macos
+      script:
+        - export PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig:"$PKG_CONFIG_PATH"
+        - make
+        - make install DESTDIR=install-prefix
+      addons:
+        homebrew:
+          packages:
+            - sdl2
+            - sdl2_image
+            - libuv
+            - icu4c
+            - fluid-synth
+          update: true
