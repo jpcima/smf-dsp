@@ -76,7 +76,6 @@ void File_Browser::paint(SDL_Renderer *rr)
     const Color_Palette &pal = Color_Palette::get_current();
 
     size_t rows = this->rows();
-    size_t cols = this->cols();
     size_t iw = item_width();
     size_t ih = item_height();
 
@@ -90,13 +89,25 @@ void File_Browser::paint(SDL_Renderer *rr)
 
     size_t colindex = colindex_;
 
-    for (size_t i = 0, n = rows * cols; i < n; ++i) {
+    for (size_t i = 0;; ++i) {
         size_t entno = i + rows * colindex;
         if (entno >= nent)
             break;
 
-        const File_Entry &entry = model_.entry(entno);
+        size_t r = i % rows;
+        size_t c = i / rows;
+        Rect ib;
+        ib.x = bounds.x + c * iw;
+        ib.y = bounds.y + r * ih;
+        if (ib.x >= bounds.x + bounds.w)
+            break;
 
+        size_t max_chars = (size_t)std::min(
+            (int)fn_name_chars, (bounds.x + bounds.w - ib.x) / fw);
+        ib.w = max_chars * fw;
+        ib.h = ih;
+
+        const File_Entry &entry = model_.entry(entno);
         const std::string &file_name = entry.name;
 
         std::string name_drawn;
@@ -109,13 +120,8 @@ void File_Browser::paint(SDL_Renderer *rr)
         if (padchars > 0)
             name_drawn.insert(name_drawn.end(), padchars, ' ');
 
-        size_t r = i % rows;
-        size_t c = i / rows;
-
-        Rect ib(bounds.x + c * iw, bounds.y + r * ih, fn_name_chars * fw, ih);
         tp.pos.x = ib.x;
         tp.pos.y = ib.y;
-
         tp.fg = pal[Colors::text_browser_foreground];
         if (entno == sel) {
             tp.fg = pal[Colors::info_box_background];
@@ -199,10 +205,12 @@ size_t File_Browser::item_height() const
 
 size_t File_Browser::rows() const
 {
-    return std::max<size_t>(1, bounds_.h / item_height());
+    size_t ih = item_height();
+    return std::max<size_t>(1, bounds_.h / ih);
 }
 
 size_t File_Browser::cols() const
 {
-    return std::max<size_t>(1, bounds_.w / item_width());
+    size_t iw = item_width();
+    return std::max<size_t>(1, bounds_.w / iw);
 }
