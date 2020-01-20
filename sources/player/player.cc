@@ -12,7 +12,7 @@
 #include "smftext.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
-#include <uv.h>
+#include "utility/uv++.h"
 #include <gsl.hpp>
 #include <stdexcept>
 #include <cstdio>

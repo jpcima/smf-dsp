@@ -41,6 +41,7 @@ SOURCES := \
   sources/utility/paths.cc \
   sources/utility/file_scan.cc \
   sources/utility/portfts.cc \
+  sources/utility/uv++.cc \
   sources/utility/load_library.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_util.cc \
   thirdparty/fmidi/sources/fmidi/fmidi_player.cc \

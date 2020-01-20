@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "clock.h"
-#include <uv.h>
+#include "utility/uv++.h"
 #include <stdexcept>
 #include <cstdio>
 
