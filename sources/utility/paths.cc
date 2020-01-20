@@ -20,7 +20,8 @@
 #include <mach-o/dyld.h>
 #elif defined(__HAIKU__)
 #include <KernelKit.h>
-#else
+#endif
+#if !defined(_WIN32)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -100,7 +101,7 @@ static std::string get_native_executable_path()
 #elif defined(__APPLE__)
 static std::string get_native_executable_path()
 {
-    size_t bufsize = 0x100;
+    uint32_t bufsize = 0x100;
     std::unique_ptr<char[]> buf;
     bool need_more_buffer;
     do {
