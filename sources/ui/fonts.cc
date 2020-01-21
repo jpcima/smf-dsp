@@ -5,29 +5,12 @@
 
 #include "fonts.h"
 #include "utility/charset.h"
-#include <unicode/unorm2.h>
-#include <unicode/uiter.h>
 #include <algorithm>
 
 const Font_Glyph *Font::glyph(uint32_t ch) const noexcept
 {
     size_t index = find_glyph(ch);
     return (index != ~size_t(0)) ? &g_[index] : nullptr;
-}
-
-static uint32_t decomposition_lead_char(const UNormalizer2 *norm, uint32_t ch)
-{
-    UChar dec[8];
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t declen = unorm2_getDecomposition(
-        norm, ch, dec, sizeof(dec) / sizeof(dec[0]), &status);
-    UChar32 dc = U_SENTINEL;
-    if (declen > 0) {
-        UCharIterator iter;
-        uiter_setString(&iter, dec, declen);
-        dc = uiter_current32(&iter);
-    }
-    return (dc != U_SENTINEL) ? dc : 0;
 }
 
 size_t Font::find_glyph(uint32_t ch) const noexcept
@@ -49,18 +32,10 @@ size_t Font::find_glyph(uint32_t ch) const noexcept
 
     // try the character decomposition
     if (index == ~size_t(0)) {
-        static const UNormalizer2 *norm =
-            []() -> const UNormalizer2 * {
-                UErrorCode status = U_ZERO_ERROR;
-                const UNormalizer2 *norm = unorm2_getNFDInstance(&status);
-                return U_SUCCESS(status) ? norm : nullptr;
-            }();
-        if (norm) {
-            for (uint32_t nth = 0; nth < ncandidates && index == ~size_t(0); ++nth) {
-                uint32_t dc = decomposition_lead_char(norm, candidates[nth]);
-                if (dc != 0)
-                    index = find_exact_glyph(dc);
-            }
+        for (uint32_t nth = 0; nth < ncandidates && index == ~size_t(0); ++nth) {
+            uint32_t dc = unicode_nfd_base(candidates[nth]);
+            if (dc != 0)
+                index = find_exact_glyph(dc);
         }
     }
 

@@ -15,6 +15,7 @@ bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding);
 template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive);
 uint32_t unicode_tolower(uint32_t ch);
 uint32_t unicode_toupper(uint32_t ch);
+uint32_t unicode_nfd_base(uint32_t ch);
 
 // comparison
 int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b);

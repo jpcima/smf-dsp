@@ -7,6 +7,8 @@
 #include <iconv.h>
 #include <unicode/uchar.h>
 #include <unicode/ucol.h>
+#include <unicode/uiter.h>
+#include <unicode/unorm2.h>
 #include <bst/utf.hpp>
 #include <array>
 #include <type_traits>
@@ -106,6 +108,32 @@ uint32_t unicode_tolower(uint32_t ch)
 uint32_t unicode_toupper(uint32_t ch)
 {
     return u_toupper(ch);
+}
+
+static const UNormalizer2 *NFD_normalizer()
+{
+    static const UNormalizer2 *norm = []() -> const UNormalizer2 * {
+        UErrorCode status = U_ZERO_ERROR;
+        const UNormalizer2 *norm = unorm2_getNFDInstance(&status);
+        return U_SUCCESS(status) ? norm : nullptr;
+    }();
+    return norm;
+};
+
+uint32_t unicode_nfd_base(uint32_t ch)
+{
+    static const UNormalizer2 *norm = NFD_normalizer();
+    UChar dec[8];
+    UErrorCode status = U_ZERO_ERROR;
+    int32_t declen = unorm2_getDecomposition(
+        norm, ch, dec, sizeof(dec) / sizeof(dec[0]), &status);
+    UChar32 dc = U_SENTINEL;
+    if (declen > 0) {
+        UCharIterator iter;
+        uiter_setString(&iter, dec, declen);
+        dc = uiter_current32(&iter);
+    }
+    return (dc != U_SENTINEL) ? dc : 0;
 }
 
 ///
