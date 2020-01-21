@@ -9,7 +9,9 @@
 #include "ui/text.h"
 #include "ui/paint.h"
 #include "utility/charset.h"
+#include "utility/strings.h"
 #include "utility/SDL++.h"
+#include <bst/utf.hpp>
 #include <gsl.hpp>
 #include <algorithm>
 #include <cstdlib>
@@ -170,6 +172,20 @@ bool File_Browser::handle_key_pressed(const SDL_KeyboardEvent &event)
     return false;
 }
 
+bool File_Browser::handle_text_input(const SDL_TextInputEvent &event)
+{
+    gsl::cstring_span str = event.text;
+
+    for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
+        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
+        if (ch == bst::utf::incomplete) break;
+        if (ch == bst::utf::illegal) continue;
+        move_to_character(ch);
+    }
+
+    return false;
+}
+
 bool File_Browser::handle_key_released(const SDL_KeyboardEvent &event)
 {
     return false;
@@ -179,6 +195,30 @@ void File_Browser::move_selection_by(long offset)
 {
     model_.set_selection((long)model_.selection() + offset);
     focus_on_selection();
+}
+
+void File_Browser::move_to_character(uint32_t character)
+{
+    File_Browser_Model &model = model_;
+    size_t sel = model.selection();
+    size_t count = model.count();
+
+    size_t newsel = sel;
+    for (size_t i = sel; (i = (i + 1) % count) != sel && newsel == sel;) {
+        const File_Entry &entry = model.entry(i);
+        gsl::cstring_span name = entry.name;
+
+        gsl::cstring_span::iterator it = name.begin();
+        uint32_t leadchar = bst::utf::utf_traits<char>::decode(it, name.end());
+
+        if (unicode_tolower(character) == unicode_tolower(leadchar))
+            newsel = i;
+    }
+
+    if (newsel != sel) {
+        model.set_selection(newsel);
+        focus_on_selection();
+    }
 }
 
 void File_Browser::focus_on_selection()
