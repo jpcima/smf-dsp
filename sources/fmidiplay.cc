@@ -122,6 +122,10 @@ SDL_Renderer *Application::init_renderer()
     if (!rr)
         return nullptr;
 
+    SDL_RendererInfo ri = {};
+    SDL_GetRendererInfo(rr, &ri);
+    fprintf(stderr, "renderer: %s\n", ri.name);
+
     renderer_.reset(rr);
     return rr;
 }
