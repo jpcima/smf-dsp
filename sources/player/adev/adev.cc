@@ -8,6 +8,7 @@
 #include "adev_haiku.h"
 #include "adev_jack.h"
 #include <memory>
+#include <cstring>
 
 Audio_Device *Audio_Device::create_best_for_system()
 {
@@ -26,4 +27,22 @@ Audio_Device *Audio_Device::create_best_for_system()
 #endif
 
     return adev.release();
+}
+
+void Audio_Device::set_callback(audio_callback_t *cb, void *cbdata)
+{
+    std::lock_guard<std::mutex> lock(cbmutex_);
+
+    cb_ = cb;
+    cbdata_ = cbdata;
+}
+
+void Audio_Device::process_cycle(float *output, unsigned nframes)
+{
+    std::unique_lock<std::mutex> lock(cbmutex_, std::try_to_lock);
+
+    if (lock.owns_lock() && cb_)
+        cb_(reinterpret_cast<float *>(output), nframes, cbdata_);
+    else
+        std::memset(output, 0, 2 * nframes * sizeof(float));
 }

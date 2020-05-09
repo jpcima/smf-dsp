@@ -13,7 +13,7 @@ class Audio_Device_Jack : public Audio_Device {
 public:
     static bool is_available();
 
-    bool init(double desired_latency, audio_callback_t *cb, void *cbdata) override;
+    bool init(double desired_latency) override;
     void shutdown() override;
     bool start() override;
     double latency() const override;
@@ -32,8 +32,6 @@ private:
 private:
     jack_port_t *ports_[2] = {};
     std::unique_ptr<float[]> buffer_;
-    audio_callback_t *cb_ = nullptr;
-    void *cbdata_ = nullptr;
     double audio_rate_ = 0.0;
     double audio_latency_ = 0.0;
     jack_client_u client_;

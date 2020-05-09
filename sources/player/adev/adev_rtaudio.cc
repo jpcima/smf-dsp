@@ -8,12 +8,9 @@
 #include <cmath>
 #include <cstring>
 
-bool Audio_Device_Rt::init(double desired_latency, audio_callback_t *cb, void *cbdata)
+bool Audio_Device_Rt::init(double desired_latency)
 {
     shutdown();
-
-    cb_ = cb;
-    cbdata_ = cbdata;
 
     std::unique_ptr<RtAudio> audio(new RtAudio);
     unsigned audio_device = audio->getDefaultOutputDevice();
@@ -65,11 +62,7 @@ double Audio_Device_Rt::sample_rate() const
 int Audio_Device_Rt::rtaudio_callback(void *output_buffer, void *, unsigned nframes, double, RtAudioStreamStatus, void *user_data)
 {
     Audio_Device_Rt *self = reinterpret_cast<Audio_Device_Rt *>(user_data);
-    if (self->cb_)
-        self->cb_(reinterpret_cast<float *>(output_buffer), nframes, self->cbdata_);
-    else
-        std::memset(output_buffer, 0, 2 * nframes * sizeof(float));
-
+    self->process_cycle(reinterpret_cast<float *>(output_buffer), nframes);
     return 0;
 }
 #endif

@@ -16,12 +16,9 @@ bool Audio_Device_Jack::is_available()
     return client != nullptr;
 }
 
-bool Audio_Device_Jack::init(double desired_latency, audio_callback_t *cb, void *cbdata)
+bool Audio_Device_Jack::init(double desired_latency)
 {
     shutdown();
-
-    cb_ = cb;
-    cbdata_ = cbdata;
 
     jack_client_u client(jack_client_open(PROGRAM_DISPLAY_NAME, JackNoStartServer, nullptr));
     if (!client)
@@ -80,20 +77,14 @@ int Audio_Device_Jack::jack_audio_callback(jack_nframes_t nframes, void *user_da
 {
     Audio_Device_Jack *self = reinterpret_cast<Audio_Device_Jack *>(user_data);
 
+    float *buffer = self->buffer_.get();
+    self->process_cycle(buffer, nframes);
+
     float *out1 = reinterpret_cast<float *>(jack_port_get_buffer(self->ports_[0], nframes));
     float *out2 = reinterpret_cast<float *>(jack_port_get_buffer(self->ports_[1], nframes));
-
-    if (self->cb_) {
-        float *buffer = self->buffer_.get();
-        self->cb_(buffer, nframes, self->cbdata_);
-        for (jack_nframes_t i = 0; i < nframes; ++i) {
-            out1[i] = buffer[2 * i];
-            out2[i] = buffer[2 * i + 1];
-        }
-    }
-    else {
-        std::memset(out1, 0, nframes * sizeof(float));
-        std::memset(out2, 0, nframes * sizeof(float));
+    for (jack_nframes_t i = 0; i < nframes; ++i) {
+        out1[i] = buffer[2 * i];
+        out2[i] = buffer[2 * i + 1];
     }
 
     return 0;

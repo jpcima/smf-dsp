@@ -40,6 +40,8 @@ public:
     virtual void open_midi_output(gsl::cstring_span id) = 0;
     virtual void close_midi_output() = 0;
 
+    virtual bool is_synth() const { return false; }
+
 protected:
     virtual void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) = 0;
 
@@ -88,6 +90,8 @@ public:
 
     void open_midi_output(gsl::cstring_span id) override;
     void close_midi_output() override;
+
+    bool is_synth() const override { return true; }
 
 protected:
     void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) override;

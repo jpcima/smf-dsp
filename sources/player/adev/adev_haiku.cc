@@ -6,14 +6,10 @@
 #if defined(__HAIKU__)
 #include "adev_haiku.h"
 #include <cmath>
-#include <cstring>
 
-bool Audio_Device_Haiku::init(double desired_latency, audio_callback_t *cb, void *cbdata)
+bool Audio_Device_Haiku::init(double desired_latency)
 {
     shutdown();
-
-    cb_ = cb;
-    cbdata_ = cbdata;
 
     media_raw_audio_format format = media_raw_audio_format::wildcard;
     format.channel_count = 2;
@@ -62,12 +58,8 @@ double Audio_Device_Haiku::sample_rate() const
 
 void Audio_Device_Haiku::haiku_audio_callback(void *user_data, void *output_buffer, size_t size, const media_raw_audio_format &)
 {
-    const unsigned nframes = size / (2 * sizeof(float));
-
     Audio_Device_Haiku *self = reinterpret_cast<Audio_Device_Haiku *>(user_data);
-    if (self->cb_)
-        self->cb_(reinterpret_cast<float *>(output_buffer), nframes, self->cbdata_);
-    else
-        std::memset(output_buffer, 0, 2 * nframes * sizeof(float));
+    const unsigned nframes = size / (2 * sizeof(float));
+    self->process_cycle(reinterpret_cast<float *>(output_buffer), nframes);
 }
 #endif

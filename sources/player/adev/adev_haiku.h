@@ -11,7 +11,7 @@
 
 class Audio_Device_Haiku : public Audio_Device {
 public:
-    bool init(double desired_latency, audio_callback_t *cb, void *cbdata) override;
+    bool init(double desired_latency) override;
     void shutdown() override;
     bool start() override;
     double latency() const override;
@@ -22,8 +22,6 @@ private:
 
 private:
     std::unique_ptr<BSoundPlayer> audio_;
-    audio_callback_t *cb_ = nullptr;
-    void *cbdata_ = nullptr;
     double audio_rate_ = 0.0;
     double audio_latency_ = 0.0;
 };

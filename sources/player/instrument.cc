@@ -219,11 +219,13 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
     std::unique_ptr<Audio_Device> audio(Audio_Device::create_best_for_system());
-    if (!audio->init(desired_latency, &audio_callback, this))
+    if (!audio->init(desired_latency))
         return;
 
-     const double audio_rate = audio->sample_rate();
-     const double audio_latency = audio->latency();
+    audio->set_callback(&audio_callback, this);
+
+    const double audio_rate = audio->sample_rate();
+    const double audio_latency = audio->latency();
 
     fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
