@@ -47,16 +47,7 @@ SOURCES := \
   sources/utility/portfts.cc \
   sources/utility/uv++.cc \
   sources/utility/load_library.cc \
-  thirdparty/fmidi/sources/fmidi/fmidi_util.cc \
-  thirdparty/fmidi/sources/fmidi/fmidi_player.cc \
-  thirdparty/fmidi/sources/fmidi/fmidi_internal.cc \
-  thirdparty/fmidi/sources/fmidi/fmidi_seq.cc \
-  thirdparty/fmidi/sources/fmidi/file/read_smf.cc \
-  thirdparty/fmidi/sources/fmidi/file/identify.cc \
-  thirdparty/fmidi/sources/fmidi/file/read_xmi.cc \
-  thirdparty/fmidi/sources/fmidi/file/write_smf.cc \
-  thirdparty/fmidi/sources/fmidi/u_memstream.cc \
-  thirdparty/fmidi/sources/fmidi/u_stdio.cc \
+  thirdparty/fmidi/sources/fmidi/fmidi_mini.cc \
   thirdparty/simpleini/ConvertUTF.cpp \
   thirdparty/rtaudio/RtAudio.cpp \
   thirdparty/rtmidi/RtMidi.cpp \

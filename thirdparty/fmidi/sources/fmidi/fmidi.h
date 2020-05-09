@@ -197,8 +197,10 @@ FMIDI_API void fmidi_player_finish_callback(
 // PRINTERS //
 //////////////
 
+#if !defined(FMIDI_DISABLE_DESCRIBE_API)
 FMIDI_API void fmidi_smf_describe(const fmidi_smf_t *smf, FILE *stream);
 FMIDI_API void fmidi_event_describe(const fmidi_event_t *evt, FILE *stream);
+#endif
 
 ////////////
 // LIMITS //
@@ -214,7 +216,7 @@ enum { fmidi_file_size_limit = 64 * 1024 * 1024 };
 // C++ PRINTERS //
 //////////////////
 
-#if defined(__cplusplus)
+#if defined(__cplusplus) && !defined(FMIDI_DISABLE_DESCRIBE_API)
 # include <iosfwd>
 FMIDI_API std::ostream &operator<<(std::ostream &out, const fmidi_smf_t &smf);
 FMIDI_API std::ostream &operator<<(std::ostream &out, const fmidi_event_t &evt);
