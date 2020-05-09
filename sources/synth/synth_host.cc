@@ -58,10 +58,18 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
     if (!info)
         return false;
 
-    Dl_Handle handle(Dl_open(plugin_path(*info).c_str()));
-    if (!handle)
-        return false;
-    Dl_Handle_U handle_u(handle);
+    Dl_Handle handle = [this, &id]() -> Dl_Handle {
+        auto it = loaded_modules_.find(gsl::to_string(id));
+        return (it != loaded_modules_.end()) ? it->second.get() : nullptr;
+    }();
+
+    if (!handle) {
+        Dl_Handle_U handle_u(Dl_open(plugin_path(*info).c_str()));
+        if (!handle_u)
+            return false;
+        handle = handle_u.get();
+        loaded_modules_[gsl::to_string(id)] = std::move(handle_u);
+    }
 
     synth_plugin_entry_fn *entry = reinterpret_cast<synth_plugin_entry_fn *>(
         Dl_sym(handle, "synth_plugin_entry"));
@@ -75,7 +83,7 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
     unload();
 
     intf->plugin_init(get_configuration_dir().c_str());
-    module_ = std::move(handle_u);
+    module_ = handle;
     intf_ = intf;
 
     synth_object *synth = intf->synth_instantiate(srate);
@@ -112,7 +120,7 @@ void Synth_Host::unload()
         intf_ = nullptr;
     }
 
-    module_.reset();
+    module_ = nullptr;
 }
 
 void Synth_Host::generate(float *buffer, size_t nframes)

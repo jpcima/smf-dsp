@@ -38,7 +38,8 @@ public:
     void send_midi(const uint8_t *data, unsigned len);
 
 private:
-    Dl_Handle_U module_;
+    Dl_Handle module_;
+    std::map<std::string, Dl_Handle_U> loaded_modules_;
     const synth_interface *intf_ = nullptr;
     synth_object *synth_ = nullptr;
 
