@@ -6,6 +6,7 @@
 #include "adev.h"
 #include "adev_rtaudio.h"
 #include "adev_haiku.h"
+#include "adev_jack.h"
 #include <memory>
 
 Audio_Device *Audio_Device::create_best_for_system()
@@ -13,9 +14,15 @@ Audio_Device *Audio_Device::create_best_for_system()
     std::unique_ptr<Audio_Device> adev;
 
 #if !defined(__HAIKU__)
-    adev.reset(new Audio_Device_Rt);
+#if defined(__linux__)
+    if (!adev && Audio_Device_Jack::is_available())
+        adev.reset(new Audio_Device_Jack);
+#endif
+    if (!adev)
+        adev.reset(new Audio_Device_Rt);
 #else
-    adev.reset(new Audio_Device_Haiku);
+    if (!adev)
+        adev.reset(new Audio_Device_Haiku);
 #endif
 
     return adev.release();

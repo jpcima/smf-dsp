@@ -26,6 +26,7 @@ SOURCES := \
   sources/player/adev/adev.cc \
   sources/player/adev/adev_rtaudio.cc \
   sources/player/adev/adev_haiku.cc \
+  sources/player/adev/adev_jack.cc \
   sources/synth/synth_host.cc \
   sources/data/ins_names.cc \
   sources/ui/main_layout.cc \
@@ -84,7 +85,7 @@ $(APP): CPPFLAGS += \
     -Ithirdparty/ring_buffer \
     -Ithirdparty/uchardet/src \
     -DSI_CONVERT_GENERIC \
-    $(if $(LINUX),-D__LINUX_ALSA__=1 -D__LINUX_PULSE__=1 -D__UNIX_JACK__=1 -DJACK_HAS_PORT_RENAME=1 -DHAVE_SEMAPHORE=1) \
+    $(if $(LINUX),-D__LINUX_ALSA__=1 -D__LINUX_PULSE__=1) \
     $(if $(MINGW),-D__WINDOWS_MM__=1 -D__WINDOWS_DS__=1) \
     $(if $(APPLE),-D__MACOSX_CORE__=1) \
     $(if $(NOT_WASM),$(call pkg_config_cflags,sdl2 SDL2_image libuv)) \
