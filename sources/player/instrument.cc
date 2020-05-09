@@ -6,8 +6,6 @@
 #include "instrument.h"
 #include "configuration.h"
 #include "synth/synth_host.h"
-#include "adev/adev_rtaudio.h"
-#include "adev/adev_haiku.h"
 #include <RtMidi.h>
 #include <algorithm>
 #include <thread>
@@ -220,12 +218,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
     desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
-#if !defined(__HAIKU__)
-    std::unique_ptr<Audio_Device_Rt> audio(new Audio_Device_Rt);
-#else
-    std::unique_ptr<Audio_Device_Haiku> audio(new Audio_Device_Haiku);
-#endif
-
+    std::unique_ptr<Audio_Device> audio(Audio_Device::create_best_for_system());
     if (!audio->init(desired_latency, &audio_callback, this))
         return;
 

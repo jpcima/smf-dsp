@@ -9,6 +9,8 @@ class Audio_Device {
 public:
     virtual ~Audio_Device() {}
 
+    static Audio_Device *create_best_for_system();
+
     typedef void (audio_callback_t)(float *output, unsigned nframes, void *user_data);
 
     virtual bool init(double desired_latency, audio_callback_t *cb, void *cbdata) = 0;
