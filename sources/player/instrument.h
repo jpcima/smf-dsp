@@ -5,6 +5,7 @@
 
 #pragma once
 #include "keystate.h"
+#include "adev/adev.h"
 #include <ring_buffer.h>
 #include <gsl.hpp>
 #include <vector>
@@ -13,13 +14,6 @@
 #include <cstdint>
 class Synth_Host;
 class RtMidiOut;
-#if !defined(__HAIKU__)
-class RtAudio;
-typedef unsigned RtAudioStreamStatus;
-#else
-class BSoundPlayer;
-struct media_raw_audio_format;
-#endif
 
 struct Midi_Output {
     std::string id;
@@ -99,11 +93,7 @@ protected:
     void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) override;
 
 private:
-#if !defined(__HAIKU__)
-    static int audio_callback(void *output_buffer, void *, unsigned nframes, double, RtAudioStreamStatus, void *user_data);
-#else
-    static void audio_callback(void *user_data, void *output_buffer, size_t size, const media_raw_audio_format &);
-#endif
+    static void audio_callback(float *output, unsigned nframes, void *user_data);
     void process_midi(double time_incr);
 
     bool extract_next_message();
@@ -111,11 +101,7 @@ private:
 private:
     std::unique_ptr<Synth_Host> host_;
     std::unique_ptr<Ring_Buffer> midibuf_;
-#if !defined(__HAIKU__)
-    std::unique_ptr<RtAudio> audio_;
-#else
-    std::unique_ptr<BSoundPlayer> audio_;
-#endif
+    std::unique_ptr<Audio_Device> audio_;
     double audio_rate_ = 0;
     double audio_latency_ = 0;
     double time_delta_ = 0;

@@ -23,6 +23,8 @@ SOURCES := \
   sources/player/keystate.cc \
   sources/player/clock.cc \
   sources/player/smftext.cc \
+  sources/player/adev/adev_rtaudio.cc \
+  sources/player/adev/adev_haiku.cc \
   sources/synth/synth_host.cc \
   sources/data/ins_names.cc \
   sources/ui/main_layout.cc \

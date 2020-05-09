@@ -6,12 +6,9 @@
 #include "instrument.h"
 #include "configuration.h"
 #include "synth/synth_host.h"
+#include "adev/adev_rtaudio.h"
+#include "adev/adev_haiku.h"
 #include <RtMidi.h>
-#if !defined(__HAIKU__)
-#include <RtAudio.h>
-#else
-#include <MediaKit.h>
-#endif
 #include <algorithm>
 #include <thread>
 #include <chrono>
@@ -220,47 +217,21 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
     if (!ini) ini = create_configuration();
 
+    double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
+    desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
+
 #if !defined(__HAIKU__)
-    std::unique_ptr<RtAudio> audio(new RtAudio);
-    unsigned audio_device = audio->getDefaultOutputDevice();
-    RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
-
-    fprintf(stderr, "Audio interface: %s\n", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
-
-    RtAudio::StreamParameters audio_param;
-    audio_param.deviceId = audio_device;
-    audio_param.nChannels = 2;
-
-    RtAudio::StreamOptions audio_opt;
-    audio_opt.streamName = PROGRAM_DISPLAY_NAME " synth";
-    audio_opt.flags = RTAUDIO_ALSA_USE_DEFAULT;
-
-    double audio_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
-    audio_latency = 1e-3 * std::max(1.0, std::min(500.0, audio_latency));
-
-    double audio_rate = audio_devinfo.preferredSampleRate;
-    unsigned audio_buffer_size = (unsigned)std::ceil(audio_latency * audio_rate);
-
-    audio->openStream(&audio_param, nullptr, RTAUDIO_FLOAT32, audio_rate, &audio_buffer_size, &audio_callback, this, &audio_opt);
-
-    audio_latency = audio_buffer_size / audio_rate;
+    std::unique_ptr<Audio_Device_Rt> audio(new Audio_Device_Rt);
 #else
-    media_raw_audio_format format = media_raw_audio_format::wildcard;
-    format.channel_count = 2;
-    format.format = media_raw_audio_format::B_AUDIO_FLOAT;
-    format.byte_order = B_MEDIA_HOST_ENDIAN;
-    //NOTE: latency setting not used
+    std::unique_ptr<Audio_Device_Haiku> audio(new Audio_Device_Haiku);
+#endif
 
-    std::unique_ptr<BSoundPlayer> audio(
-        new BSoundPlayer(&format, PROGRAM_DISPLAY_NAME " synth", &audio_callback, nullptr, this));
-
-    if (audio->InitCheck() != B_OK)
+    if (!audio->init(desired_latency, &audio_callback, this))
         return;
 
-    format = audio->Format();
-    double audio_rate = format.frame_rate;
-    double audio_latency = format.buffer_size / audio_rate;
-#endif
+     const double audio_rate = audio->sample_rate();
+     const double audio_latency = audio->latency();
+
     fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
     if (!host.load(id, audio_rate))
@@ -268,20 +239,11 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     audio_rate_ = audio_rate;
     audio_latency_ = audio_latency;
-
     audio_ = std::move(audio);
 
     time_delta_ = -audio_latency;
 
-#if !defined(__HAIKU__)
-    audio_->startStream();
-#else
-    if (audio_->Start() != B_OK) {
-        audio_.reset();
-        return;
-    }
-    audio_->SetHasData(true);
-#endif
+    audio_->start();
 }
 
 void Midi_Synth_Instrument::close_midi_output()
@@ -314,33 +276,19 @@ void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned le
     midibuf.put(data, len);
 }
 
-#if !defined(__HAIKU__)
-int Midi_Synth_Instrument::audio_callback(void *output_buffer, void *, unsigned nframes, double, RtAudioStreamStatus, void *user_data)
-#else
-void Midi_Synth_Instrument::audio_callback(void *user_data, void *output_buffer, size_t size, const media_raw_audio_format &)
-#endif
+void Midi_Synth_Instrument::audio_callback(float *output, unsigned nframes, void *user_data)
 {
     Midi_Synth_Instrument *self = (Midi_Synth_Instrument *)user_data;
     Synth_Host &host = *self->host_;
     double srate = self->audio_rate_;
 
-#if defined(__HAIKU__)
-    unsigned nframes = size / (2 * sizeof(float));
-#endif
-
-    float *frame_buffer = (float *)output_buffer;
     unsigned frame_index = 0;
-
     while (frame_index < nframes) {
         unsigned nframes_current = std::min(nframes - frame_index, midi_interval_max);
         self->process_midi(nframes_current * (1.0 / srate));
-        host.generate(&frame_buffer[2 * frame_index], nframes_current);
+        host.generate(&output[2 * frame_index], nframes_current);
         frame_index += nframes_current;
     }
-
-#if !defined(__HAIKU__)
-    return 0;
-#endif
 }
 
 void Midi_Synth_Instrument::process_midi(double time_incr)
