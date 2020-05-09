@@ -230,7 +230,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
 
     if (!host.load(id, audio_rate))
-        return;
+        fprintf(stderr, "Error loading synth: %s\n", gsl::to_string(id).c_str());
 
     audio_rate_ = audio_rate;
     audio_latency_ = audio_latency;
