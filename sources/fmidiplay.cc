@@ -574,7 +574,7 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
             player_->push_command(std::move(cmd));
             return true;
         }
-        else if (keymod & KMOD_SHIFT) {
+        else if ((keymod & KMOD_SHIFT) && !(keymod & ~KMOD_SHIFT)) {
             std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
             cmd->time_offset = -10;
             player_->push_command(std::move(cmd));
@@ -588,7 +588,7 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
             player_->push_command(std::move(cmd));
             return true;
         }
-        else if (keymod & KMOD_SHIFT) {
+        else if ((keymod & KMOD_SHIFT) && !(keymod & ~KMOD_SHIFT)) {
             std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
             cmd->time_offset = +10;
             player_->push_command(std::move(cmd));
