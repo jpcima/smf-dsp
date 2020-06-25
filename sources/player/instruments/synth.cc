@@ -55,8 +55,18 @@ void Midi_Synth_Instrument::flush_events()
 {
     Impl& impl = *impl_;
 
-    while (impl.message_count_.load() > 0)
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    unsigned long counter = 0;
+    auto interval = std::chrono::milliseconds(1);
+    bool warned = false;
+
+    while (impl.message_count_.load() > 0) {
+        if (counter > 1000 && !warned) {
+            Log::w("Events are taking a long time to flush (%u left)", impl.message_count_.load());
+            warned = true;
+        }
+        std::this_thread::sleep_for(interval);
+        ++counter;
+    }
 }
 
 void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
