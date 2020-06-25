@@ -5,6 +5,7 @@
 
 #include "../synth.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #define MT32EMU_API_TYPE 1
 #include <mt32emu.h>
 #include <algorithm>
@@ -77,7 +78,8 @@ static const mt32emu_report_handler_i_v0 the_report_handler = {
     +[](void *instance_data, const char *fmt, va_list list)
     {
         if (!mt32emu_debug_enabled) return;
-        fputs("mt32emu: ", stderr); vfprintf(stderr, fmt, list); fputc('\n', stderr);
+        std::string logfmt = std::string("mt32emu: ") + fmt;
+        Log::i(logfmt.c_str(), list);
     },
     /** Callbacks for reporting errors */
     +[](void *instance_data) {},
@@ -116,11 +118,13 @@ static int mt32emu_synth_activate(synth_object *obj)
     mt32emu_report_handler_i report_handler;
     report_handler.v0 = &the_report_handler;
 
+    Log::i("mt32emu: create new context");
+
     mt32emu_context_u devices[2];
     devices[0].reset(mt32emu_create_context(report_handler, obj));
     devices[1].reset(mt32emu_create_context(report_handler, obj));
     if (!devices[0] || !devices[1]) {
-        fprintf(stderr, "mt32emu: error creating context\n");
+        Log::e("mt32emu: error creating context");
         return -1;
     }
 
@@ -138,11 +142,11 @@ static int mt32emu_synth_activate(synth_object *obj)
         mt32emu_select_renderer_type(device, MT32EMU_RT_FLOAT);
 
         if (mt32emu_add_rom_file(device, control_rom.c_str()) < 0) {
-            fprintf(stderr, "mt32emu: cannot add control ROM \"%s\"\n", control_rom.c_str());
+            Log::e("mt32emu: cannot add control ROM \"%s\"", control_rom.c_str());
             return -1;
         }
         if (mt32emu_add_rom_file(device, pcm_rom.c_str()) < 0) {
-            fprintf(stderr, "mt32emu: cannot add PCM ROM \"%s\"\n", pcm_rom.c_str());
+            Log::e("mt32emu: cannot add PCM ROM \"%s\"", pcm_rom.c_str());
             return -1;
         }
 
@@ -150,8 +154,8 @@ static int mt32emu_synth_activate(synth_object *obj)
         mt32emu_get_rom_info(device, &rom_info);
 
         if (devno == 0) {
-            fprintf(stderr, "mt32emu: using control ROM \"%s\"\n", rom_info.control_rom_description);
-            fprintf(stderr, "mt32emu: using PCM ROM \"%s\"\n", rom_info.pcm_rom_description);
+            Log::i("mt32emu: using control ROM \"%s\"", rom_info.control_rom_description);
+            Log::i("mt32emu: using PCM ROM \"%s\"", rom_info.pcm_rom_description);
         }
 
         mt32emu_set_midi_event_queue_size(device, 8192);
@@ -159,12 +163,12 @@ static int mt32emu_synth_activate(synth_object *obj)
         mt32emu_set_partial_count(device, sy->partial_count);
 
         if (mt32emu_open_synth(device) != MT32EMU_RC_OK) {
-            fprintf(stderr, "mt32emu: cannot open synth\n");
+            Log::e("mt32emu: cannot open synth");
             return -1;
         }
 
         if (devno == 0)
-            fprintf(stderr, "mt32emu: number of partials %u\n", mt32emu_get_partial_count(device));
+            Log::e("mt32emu: number of partials %u", mt32emu_get_partial_count(device));
 
         // setup part assignment
         const uint8_t device_part_channel[2][9] = {

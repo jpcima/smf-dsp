@@ -6,6 +6,7 @@
 #include "../synth.h"
 #include "../synth_utility.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #include <fluidsynth.h>
 #include <memory>
 #include <cstdlib>
@@ -111,9 +112,10 @@ static int fluid_synth_activate(synth_object *obj)
             sf_absolute = fluid_synth_base_dir + sf;
             sf = (char *)sf_absolute.c_str();
         }
+        Log::i("[fluid] load soundfont: %s", sf);
         int sfid = fluid_synth_sfload(synth, sf, true);
         if (sfid == FLUID_FAILED)
-            fprintf(stderr, "Soundfont loading failure: %s\n", sf);
+            Log::e("[fluid] could not load soundfont");
     }
 
     fluid_synth_set_chorus_on(synth, sy->chorus_enable);

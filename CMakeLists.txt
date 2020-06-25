@@ -53,7 +53,8 @@ add_executable(fmidiplay
   "sources/utility/file_scan.cc"
   "sources/utility/portfts.cc"
   "sources/utility/uv++.cc"
-  "sources/utility/load_library.cc")
+  "sources/utility/load_library.cc"
+  "sources/utility/logs.cc")
 
 target_compile_definitions(fmidiplay PRIVATE
   "PROGRAM_NAME=\"${PROJECT_NAME}\""

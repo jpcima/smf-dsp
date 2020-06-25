@@ -9,6 +9,7 @@
 #include "ui/fonts.h"
 #include "ui/text.h"
 #include "utility/SDL++.h"
+#include "utility/logs.h"
 
 Metadata_Display::Metadata_Display(const Rect &bounds)
     : bounds_(bounds), md_(new Player_Song_Metadata)
@@ -31,12 +32,12 @@ void Metadata_Display::paint(SDL_Renderer *rr)
     const Player_Song_Metadata &md = *md_;
 
     if (0) {
-        fprintf(stderr, "Format: %s\n", md.format);
-        fprintf(stderr, "Tracks: %u\n", md.track_count);
-        fprintf(stderr, "Author: %s\n", md.author.c_str());
-        fprintf(stderr, "Name: %s\n", md.name.c_str());
+        Log::i("Format: %s", md.format);
+        Log::i("Tracks: %u", md.track_count);
+        Log::i("Author: %s", md.author.c_str());
+        Log::i("Name: %s", md.name.c_str());
         for (size_t i = 0, n = md.text.size(); i < n; ++i)
-            fprintf(stderr, "Text[%zu]: %s\n", i, md.text[i].c_str());
+            Log::i("Text[%zu]: %s", i, md.text[i].c_str());
     }
 
     Rect r = bounds.reduced(Point(0, 2));

@@ -5,6 +5,7 @@
 
 #if !defined(__HAIKU__)
 #include "adev_rtaudio.h"
+#include "utility/logs.h"
 #include <cmath>
 #include <cstring>
 
@@ -16,7 +17,7 @@ bool Audio_Device_Rt::init(double desired_latency)
     unsigned audio_device = audio->getDefaultOutputDevice();
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
 
-    fprintf(stderr, "Audio interface: %s\n", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
+    Log::e("Audio interface: %s", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
 
     RtAudio::StreamParameters audio_param;
     audio_param.deviceId = audio_device;

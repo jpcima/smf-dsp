@@ -5,6 +5,7 @@
 
 #include "../synth.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #include <opnmidi.h>
 #include <memory>
 #include <cstring>
@@ -71,14 +72,17 @@ static int opnmidi_synth_activate(synth_object *obj)
     sy->player.reset(player);
 
     if (opn2_switchEmulator(player, OPNMIDI_EMU_MAME) != 0)
-        fprintf(stderr, "opnmidi: cannot set emulator\n");
+        Log::e("opnmidi: cannot set emulator");
 
     if (opn2_setNumChips(player, sy->chip_count) != 0)
-        fprintf(stderr, "opnmidi: cannot set chip count %d\n", sy->chip_count);
+        Log::e("opnmidi: cannot set chip count %d", sy->chip_count);
+
+    Log::i("opnmidi: use %d \"%s\"", opn2_getNumChips(player), opn2_chipEmulatorName(player));
 
     int bank_no = 0;
     unsigned scan_count = 0;
     if (sscanf(sy->instrument_bank.c_str(), "%d%n", &bank_no, &scan_count) == 1 && scan_count == sy->instrument_bank.size()) {
+        Log::i("opnmidi: set bank number %d", bank_no);
         #pragma message("TODO opnmidi: no library support for embedded banks")
         bool loaded = false;
         if (bank_no == 0) {
@@ -88,14 +92,15 @@ static int opnmidi_synth_activate(synth_object *obj)
             loaded = opn2_openBankData(player, bank_data, sizeof(bank_data)) == 0;
         }
         if (!loaded)
-            fprintf(stderr, "opnmidi: cannot set bank number %d\n", bank_no);
+            Log::e("opnmidi: cannot set bank number %d", bank_no);
     }
     else {
         std::string path = sy->instrument_bank;
         if (!is_path_absolute(path))
             path = opnmidi_synth_base_dir + path;
+        Log::i("opnmidi: set bank file %s", path.c_str());
         if (opn2_openBankFile(player, path.c_str()) != 0)
-            fprintf(stderr, "opnmidi: cannot set bank file \"%s\"\n", path.c_str());
+            Log::e("opnmidi: cannot set bank file \"%s\"", path.c_str());
     }
 
     return 0;

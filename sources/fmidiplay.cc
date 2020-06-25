@@ -24,6 +24,7 @@
 #include "utility/paths.h"
 #include "utility/charset.h"
 #include "utility/strings.h"
+#include "utility/logs.h"
 #include <SDL_image.h>
 #include <gsl.hpp>
 #include <algorithm>
@@ -124,7 +125,7 @@ SDL_Renderer *Application::init_renderer()
 
     SDL_RendererInfo ri = {};
     SDL_GetRendererInfo(rr, &ri);
-    fprintf(stderr, "renderer: %s\n", ri.name);
+    Log::i("Renderer type: %s", ri.name);
 
     renderer_.reset(rr);
     return rr;
@@ -905,10 +906,13 @@ void Application::load_theme(gsl::cstring_span theme)
     if (theme.empty())
         theme = "default";
 
+    Log::i("Loading theme: %s", gsl::to_string(theme).c_str());
+
     if (theme != "default") {
-        std::unique_ptr<CSimpleIniA> ini = load_configuration("t_" + gsl::to_string(theme));
+        std::string filename = "t_" + gsl::to_string(theme);
+        std::unique_ptr<CSimpleIniA> ini = load_configuration(filename);
         if (!ini) {
-            fprintf(stderr, "Theme: cannot load the configuration file.\n");
+            Log::e("Cannot load theme file: %s.ini", filename.c_str());
             return;
         }
 
@@ -943,7 +947,7 @@ void Application::load_theme_configuration(const CSimpleIniA &ini)
 {
     Color_Palette &pal = Color_Palette::get_current();
     if (!pal.load(ini, "color"))
-        fprintf(stderr, "Theme: cannot load the color palette.\n");
+        Log::e("Cannot load the color palette");
 
     //
     struct Image_Assoc {
@@ -971,6 +975,8 @@ void Application::load_theme_configuration(const CSimpleIniA &ini)
 
 void Application::engage_shutdown()
 {
+    Log::i("Engage shutdown");
+
     if (!fadeout_engaged_) {
         fadeout_engaged_ = true;
         fadeout_time_ = fadeout_delay;

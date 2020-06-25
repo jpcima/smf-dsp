@@ -6,13 +6,13 @@
 #include "instrument.h"
 #include "configuration.h"
 #include "synth/synth_host.h"
+#include "utility/logs.h"
 #include <RtMidi.h>
 #include <algorithm>
 #include <thread>
 #include <chrono>
 #include <cmath>
 #include <cstring>
-#include <cstdio>
 
 Midi_Instrument::Midi_Instrument()
 {
@@ -94,7 +94,7 @@ void Midi_Port_Instrument::handle_send_message(const uint8_t *data, unsigned len
 
 void Midi_Port_Instrument::handle_midi_error(int type, const std::string &text)
 {
-    fprintf(stderr, "[MIDI] %s\n", text.c_str());
+    Log::e("%s", text.c_str());
     midi_error_status_ = (type < RtMidiError::UNSPECIFIED) ? 0 : type;
 }
 
@@ -227,10 +227,10 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     const double audio_rate = audio->sample_rate();
     const double audio_latency = audio->latency();
 
-    fprintf(stderr, "Audio latency: %f ms\n", 1e3 * audio_latency);
+    Log::i("Audio latency: %f ms", 1e3 * audio_latency);
 
     if (!host.load(id, audio_rate))
-        fprintf(stderr, "Error loading synth: %s\n", gsl::to_string(id).c_str());
+        Log::e("Could not open synth: %s", gsl::to_string(id).c_str());
 
     audio_rate_ = audio_rate;
     audio_latency_ = audio_latency;

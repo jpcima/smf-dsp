@@ -5,6 +5,7 @@
 
 #include "../synth.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #include <emidi_alpha/CMIDIModule.hpp>
 #include <emidi_alpha/CSccDevice.hpp>
 #include <emidi_alpha/COpllDevice.hpp>
@@ -62,6 +63,8 @@ static int scc_synth_activate(synth_object *obj)
     double srate = sy->srate;
     unsigned mods = sy->module_count;
 
+    Log::i("scc: instantiate %u modules", mods);
+
     for (unsigned m = 0; m < mods; ++m) {
         dsa::ISoundDevice *dev;
         if (m & 1) dev = new dsa::CSccDevice(srate, 2);
@@ -97,7 +100,7 @@ static void scc_synth_write(synth_object *obj, const unsigned char *msg, size_t 
         return;
 
     const dsa::CMIDIMsg &mm = mi.GetMsg();
-    //fprintf(stderr, "%s\n", mm.c_str());
+    //Log::e("%s", mm.c_str());
 
     sy->module[(mm.m_ch * 2) % mods].SendMIDIMsg(mm);
     if (mm.m_ch != 9)

@@ -8,6 +8,7 @@
 #include "configuration.h"
 #include "utility/paths.h"
 #include "utility/charset.h"
+#include "utility/logs.h"
 #include <algorithm>
 #include <cassert>
 #include <dirent.h>
@@ -159,11 +160,15 @@ std::string Synth_Host::find_plugin_dir()
     size_t suffixlen = suffix.size();
 
     if (dir.size() >= suffixlen && gsl::cstring_span(dir).subspan(dir.size() - suffixlen) == suffix) {
+        Log::i("Use FHS plugin search");
         dir.resize(dir.size() - suffixlen);
         dir.append("/lib/" PROGRAM_NAME "/");
     }
+    else {
+        Log::i("Use portable application plugin search");
+    }
 
-    fprintf(stderr, "plugin directory: %s\n", dir.c_str());
+    Log::i("Plugin directory: %s", dir.c_str());
 
     dir.shrink_to_fit();
     return dir;
@@ -171,6 +176,8 @@ std::string Synth_Host::find_plugin_dir()
 
 std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
 {
+    Log::i("Perform plugin scan");
+
     std::vector<Synth_Host::Plugin_Info> plugins;
     const std::string &dir = plugin_dir();
 
@@ -198,7 +205,7 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
             if (entry)
                 intf = entry();
             if (intf) {
-                fprintf(stderr, "synth plugin found: %s\n", intf->name);
+                Log::s("Synth plugin found: %s", intf->name);
                 Plugin_Info info;
                 info.id = std::string(id.data(), id.size());
                 info.name = intf->name;

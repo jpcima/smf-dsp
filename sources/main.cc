@@ -6,9 +6,9 @@
 #include "fmidiplay.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #include <gsl.hpp>
 #include <getopt.h>
-#include <cstdio>
 
 int main(int argc, char *argv[])
 {
@@ -28,14 +28,16 @@ int main(int argc, char *argv[])
         initial_path = make_path_canonical(argv[optind]);
         break;
     default:
-        fprintf(stderr, "Error: invalid number of positional arguments\n");
+        Log::e("Invalid number of positional arguments");
         return 1;
     }
+
+    Log::i("Start");
 
     // Initialize SDL
     uint32_t subsys = SDL_INIT_VIDEO|SDL_INIT_TIMER;
     if (SDL_InitSubSystem(subsys) < 0) {
-        fprintf(stderr, "Error initializing.\n");
+        Log::e("Error initializing.");
         return 1;
     }
     auto sdl_cleanup = gsl::finally([subsys] { SDL_QuitSubSystem(subsys); });
@@ -45,17 +47,21 @@ int main(int argc, char *argv[])
     if (!initial_path.empty())
         app.set_current_path(initial_path);
 
+    Log::i("Creating window");
     SDL_Window *win = app.init_window();
     if (!win) {
-        fprintf(stderr, "Error creating window.\n");
+        Log::e("Error creating window");
         return 1;
     }
+    Log::s("New window: %p", win);
 
+    Log::i("Creating renderer");
     SDL_Renderer *rr = app.init_renderer();
     if (!rr) {
-        fprintf(stderr, "Error creating window renderer.\n");
+        Log::e("Error creating window renderer");
         return 1;
     }
+    Log::s("New renderer: %p", rr);
 
     // Initial painting
     app.paint_cached_background(rr);
@@ -97,7 +103,7 @@ int main(int argc, char *argv[])
             app.engage_shutdown();
             break;
         default:
-            // fprintf(stderr, "SDL event %X\n", event.type);
+            //Log::i("SDL event %X", event.type);
             break;
         }
 
@@ -107,6 +113,8 @@ int main(int argc, char *argv[])
             SDL_RenderPresent(rr);
         }
     }
+
+    Log::i("Quit");
 
     return 0;
 }

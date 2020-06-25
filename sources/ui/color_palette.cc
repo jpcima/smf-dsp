@@ -5,8 +5,8 @@
 
 #include "color_palette.h"
 #include "configuration.h"
+#include "utility/logs.h"
 #include <unordered_set>
-#include <cstdio>
 
 Color_Palette::Color_Palette()
     : colors_{new SDL_Color[Colors::Count]{}}
@@ -121,7 +121,7 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
         }
 
         if (!found) {
-            fprintf(stderr, "Colors: cannot interpret the color value \"%s\" for \"%s\".\n", value.data(), key.data());
+            Log::e("Cannot interpret the color value \"%s\" for \"%s\".", value.data(), key.data());
             continue;
         }
 
@@ -132,7 +132,7 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
     }
 
     if (num_colors_set != Colors::Count)
-        fprintf(stderr, "Colors: the color palette is incomplete.\n");
+        Log::w("The color palette is incomplete.");
 
     return true;
 }

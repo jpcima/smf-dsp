@@ -5,6 +5,7 @@
 
 #include "../synth.h"
 #include "utility/paths.h"
+#include "utility/logs.h"
 #include <adlmidi.h>
 #include <memory>
 #include <cstring>
@@ -71,23 +72,27 @@ static int adlmidi_synth_activate(synth_object *obj)
     sy->player.reset(player);
 
     if (adl_switchEmulator(player, ADLMIDI_EMU_DOSBOX) != 0)
-        fprintf(stderr, "adlmidi: cannot set emulator\n");
+        Log::e("adlmidi: cannot set emulator");
 
     if (adl_setNumChips(player, sy->chip_count) != 0)
-        fprintf(stderr, "adlmidi: cannot set chip count %d\n", sy->chip_count);
+        Log::e("adlmidi: cannot set chip count %d", sy->chip_count);
+
+    Log::i("adlmidi: use %d chips \"%s\"", adl_getNumChips(player), adl_chipEmulatorName(player));
 
     int bank_no = 0;
     unsigned scan_count = 0;
     if (sscanf(sy->instrument_bank.c_str(), "%d%n", &bank_no, &scan_count) == 1 && scan_count == sy->instrument_bank.size()) {
+        Log::i("adlmidi: set bank number %d", bank_no);
         if (adl_setBank(player, bank_no) != 0)
-            fprintf(stderr, "adlmidi: cannot set bank number %d\n", bank_no);
+            Log::e("adlmidi: cannot set bank number %d", bank_no);
     }
     else {
         std::string path = sy->instrument_bank;
         if (!is_path_absolute(path))
             path = adlmidi_synth_base_dir + path;
+        Log::i("adlmidi: set bank file %s", path.c_str());
         if (adl_openBankFile(player, path.c_str()) != 0)
-            fprintf(stderr, "adlmidi: cannot set bank file \"%s\"\n", path.c_str());
+            Log::e("adlmidi: cannot set bank file \"%s\"", path.c_str());
     }
 
     return 0;
