@@ -6,7 +6,6 @@
 #pragma once
 #include "player/instrument.h"
 #include <memory>
-class Synth_Host;
 
 class Midi_Synth_Instrument : public Midi_Instrument {
 public:
@@ -19,6 +18,9 @@ public:
     void close_midi_output() override;
 
     bool is_synth() const override { return true; }
+
+    void configure_audio(double audio_rate, double audio_latency);
+    void generate_audio(float *output, unsigned nframes);
 
 protected:
     void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) override;

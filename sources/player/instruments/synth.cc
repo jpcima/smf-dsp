@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "player/instruments/synth.h"
-#include "player/adev/adev.h"
 #include "synth/synth_host.h"
 #include "configuration.h"
 #include "utility/logs.h"
@@ -21,7 +20,6 @@ static constexpr unsigned midi_interval_max = 64;
 struct Midi_Synth_Instrument::Impl {
     std::unique_ptr<Synth_Host> host_;
     std::unique_ptr<Ring_Buffer> midibuf_;
-    std::unique_ptr<Audio_Device> audio_;
     double audio_rate_ = 0;
     double audio_latency_ = 0;
     double time_delta_ = 0;
@@ -37,7 +35,6 @@ struct Midi_Synth_Instrument::Impl {
     uint8_t next_message_[midi_message_max];
     std::atomic_uint message_count_ = {0};
 
-    static void audio_callback(float *output, unsigned nframes, void *user_data);
     void process_midi(double time_incr);
 
     bool extract_next_message();
@@ -78,34 +75,16 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
     double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
     desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
-    std::unique_ptr<Audio_Device> audio(Audio_Device::create_best_for_system());
-    if (!audio->init(desired_latency))
-        return;
-
-    audio->set_callback(&Impl::audio_callback, this);
-
-    const double audio_rate = audio->sample_rate();
-    const double audio_latency = audio->latency();
-
-    Log::i("Audio latency: %f ms", 1e3 * audio_latency);
-
-    if (!host.load(id, audio_rate))
+    if (!host.load(id, impl.audio_rate_))
         Log::e("Could not open synth: %s", gsl::to_string(id).c_str());
 
-    impl.audio_rate_ = audio_rate;
-    impl.audio_latency_ = audio_latency;
-    impl.audio_ = std::move(audio);
-
-    impl.time_delta_ = -audio_latency;
-
-    impl.audio_->start();
+    impl.time_delta_ = -impl.audio_latency_;
 }
 
 void Midi_Synth_Instrument::close_midi_output()
 {
     Impl& impl = *impl_;
 
-    impl.audio_.reset();
     impl.host_->unload();
 
     Ring_Buffer &midibuf = *impl.midibuf_;
@@ -134,10 +113,17 @@ void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned le
     midibuf.put(data, len);
 }
 
-void Midi_Synth_Instrument::Impl::audio_callback(float *output, unsigned nframes, void *user_data)
+void Midi_Synth_Instrument::configure_audio(double audio_rate, double audio_latency)
 {
-    Midi_Synth_Instrument *self = (Midi_Synth_Instrument *)user_data;
-    Impl& impl = *self->impl_;
+    Impl& impl = *impl_;
+
+    impl.audio_rate_ = audio_rate;
+    impl.audio_latency_ = audio_latency;
+}
+
+void Midi_Synth_Instrument::generate_audio(float *output, unsigned nframes)
+{
+    Impl& impl = *impl_;
     Synth_Host &host = *impl.host_;
     double srate = impl.audio_rate_;
 

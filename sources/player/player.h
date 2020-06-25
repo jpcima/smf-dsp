@@ -21,6 +21,7 @@ class Midi_Port_Instrument;
 class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
 class Synth_Host;
+class Audio_Device;
 typedef struct uv_async_s uv_async_t;
 
 class Player {
@@ -62,6 +63,8 @@ private:
     bool start_ticking();
     bool stop_ticking();
 
+    Audio_Device *init_audio_device();
+
 private:
     std::thread thread_;
     std::atomic_bool quit_;
@@ -92,6 +95,9 @@ private:
     // timestamping
     bool ts_started_ = false;
     uint64_t ts_last_ = 0;
+
+    // audio
+    std::unique_ptr<Audio_Device> adev_;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;

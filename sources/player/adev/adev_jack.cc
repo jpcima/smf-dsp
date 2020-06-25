@@ -6,6 +6,7 @@
 #if defined(ADEV_JACK)
 #include "adev_jack.h"
 #include "utility/strings.h"
+#include "utility/logs.h"
 #include <gsl.hpp>
 #include <cmath>
 #include <cstring>
@@ -24,13 +25,12 @@ bool Audio_Device_Jack::init(double desired_latency)
     if (!client)
         return false;
 
-    ports_[0] = jack_port_register(client.get(), "output_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-    if (!ports_[0])
-        return false;
-
-    ports_[1] = jack_port_register(client.get(), "output_2", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-    if (!ports_[1])
-        return false;
+    for (unsigned i = 0; i < 2; ++i) {
+        std::string name = "output_" + std::to_string(i);
+        ports_[i] = jack_port_register(client.get(), name.c_str(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+        if (!ports_[i])
+            return false;
+    }
 
     jack_set_process_callback(client.get(), &jack_audio_callback, this);
 
@@ -42,6 +42,8 @@ bool Audio_Device_Jack::init(double desired_latency)
     client_ = std::move(client);
     audio_rate_ = audio_rate;
     audio_latency_ = audio_buffer_size / audio_rate;
+
+    identify_physical_ports();
 
     return true;
 }
@@ -58,7 +60,10 @@ bool Audio_Device_Jack::start()
     if (jack_activate(client) != 0)
         return false;
 
-    connect_physical_ports();
+    if (!active_) {
+        connect_physical_ports();
+        active_ = true;
+    }
 
     return true;
 }
@@ -93,12 +98,30 @@ int Audio_Device_Jack::jack_audio_callback(jack_nframes_t nframes, void *user_da
 void Audio_Device_Jack::connect_physical_ports()
 {
     jack_client_t *client = client_.get();
+    Connections connections = identify_physical_ports();
+
+    for (unsigned i = 0; i < connections.size(); ++i) {
+        jack_port_t *port = ports_[i];
+        const char *name = jack_port_name(port);
+        for (const std::string &conn : connections[i])
+            jack_connect(client, name, conn.c_str());
+    }
+}
+
+auto Audio_Device_Jack::identify_physical_ports() -> Connections
+{
+    jack_client_t *client = client_.get();
+    Connections connections;
 
     const char **ports = jack_get_ports(
         client, nullptr, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput|JackPortIsPhysical);
-
     if (!ports)
-        return;
+        return connections;
+
+    auto ports_cleanup = gsl::finally([ports]() { jack_free(ports); });
+
+    if (!ports[0])
+        return connections;
 
     gsl::cstring_span prefix;
     if (const char *name = ports[0]) {
@@ -108,13 +131,12 @@ void Audio_Device_Jack::connect_physical_ports()
     }
 
     if (!prefix.empty()) {
-        jack_connect(client, jack_port_name(ports_[0]), ports[0]);
-        for (unsigned i = 1; i < 2 && ports[i]; ++i) {
+        for (unsigned i = 0; i < connections.size() && ports[i]; ++i) {
             if (string_starts_with<char>(ports[i], prefix))
-                jack_connect(client, jack_port_name(ports_[i]), ports[i]);
+                connections[i].push_back(ports[i]);
         }
     }
 
-    jack_free(ports);
+    return connections;
 }
 #endif
