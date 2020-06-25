@@ -34,7 +34,12 @@ The listed key names are based on the QWERTY keyboard type, it will vary for a d
 
 # Building
 
-To build the software, type `make` in the source directory.
+To build the software, type these commands in the source directory.
+
+- `mkdir build`
+- `cd build`
+- `cmake -DCMAKE_BUILD_TYPE=Release ..`
+- `cmake --build .`
 
 Install following packages on Debian/LibraZiK/Mint:
 
