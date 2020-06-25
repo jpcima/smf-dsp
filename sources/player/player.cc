@@ -10,6 +10,8 @@
 #include "command.h"
 #include "clock.h"
 #include "smftext.h"
+#include "instruments/port.h"
+#include "instruments/synth.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include "utility/uv++.h"
