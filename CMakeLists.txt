@@ -19,7 +19,7 @@ endif()
 
 include("CMakeLists.deps.txt")
 
-add_executable(fmidiplay
+add_executable(fmidiplay WIN32
   "sources/configuration.cc"
   "sources/fmidiplay.cc"
   "sources/main.cc"
