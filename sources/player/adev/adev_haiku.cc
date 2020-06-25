@@ -35,14 +35,20 @@ bool Audio_Device_Haiku::init(double desired_latency)
 void Audio_Device_Haiku::shutdown()
 {
     audio_.reset();
+    active_ = false;
 }
 
 bool Audio_Device_Haiku::start()
 {
+    if (active_)
+        return true;
+
     if (audio_->Start() != B_OK)
         return false;
 
     audio_->SetHasData(true);
+
+    active_ = true;
     return true;
 }
 

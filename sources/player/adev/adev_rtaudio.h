@@ -24,5 +24,6 @@ private:
     std::unique_ptr<RtAudio> audio_;
     double audio_rate_ = 0.0;
     double audio_latency_ = 0.0;
+    bool active_ = false;
 };
 #endif

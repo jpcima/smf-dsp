@@ -42,11 +42,17 @@ bool Audio_Device_Rt::init(double desired_latency)
 void Audio_Device_Rt::shutdown()
 {
     audio_.reset();
+    active_ = false;
 }
 
 bool Audio_Device_Rt::start()
 {
+    if (active_)
+        return true;
+
     audio_->startStream();
+
+    active_ = true;
     return true;
 }
 

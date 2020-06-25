@@ -56,16 +56,16 @@ void Audio_Device_Jack::shutdown()
 
 bool Audio_Device_Jack::start()
 {
-    jack_client_t *client = client_.get();
+    if (active_)
+        return true;
 
+    jack_client_t *client = client_.get();
     if (jack_activate(client) != 0)
         return false;
 
-    if (!active_) {
-        connect_physical_ports();
-        active_ = true;
-    }
+    connect_physical_ports();
 
+    active_ = true;
     return true;
 }
 
