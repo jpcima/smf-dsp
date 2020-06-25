@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#if defined(__linux__)
+#if defined(ADEV_JACK)
 #include "adev.h"
 #include <jack/jack.h>
 #include <memory>

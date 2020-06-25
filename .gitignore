@@ -1,8 +1,2 @@
-/obj/
-/gen/
-/Makefile.ini
-/fmidiplay
-*.so
-*.dll
-*.exe
+/build/
 /trash/

@@ -15,7 +15,7 @@ Audio_Device *Audio_Device::create_best_for_system()
     std::unique_ptr<Audio_Device> adev;
 
 #if !defined(__HAIKU__)
-#if defined(__linux__)
+#if defined(ADEV_JACK)
     if (!adev && Audio_Device_Jack::is_available())
         adev.reset(new Audio_Device_Jack);
 #endif

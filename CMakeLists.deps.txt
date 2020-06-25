@@ -1,0 +1,297 @@
+# -*- mode: cmake; -*-
+
+find_package(PkgConfig)
+
+###
+add_library(uchardet STATIC
+  "thirdparty/uchardet/src/CharDistribution.cpp"
+  "thirdparty/uchardet/src/JpCntx.cpp"
+  "thirdparty/uchardet/src/nsCharSetProber.cpp"
+  "thirdparty/uchardet/src/nsLatin1Prober.cpp"
+  "thirdparty/uchardet/src/nsMBCSSM.cpp"
+  "thirdparty/uchardet/src/nsSJISProber.cpp"
+  "thirdparty/uchardet/src/nsUTF8Prober.cpp")
+target_include_directories(uchardet PUBLIC
+  "thirdparty/uchardet/src")
+add_library(vendor::uchardet ALIAS uchardet)
+
+###
+add_library(gsl-lite INTERFACE)
+target_include_directories(gsl-lite INTERFACE "thirdparty/gsl-lite/include")
+add_library(vendor::gsl-lite ALIAS gsl-lite)
+
+###
+add_library(any-lite INTERFACE)
+target_include_directories(any-lite INTERFACE "thirdparty/any-lite/include")
+add_library(vendor::any-lite ALIAS any-lite)
+
+###
+add_library(bst INTERFACE)
+target_include_directories(bst INTERFACE "thirdparty/bst")
+add_library(vendor::bst ALIAS bst)
+
+###
+add_library(simpleini STATIC "thirdparty/simpleini/ConvertUTF.cpp")
+target_compile_definitions(simpleini PUBLIC "SI_CONVERT_GENERIC=1")
+target_include_directories(simpleini INTERFACE "thirdparty/simpleini")
+add_library(vendor::simpleini ALIAS simpleini)
+
+###
+add_library(ring-buffer STATIC "thirdparty/ring_buffer/ring_buffer.cpp")
+target_include_directories(ring-buffer PUBLIC "thirdparty/ring_buffer")
+add_library(vendor::ring-buffer ALIAS ring-buffer)
+
+###
+add_library(fmidi STATIC "thirdparty/fmidi/sources/fmidi/fmidi_mini.cc")
+target_compile_definitions(fmidi PUBLIC "FMIDI_STATIC=1" "FMIDI_DISABLE_DESCRIBE_API=1")
+target_include_directories(fmidi PUBLIC "thirdparty/fmidi/sources")
+add_library(vendor::fmidi ALIAS fmidi)
+
+###
+add_library(rtaudio STATIC "thirdparty/rtaudio/RtAudio.cpp")
+add_library(rtmidi STATIC "thirdparty/rtmidi/RtMidi.cpp")
+target_include_directories(rtaudio PUBLIC "thirdparty/rtaudio")
+target_include_directories(rtmidi PUBLIC "thirdparty/rtmidi")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  pkg_check_modules(alsa "alsa" REQUIRED IMPORTED_TARGET)
+  pkg_check_modules(pulse-simple "libpulse-simple" REQUIRED IMPORTED_TARGET)
+  target_compile_definitions(rtaudio PUBLIC "__LINUX_ALSA__" "__LINUX_PULSE__")
+  target_compile_definitions(rtmidi PUBLIC "__LINUX_ALSA__")
+  target_link_libraries(rtaudio PUBLIC PkgConfig::alsa PkgConfig::pulse-simple)
+  target_link_libraries(rtmidi PUBLIC PkgConfig::alsa)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  target_compile_definitions(rtaudio PUBLIC "__WINDOWS_DS__" "__WINDOWS_WASAPI__")
+  target_compile_definitions(rtmidi PUBLIC "__WINDOWS_MM__")
+  find_library(DSOUND_LIBRARY "dsound")
+  find_library(KSGUID_LIBRARY "dsound")
+  find_library(WINMM_LIBRARY "winmm")
+  target_link_libraries(rtaudio PUBLIC "${DSOUND_LIBRARY}" "${KSGUID_LIBRARY}")
+  target_link_libraries(rtmidi PUBLIC "${WINMM_LIBRARY}")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  target_compile_definitions(rtaudio PUBLIC "__MACOSX_CORE__")
+  find_library(COREAUDIO_LIBRARY "CoreAudio")
+  find_library(COREMIDI_LIBRARY "CoreMIDI")
+  find_library(FOUNDATION_LIBRARY "Foundation")
+  target_link_libraries(rtaudio PUBLIC "${COREAUDIO_LIBRARY}" "${FOUNDATION_LIBRARY}")
+  target_link_libraries(rtmidi PUBLIC "${COREMIDI_LIBRARY}" "${FOUNDATION_LIBRARY}")
+endif()
+add_library(vendor::rtaudio ALIAS rtaudio)
+add_library(vendor::rtmidi ALIAS rtmidi)
+
+###
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  pkg_check_modules(jack "jack" REQUIRED IMPORTED_TARGET)
+  add_library(jack INTERFACE)
+  target_link_libraries(jack INTERFACE PkgConfig::jack)
+  add_library(sys::jack ALIAS jack)
+endif()
+
+###
+find_package(SDL2 REQUIRED)
+if(TARGET SDL2::SDL2)
+  add_library(SDL2 INTERFACE)
+  target_link_libraries(SDL2 INTERFACE SDL2::SDL2)
+else()
+  add_library(SDL2 INTERFACE)
+  target_include_directories(SDL2 INTERFACE ${SDL2_INCLUDE_DIRS})
+  target_link_libraries(SDL2 INTERFACE ${SDL2_LIBRARIES})
+endif()
+add_library(sys::SDL2 ALIAS SDL2)
+
+###
+find_library(SDL2_IMAGE_LIBRARY "SDL2_image")
+if(NOT SDL2_IMAGE_LIBRARY)
+  message(FATAL_ERROR "Cannot find library SDL2_image")
+endif()
+add_library(SDL2_image INTERFACE)
+target_link_libraries(SDL2_image INTERFACE "${SDL2_IMAGE_LIBRARY}" SDL2)
+add_library(sys::SDL2_image ALIAS SDL2_image)
+
+###
+find_package(ICU COMPONENTS "uc" "i18n" REQUIRED)
+
+###
+add_library(uv INTERFACE)
+if(PKG_CONFIG_FOUND)
+  pkg_check_modules(libuv "libuv" REQUIRED IMPORTED_TARGET)
+  target_link_libraries(uv INTERFACE PkgConfig::libuv)
+else()
+  find_library(UV_LIBRARY "uv")
+  if(NOT UV_LIBRARY)
+    message(FATAL_ERROR "Cannot find library uv")
+  endif()
+  target_link_libraries(uv INTERFACE "${UV_LIBRARY}")
+endif()
+add_library(sys::uv ALIAS uv)
+
+###
+add_library(iconv INTERFACE)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_library(ICONV_LIBRARY "iconv")
+  if(NOT ICONV_LIBRARY)
+    message(FATAL_ERROR "Cannot find library iconv")
+  endif()
+  target_link_libraries(iconv PUBLIC "${ICONV_LIBRARY}")
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  target_compile_definitions(iconv PUBLIC "WINICONV_CONST=")
+endif()
+add_library(sys::iconv ALIAS iconv)
+
+###
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  find_package(Boost COMPONENTS "filesystem" REQUIRED)
+endif()
+
+###
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+  find_library(MEDIAKIT_LIBRARY "media")
+  add_library(mediakit INTERFACE)
+  target_link_libraries(mediakit INTERFACE "${MEDIAKIT_LIBRARY}")
+  add_library(sys::mediakit ALIAS mediakit)
+endif()
+
+###
+find_package(Threads REQUIRED)
+add_library(threads INTERFACE)
+
+###
+if(PKG_CONFIG_FOUND)
+  pkg_check_modules(fluidsynth "fluidsynth" IMPORTED_TARGET)
+endif()
+if(TARGET PkgConfig::fluidsynth)
+  add_library(fluidsynth INTERFACE)
+  target_link_libraries(fluidsynth INTERFACE PkgConfig::fluidsynth)
+  add_library(sys::fluidsynth ALIAS fluidsynth)
+endif()
+
+###
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libADLMIDI")
+  add_library(adlmidi STATIC
+    "thirdparty/libADLMIDI/src/adldata.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi_load.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi_midiplay.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi_opl3.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi_private.cpp"
+    "thirdparty/libADLMIDI/src/adlmidi_sequencer.cpp"
+    "thirdparty/libADLMIDI/src/chips/dosbox_opl3.cpp"
+    "thirdparty/libADLMIDI/src/chips/java_opl3.cpp"
+    "thirdparty/libADLMIDI/src/chips/nuked_opl3.cpp"
+    "thirdparty/libADLMIDI/src/chips/nuked_opl3_v174.cpp"
+    "thirdparty/libADLMIDI/src/chips/opal_opl3.cpp"
+    "thirdparty/libADLMIDI/src/chips/dosbox/dbopl.cpp"
+    "thirdparty/libADLMIDI/src/chips/nuked/nukedopl3.c"
+    "thirdparty/libADLMIDI/src/chips/nuked/nukedopl3_174.c"
+    "thirdparty/libADLMIDI/src/wopl/wopl_file.c")
+  target_compile_definitions(adlmidi PRIVATE "ADLMIDI_DISABLE_MIDI_SEQUENCER" "ADLMIDI_DISABLE_CPP_EXTRAS")
+  target_include_directories(adlmidi PRIVATE "thirdparty/libADLMIDI/src")
+  target_include_directories(adlmidi PUBLIC "thirdparty/libADLMIDI/include")
+  add_library(vendor::adlmidi ALIAS adlmidi)
+endif()
+
+###
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libOPNMIDI")
+  add_library(opnmidi STATIC
+    "thirdparty/libOPNMIDI/src/opnmidi.cpp"
+    "thirdparty/libOPNMIDI/src/opnmidi_load.cpp"
+    "thirdparty/libOPNMIDI/src/opnmidi_midiplay.cpp"
+    "thirdparty/libOPNMIDI/src/opnmidi_opn2.cpp"
+    "thirdparty/libOPNMIDI/src/opnmidi_private.cpp"
+    "thirdparty/libOPNMIDI/src/opnmidi_sequencer.cpp"
+    "thirdparty/libOPNMIDI/src/chips/gens_opn2.cpp"
+    "thirdparty/libOPNMIDI/src/chips/gx_opn2.cpp"
+    "thirdparty/libOPNMIDI/src/chips/mame_opn2.cpp"
+    "thirdparty/libOPNMIDI/src/chips/mame_opna.cpp"
+    "thirdparty/libOPNMIDI/src/chips/nuked_opn2.cpp"
+    "thirdparty/libOPNMIDI/src/chips/pmdwin_opna.cpp"
+    "thirdparty/libOPNMIDI/src/chips/gens/Ym2612_Emu.cpp"
+    "thirdparty/libOPNMIDI/src/chips/gx/gx_ym2612.c"
+    "thirdparty/libOPNMIDI/src/chips/mame/mame_ym2612fm.c"
+    "thirdparty/libOPNMIDI/src/chips/mamefm/emu2149.c"
+    "thirdparty/libOPNMIDI/src/chips/mamefm/fm.cpp"
+    "thirdparty/libOPNMIDI/src/chips/mamefm/resampler.cpp"
+    "thirdparty/libOPNMIDI/src/chips/mamefm/ymdeltat.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2/fmgen_file.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2/fmgen_fmgen.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2/fmgen_fmtimer.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2/fmgen_opna.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2/fmgen_psg.cpp"
+    "thirdparty/libOPNMIDI/src/chips/np2_opna.cpp"
+    "thirdparty/libOPNMIDI/src/chips/nuked/ym3438.c"
+    "thirdparty/libOPNMIDI/src/chips/pmdwin/opna.c"
+    "thirdparty/libOPNMIDI/src/chips/pmdwin/psg.c"
+    "thirdparty/libOPNMIDI/src/chips/pmdwin/rhythmdata.c"
+    "thirdparty/libOPNMIDI/src/chips/vgm_file_dumper.cpp"
+    "thirdparty/libOPNMIDI/src/wopn/wopn_file.c")
+  target_compile_definitions(opnmidi PRIVATE "OPNMIDI_DISABLE_MIDI_SEQUENCER" "OPNMIDI_DISABLE_CPP_EXTRAS")
+  target_include_directories(opnmidi PRIVATE "thirdparty/libOPNMIDI/src")
+  target_include_directories(opnmidi PUBLIC "thirdparty/libOPNMIDI/include")
+  add_library(vendor::opnmidi ALIAS opnmidi)
+endif()
+
+###
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/scc")
+  add_library(scc STATIC
+    "thirdparty/scc/emidi_alpha/CEnvelope.cpp"
+    "thirdparty/scc/emidi_alpha/CMIDIMessage.cpp"
+    "thirdparty/scc/emidi_alpha/CMIDIModule.cpp"
+    "thirdparty/scc/emidi_alpha/COpllDevice.cpp"
+    "thirdparty/scc/emidi_alpha/CPSGDrum.cpp"
+    "thirdparty/scc/emidi_alpha/CSccDevice.cpp"
+    "thirdparty/scc/emidi_alpha/CSMF.cpp"
+    "thirdparty/scc/emidi_alpha/CSMFPlay.cpp"
+    "thirdparty/scc/emidi_alpha/device/emu2149.c"
+    "thirdparty/scc/emidi_alpha/device/emu2212.c"
+    "thirdparty/scc/emidi_alpha/device/emu2413.c")
+  target_include_directories(scc PUBLIC "thirdparty/scc")
+  add_library(vendor::scc ALIAS scc)
+endif()
+
+###
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/munt")
+  add_library(mt32emu STATIC
+    "thirdparty/munt/mt32emu/src/Analog.cpp"
+    "thirdparty/munt/mt32emu/src/BReverbModel.cpp"
+    "thirdparty/munt/mt32emu/src/File.cpp"
+    "thirdparty/munt/mt32emu/src/FileStream.cpp"
+    "thirdparty/munt/mt32emu/src/LA32FloatWaveGenerator.cpp"
+    "thirdparty/munt/mt32emu/src/LA32Ramp.cpp"
+    "thirdparty/munt/mt32emu/src/LA32WaveGenerator.cpp"
+    "thirdparty/munt/mt32emu/src/MidiStreamParser.cpp"
+    "thirdparty/munt/mt32emu/src/Part.cpp"
+    "thirdparty/munt/mt32emu/src/Partial.cpp"
+    "thirdparty/munt/mt32emu/src/PartialManager.cpp"
+    "thirdparty/munt/mt32emu/src/Poly.cpp"
+    "thirdparty/munt/mt32emu/src/ROMInfo.cpp"
+    "thirdparty/munt/mt32emu/src/SampleRateConverter.cpp"
+    "thirdparty/munt/mt32emu/src/Synth.cpp"
+    "thirdparty/munt/mt32emu/src/Tables.cpp"
+    "thirdparty/munt/mt32emu/src/TVA.cpp"
+    "thirdparty/munt/mt32emu/src/TVF.cpp"
+    "thirdparty/munt/mt32emu/src/TVP.cpp"
+    "thirdparty/munt/mt32emu/src/c_interface/c_interface.cpp"
+    "thirdparty/munt/mt32emu/src/sha1/sha1.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/InternalResampler.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/SamplerateAdapter.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/SoxrAdapter.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/srctools/src/FIRResampler.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/srctools/src/IIR2xResampler.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/srctools/src/LinearResampler.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/srctools/src/ResamplerModel.cpp"
+    "thirdparty/munt/mt32emu/src/srchelper/srctools/src/SincResampler.cpp")
+  target_compile_definitions(mt32emu PUBLIC
+    "MT32EMU_WITH_INTERNAL_RESAMPLER"
+    "MT32EMU_EXPORTS_TYPE=1"
+    "MT32EMU_VERSION=\"0.0.0\""
+    "MT32EMU_VERSION_MAJOR=0"
+    "MT32EMU_VERSION_MINOR=0"
+    "MT32EMU_VERSION_PATCH=0")
+  target_include_directories(mt32emu PUBLIC "thirdparty/munt/mt32emu/src")
+  #
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen")
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen/config.h" "")
+  target_include_directories(mt32emu PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen")
+  #
+  add_library(vendor::mt32emu ALIAS mt32emu)
+endif()

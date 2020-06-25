@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#if defined(__linux__)
+#if defined(ADEV_JACK)
 #include "adev_jack.h"
 #include "utility/strings.h"
 #include <gsl.hpp>
