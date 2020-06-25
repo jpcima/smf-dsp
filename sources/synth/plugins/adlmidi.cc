@@ -70,6 +70,9 @@ static int adlmidi_synth_activate(synth_object *obj)
         return -1;
     sy->player.reset(player);
 
+    if (adl_switchEmulator(player, ADLMIDI_EMU_DOSBOX) != 0)
+        fprintf(stderr, "adlmidi: cannot set emulator\n");
+
     if (adl_setNumChips(player, sy->chip_count) != 0)
         fprintf(stderr, "adlmidi: cannot set chip count %d\n", sy->chip_count);
 

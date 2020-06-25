@@ -70,6 +70,9 @@ static int opnmidi_synth_activate(synth_object *obj)
         return -1;
     sy->player.reset(player);
 
+    if (opn2_switchEmulator(player, OPNMIDI_EMU_MAME) != 0)
+        fprintf(stderr, "opnmidi: cannot set emulator\n");
+
     if (opn2_setNumChips(player, sy->chip_count) != 0)
         fprintf(stderr, "opnmidi: cannot set chip count %d\n", sy->chip_count);
 
