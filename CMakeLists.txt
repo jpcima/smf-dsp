@@ -92,9 +92,9 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_link_libraries(fmidiplay PRIVATE Boost::filesystem)
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(fmidiplay PRIVATE sys::alsa)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
   target_link_libraries(fmidiplay PRIVATE sys::mediakit)
 endif()
 

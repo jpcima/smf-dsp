@@ -9,6 +9,16 @@
 #include "utility/logs.h"
 #include <gsl.hpp>
 #include <getopt.h>
+#if defined(__linux__)
+#include <alsa/asoundlib.h>
+#endif
+
+#if defined(__linux__)
+static void alsa_log_callback(const char *, int, const char *, int, const char *, ...)
+{
+    // just get rid of these verbose alsa logs
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -33,6 +43,11 @@ int main(int argc, char *argv[])
     }
 
     Log::i("Start");
+
+#if defined(__linux__)
+    // Initialize ALSA logging
+    snd_lib_error_set_handler(&alsa_log_callback);
+#endif
 
     // Initialize SDL
     uint32_t subsys = SDL_INIT_VIDEO|SDL_INIT_TIMER;
