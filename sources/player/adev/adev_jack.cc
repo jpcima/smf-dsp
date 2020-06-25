@@ -51,6 +51,7 @@ bool Audio_Device_Jack::init(double desired_latency)
 void Audio_Device_Jack::shutdown()
 {
     client_.reset();
+    active_ = false;
 }
 
 bool Audio_Device_Jack::start()
