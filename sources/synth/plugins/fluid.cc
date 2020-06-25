@@ -41,13 +41,43 @@ struct fluid_synth_object {
 
 static std::string fluid_synth_base_dir;
 
+///
+
+static void fluid_log_error(int, const char *message, void *)
+{
+    Log::e("[fluid] %s", message);
+}
+
+static void fluid_log_warning(int, const char *message, void *)
+{
+    Log::w("[fluid] %s", message);
+}
+
+static void fluid_log_info(int, const char *message, void *)
+{
+    Log::i("[fluid] %s", message);
+}
+
+///
+
 static void fluid_plugin_init(const char *base_dir)
 {
     fluid_synth_base_dir.assign(base_dir);
+
+    fluid_set_log_function(FLUID_PANIC, &fluid_log_error, nullptr);
+    fluid_set_log_function(FLUID_ERR, &fluid_log_error, nullptr);
+    fluid_set_log_function(FLUID_WARN, &fluid_log_warning, nullptr);
+    fluid_set_log_function(FLUID_INFO, &fluid_log_info, nullptr);
+    fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
 }
 
 static void fluid_plugin_shutdown()
 {
+    fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
+    fluid_set_log_function(FLUID_ERR, nullptr, nullptr);
+    fluid_set_log_function(FLUID_WARN, nullptr, nullptr);
+    fluid_set_log_function(FLUID_INFO, nullptr, nullptr);
+    fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
 }
 
 static const char *default_soundfont_value[] = {"A320U.sf2", nullptr};
@@ -115,7 +145,7 @@ static int fluid_synth_activate(synth_object *obj)
         Log::i("[fluid] load soundfont: %s", sf);
         int sfid = fluid_synth_sfload(synth, sf, true);
         if (sfid == FLUID_FAILED)
-            Log::e("[fluid] could not load soundfont");
+            /**/;
     }
 
     fluid_synth_set_chorus_on(synth, sy->chorus_enable);
