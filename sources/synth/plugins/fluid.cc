@@ -7,7 +7,7 @@
 #include "../synth_utility.h"
 #include "utility/paths.h"
 #include "utility/logs.h"
-#include <fluidsynth.h>
+#include <fluidlite.h>
 #include <memory>
 #include <cstdlib>
 #include <cstring>
@@ -64,10 +64,10 @@ static void fluid_plugin_init(const char *base_dir)
 {
     fluid_synth_base_dir.assign(base_dir);
 
-    fluid_set_log_function(FLUID_PANIC, &fluid_log_error, nullptr);
-    fluid_set_log_function(FLUID_ERR, &fluid_log_error, nullptr);
-    fluid_set_log_function(FLUID_WARN, &fluid_log_warning, nullptr);
-    fluid_set_log_function(FLUID_INFO, &fluid_log_info, nullptr);
+    fluid_set_log_function(FLUID_PANIC, (fluid_log_function_t)&fluid_log_error, nullptr);
+    fluid_set_log_function(FLUID_ERR, (fluid_log_function_t)&fluid_log_error, nullptr);
+    fluid_set_log_function(FLUID_WARN, (fluid_log_function_t)&fluid_log_warning, nullptr);
+    fluid_set_log_function(FLUID_INFO, (fluid_log_function_t)&fluid_log_info, nullptr);
     fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
 }
 
@@ -144,7 +144,7 @@ static int fluid_synth_activate(synth_object *obj)
         }
         Log::i("[fluid] load soundfont: %s", sf);
         int sfid = fluid_synth_sfload(synth, sf, true);
-        if (sfid == FLUID_FAILED)
+        if (sfid == -1)
             /**/;
     }
 

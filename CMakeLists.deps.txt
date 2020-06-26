@@ -151,14 +151,27 @@ find_package(Threads REQUIRED)
 add_library(threads INTERFACE)
 
 ###
-if(PKG_CONFIG_FOUND)
-  pkg_check_modules(fluidsynth "fluidsynth" IMPORTED_TARGET)
-endif()
-if(TARGET PkgConfig::fluidsynth)
-  add_library(fluidsynth INTERFACE)
-  target_link_libraries(fluidsynth INTERFACE PkgConfig::fluidsynth)
-  add_library(sys::fluidsynth ALIAS fluidsynth)
-endif()
+add_library(fluidsynth STATIC EXCLUDE_FROM_ALL
+  "thirdparty/fluidlite/src/fluid_chan.c"
+  "thirdparty/fluidlite/src/fluid_chorus.c"
+  "thirdparty/fluidlite/src/fluid_conv.c"
+  "thirdparty/fluidlite/src/fluid_defsfont.c"
+  "thirdparty/fluidlite/src/fluid_dsp_float.c"
+  "thirdparty/fluidlite/src/fluid_gen.c"
+  "thirdparty/fluidlite/src/fluid_hash.c"
+  "thirdparty/fluidlite/src/fluid_init.c"
+  "thirdparty/fluidlite/src/fluid_list.c"
+  "thirdparty/fluidlite/src/fluid_mod.c"
+  "thirdparty/fluidlite/src/fluid_ramsfont.c"
+  "thirdparty/fluidlite/src/fluid_rev.c"
+  "thirdparty/fluidlite/src/fluid_settings.c"
+  "thirdparty/fluidlite/src/fluid_synth.c"
+  "thirdparty/fluidlite/src/fluid_sys.c"
+  "thirdparty/fluidlite/src/fluid_tuning.c"
+  "thirdparty/fluidlite/src/fluid_voice.c")
+target_include_directories(fluidsynth PUBLIC "thirdparty/fluidlite/include")
+target_include_directories(fluidsynth PRIVATE "thirdparty/fluidlite/src")
+add_library(vendor::fluidsynth ALIAS fluidsynth)
 
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libADLMIDI")

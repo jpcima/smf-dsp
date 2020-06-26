@@ -10,3 +10,6 @@
 [submodule "thirdparty/munt"]
 	path = thirdparty/munt
 	url = https://github.com/munt/munt.git
+[submodule "thirdparty/FluidLite"]
+	path = thirdparty/fluidlite
+	url = https://github.com/divideconcept/FluidLite.git
