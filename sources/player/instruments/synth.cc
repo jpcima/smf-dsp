@@ -5,7 +5,6 @@
 
 #include "player/instruments/synth.h"
 #include "synth/synth_host.h"
-#include "configuration.h"
 #include "utility/logs.h"
 #include <ring_buffer.h>
 #include <algorithm>
@@ -78,12 +77,6 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     if (id.empty())
         return;
-
-    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
-    if (!ini) ini = create_configuration();
-
-    double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
-    desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
     if (!host.load(id, impl.audio_rate_))
         Log::e("Could not open synth: %s", gsl::to_string(id).c_str());
