@@ -193,11 +193,6 @@ void Player::process_command_queue()
         }
         case PC_Set_Midi_Output: {
             Midi_Port_Instrument &ins = *midiport_ins_;
-            Audio_Device *adev = adev_.get();
-
-            if (adev)
-                adev->set_callback(nullptr, nullptr);
-
             bool active = stop_ticking();
             switch_instrument(ins);
             ins.open_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id);
@@ -206,24 +201,17 @@ void Player::process_command_queue()
         }
         case PC_Set_Synth: {
             Midi_Synth_Instrument &ins = *synth_ins_;
+            bool active = stop_ticking();
             Audio_Device *adev = init_audio_device();
 
-            adev->set_callback(nullptr, nullptr);
             const double audio_rate = adev->sample_rate();
             const double audio_latency = adev->latency();
             ins.configure_audio(audio_rate, audio_latency);
             Log::i("Audio rate: %f Hz", audio_rate);
             Log::i("Audio latency: %f ms", 1e3 * audio_latency);
 
-            bool active = stop_ticking();
             switch_instrument(ins);
             ins.open_midi_output(static_cast<Pcmd_Set_Synth &>(*cmd).synth_plugin_id);
-
-            adev->set_callback([](float *output, unsigned nframes, void *user_data) {
-                Player *self = reinterpret_cast<Player *>(user_data);
-                self->synth_ins_->generate_audio(output, nframes);
-            }, this);
-            adev->start();
 
             if (active) start_ticking();
             break;
@@ -615,6 +603,12 @@ Audio_Device *Player::init_audio_device()
 
     if (!adev->init(desired_latency))
         Log::e("Cannot initialize the audio device");
+
+    adev->set_callback([](float *output, unsigned nframes, void *user_data) {
+        Player *self = reinterpret_cast<Player *>(user_data);
+        self->synth_ins_->generate_audio(output, nframes);
+    }, this);
+    adev->start();
 
     return adev;
 }
