@@ -10,6 +10,7 @@
 #include <gsl.hpp>
 #include <getopt.h>
 #if defined(__linux__)
+#include <jack/jack.h>
 #include <alsa/asoundlib.h>
 #endif
 
@@ -45,7 +46,10 @@ int main(int argc, char *argv[])
     Log::i("Start");
 
 #if defined(__linux__)
-    // Initialize ALSA logging
+    // Disable JACK messages
+    jack_set_info_function([](const char *) {});
+    jack_set_error_function([](const char *) {});
+    // Disable ALSA messages
     snd_lib_error_set_handler(&alsa_log_callback);
 #endif
 
