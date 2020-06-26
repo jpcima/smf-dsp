@@ -8,6 +8,7 @@ function(add_plugin TARGET)
     COMPONENT "plugins")
 endfunction()
 
+if(FALSE) # unstable
 if(TARGET sys::fluidsynth)
   add_plugin(s_fluid
     "sources/synth/plugins/fluid.cc"
@@ -16,6 +17,7 @@ if(TARGET sys::fluidsynth)
     "sources/utility/logs.cc")
   target_include_directories(s_fluid PRIVATE "sources")
   target_link_libraries(s_fluid PRIVATE sys::fluidsynth vendor::gsl-lite)
+endif()
 endif()
 
 if(TARGET vendor::adlmidi)
