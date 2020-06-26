@@ -18,6 +18,10 @@ bool Audio_Device_Rt::init(double desired_latency)
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
 
     Log::i("Audio interface: %s", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
+    Log::i("Audio device: %s", audio_devinfo.name.c_str());
+    Log::i("Input channels: %u", audio_devinfo.inputChannels);
+    Log::i("Output channels: %u", audio_devinfo.outputChannels);
+    Log::i("Duplex channels: %u", audio_devinfo.duplexChannels);
 
     RtAudio::StreamParameters audio_param;
     audio_param.deviceId = audio_device;
