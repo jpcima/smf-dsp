@@ -1021,6 +1021,11 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
         ini_update = true;
     }
 
+    if (!ini->GetValue("", "synth-sample-rate")) {
+        ini->SetDoubleValue("", "synth-sample-rate", 44100, "; Sample rate of synthesized audio stream (Hz) [22050:192000]");
+        ini_update = true;
+    }
+
     if (!ini->GetValue("", "synth-audio-latency")) {
         ini->SetDoubleValue("", "synth-audio-latency", 50, "; Latency of synthesized audio stream (ms) [1:500]");
         ini_update = true;

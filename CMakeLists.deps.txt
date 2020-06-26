@@ -3,7 +3,7 @@
 find_package(PkgConfig)
 
 ###
-add_library(uchardet STATIC
+add_library(uchardet STATIC EXCLUDE_FROM_ALL
   "thirdparty/uchardet/src/CharDistribution.cpp"
   "thirdparty/uchardet/src/JpCntx.cpp"
   "thirdparty/uchardet/src/nsCharSetProber.cpp"
@@ -31,18 +31,18 @@ target_include_directories(bst INTERFACE "thirdparty/bst")
 add_library(vendor::bst ALIAS bst)
 
 ###
-add_library(simpleini STATIC "thirdparty/simpleini/ConvertUTF.cpp")
+add_library(simpleini STATIC EXCLUDE_FROM_ALL "thirdparty/simpleini/ConvertUTF.cpp")
 target_compile_definitions(simpleini PUBLIC "SI_CONVERT_GENERIC=1")
 target_include_directories(simpleini INTERFACE "thirdparty/simpleini")
 add_library(vendor::simpleini ALIAS simpleini)
 
 ###
-add_library(ring-buffer STATIC "thirdparty/ring_buffer/ring_buffer.cpp")
+add_library(ring-buffer STATIC EXCLUDE_FROM_ALL "thirdparty/ring_buffer/ring_buffer.cpp")
 target_include_directories(ring-buffer PUBLIC "thirdparty/ring_buffer")
 add_library(vendor::ring-buffer ALIAS ring-buffer)
 
 ###
-add_library(fmidi STATIC "thirdparty/fmidi/sources/fmidi/fmidi_mini.cc")
+add_library(fmidi STATIC EXCLUDE_FROM_ALL "thirdparty/fmidi/sources/fmidi/fmidi_mini.cc")
 target_compile_definitions(fmidi PUBLIC "FMIDI_STATIC=1" "FMIDI_DISABLE_DESCRIBE_API=1")
 target_include_directories(fmidi PUBLIC "thirdparty/fmidi/sources")
 add_library(vendor::fmidi ALIAS fmidi)
@@ -56,33 +56,21 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 ###
-add_library(rtaudio STATIC "thirdparty/rtaudio/RtAudio.cpp")
-add_library(rtmidi STATIC "thirdparty/rtmidi/RtMidi.cpp")
-target_include_directories(rtaudio PUBLIC "thirdparty/rtaudio")
+add_library(rtmidi STATIC EXCLUDE_FROM_ALL "thirdparty/rtmidi/RtMidi.cpp")
 target_include_directories(rtmidi PUBLIC "thirdparty/rtmidi")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  pkg_check_modules(pulse-simple "libpulse-simple" REQUIRED IMPORTED_TARGET)
-  target_compile_definitions(rtaudio PUBLIC "__LINUX_ALSA__" "__LINUX_PULSE__")
   target_compile_definitions(rtmidi PUBLIC "__LINUX_ALSA__")
-  target_link_libraries(rtaudio PUBLIC sys::alsa PkgConfig::pulse-simple)
   target_link_libraries(rtmidi PUBLIC sys::alsa)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  target_compile_definitions(rtaudio PUBLIC "__WINDOWS_DS__" "__WINDOWS_WASAPI__")
   target_compile_definitions(rtmidi PUBLIC "__WINDOWS_MM__")
-  find_library(DSOUND_LIBRARY "dsound")
-  find_library(KSGUID_LIBRARY "ksguid")
   find_library(WINMM_LIBRARY "winmm")
-  target_link_libraries(rtaudio PUBLIC "${DSOUND_LIBRARY}" "${KSGUID_LIBRARY}")
   target_link_libraries(rtmidi PUBLIC "${WINMM_LIBRARY}")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  target_compile_definitions(rtaudio PUBLIC "__MACOSX_CORE__")
   find_library(COREAUDIO_LIBRARY "CoreAudio")
   find_library(COREMIDI_LIBRARY "CoreMIDI")
   find_library(FOUNDATION_LIBRARY "Foundation")
-  target_link_libraries(rtaudio PUBLIC "${COREAUDIO_LIBRARY}" "${FOUNDATION_LIBRARY}")
   target_link_libraries(rtmidi PUBLIC "${COREMIDI_LIBRARY}" "${FOUNDATION_LIBRARY}")
 endif()
-add_library(vendor::rtaudio ALIAS rtaudio)
 add_library(vendor::rtmidi ALIAS rtmidi)
 
 ###
@@ -174,7 +162,7 @@ endif()
 
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libADLMIDI")
-  add_library(adlmidi STATIC
+  add_library(adlmidi STATIC EXCLUDE_FROM_ALL
     "thirdparty/libADLMIDI/src/adldata.cpp"
     "thirdparty/libADLMIDI/src/adlmidi.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_load.cpp"
@@ -199,7 +187,7 @@ endif()
 
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libOPNMIDI")
-  add_library(opnmidi STATIC
+  add_library(opnmidi STATIC EXCLUDE_FROM_ALL
     "thirdparty/libOPNMIDI/src/opnmidi.cpp"
     "thirdparty/libOPNMIDI/src/opnmidi_load.cpp"
     "thirdparty/libOPNMIDI/src/opnmidi_midiplay.cpp"
@@ -239,7 +227,7 @@ endif()
 
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/scc")
-  add_library(scc STATIC
+  add_library(scc STATIC EXCLUDE_FROM_ALL
     "thirdparty/scc/emidi_alpha/CEnvelope.cpp"
     "thirdparty/scc/emidi_alpha/CMIDIMessage.cpp"
     "thirdparty/scc/emidi_alpha/CMIDIModule.cpp"
@@ -257,7 +245,7 @@ endif()
 
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/munt")
-  add_library(mt32emu STATIC
+  add_library(mt32emu STATIC EXCLUDE_FROM_ALL
     "thirdparty/munt/mt32emu/src/Analog.cpp"
     "thirdparty/munt/mt32emu/src/BReverbModel.cpp"
     "thirdparty/munt/mt32emu/src/File.cpp"

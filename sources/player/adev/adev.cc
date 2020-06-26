@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "adev.h"
-#include "adev_rtaudio.h"
+#include "adev_sdl.h"
 #include "adev_haiku.h"
 #include "adev_jack.h"
 #include <memory>
@@ -20,7 +20,7 @@ Audio_Device *Audio_Device::create_best_for_system()
         adev.reset(new Audio_Device_Jack);
 #endif
     if (!adev)
-        adev.reset(new Audio_Device_Rt);
+        adev.reset(new Audio_Device_SDL);
 #else
     if (!adev)
         adev.reset(new Audio_Device_Haiku);

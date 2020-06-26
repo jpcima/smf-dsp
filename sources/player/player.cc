@@ -598,10 +598,13 @@ Audio_Device *Player::init_audio_device()
     if (!ini)
         ini = create_configuration();
 
+    double desired_sample_rate = ini->GetDoubleValue("", "synth-sample-rate", 44100);
+    desired_sample_rate = std::max(22050.0, std::min(192000.0, desired_sample_rate));
+
     double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
     desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
-    if (!adev->init(desired_latency))
+    if (!adev->init(desired_sample_rate, desired_latency))
         Log::e("Cannot initialize the audio device");
 
     adev->set_callback([](float *output, unsigned nframes, void *user_data) {

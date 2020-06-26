@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 #endif
 
     // Initialize SDL
-    uint32_t subsys = SDL_INIT_VIDEO|SDL_INIT_TIMER;
+    uint32_t subsys = SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER;
     if (SDL_InitSubSystem(subsys) < 0) {
         Log::e("Error initializing.");
         return 1;

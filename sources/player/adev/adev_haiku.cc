@@ -7,7 +7,7 @@
 #include "adev_haiku.h"
 #include <cmath>
 
-bool Audio_Device_Haiku::init(double desired_latency)
+bool Audio_Device_Haiku::init(double desired_sample_rate, double desired_latency)
 {
     shutdown();
 
@@ -15,6 +15,7 @@ bool Audio_Device_Haiku::init(double desired_latency)
     format.channel_count = 2;
     format.format = media_raw_audio_format::B_AUDIO_FLOAT;
     format.byte_order = B_MEDIA_HOST_ENDIAN;
+    //NOTE: sample rate setting not used
     //NOTE: latency setting not used
 
     std::unique_ptr<BSoundPlayer> audio(

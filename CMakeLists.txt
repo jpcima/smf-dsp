@@ -31,7 +31,7 @@ add_executable(fmidiplay WIN32
   "sources/player/clock.cc"
   "sources/player/smftext.cc"
   "sources/player/adev/adev.cc"
-  "sources/player/adev/adev_rtaudio.cc"
+  "sources/player/adev/adev_sdl.cc"
   "sources/player/adev/adev_haiku.cc"
   "sources/player/adev/adev_jack.cc"
   "sources/player/instruments/dummy.cc"
@@ -78,7 +78,6 @@ target_link_libraries(fmidiplay PRIVATE
   vendor::simpleini
   vendor::ring-buffer
   vendor::fmidi
-  vendor::rtaudio
   vendor::rtmidi
   sys::SDL2
   sys::SDL2_image

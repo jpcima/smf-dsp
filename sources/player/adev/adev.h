@@ -14,7 +14,7 @@ public:
 
     typedef void (audio_callback_t)(float *output, unsigned nframes, void *user_data);
 
-    virtual bool init(double desired_latency) = 0;
+    virtual bool init(double desired_sample_rate, double desired_latency) = 0;
     virtual void shutdown() = 0;
     void set_callback(audio_callback_t *cb, void *cbdata);
     virtual bool start() = 0;

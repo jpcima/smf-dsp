@@ -11,7 +11,7 @@
 
 class Audio_Device_Haiku : public Audio_Device {
 public:
-    bool init(double desired_latency) override;
+    bool init(double desired_sample_rate, double desired_latency) override;
     void shutdown() override;
     bool start() override;
     double latency() const override;

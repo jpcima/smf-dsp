@@ -17,7 +17,7 @@ bool Audio_Device_Jack::is_available()
     return client != nullptr;
 }
 
-bool Audio_Device_Jack::init(double desired_latency)
+bool Audio_Device_Jack::init(double desired_sample_rate, double desired_latency)
 {
     shutdown();
 

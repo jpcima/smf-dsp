@@ -15,7 +15,7 @@ class Audio_Device_Jack : public Audio_Device {
 public:
     static bool is_available();
 
-    bool init(double desired_latency) override;
+    bool init(double desired_sample_rate, double desired_latency) override;
     void shutdown() override;
     bool start() override;
     double latency() const override;
