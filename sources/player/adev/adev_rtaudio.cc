@@ -17,7 +17,7 @@ bool Audio_Device_Rt::init(double desired_latency)
     unsigned audio_device = audio->getDefaultOutputDevice();
     RtAudio::DeviceInfo audio_devinfo = audio->getDeviceInfo(audio_device);
 
-    Log::e("Audio interface: %s", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
+    Log::i("Audio interface: %s", audio->getApiDisplayName(audio->getCurrentApi()).c_str());
 
     RtAudio::StreamParameters audio_param;
     audio_param.deviceId = audio_device;
