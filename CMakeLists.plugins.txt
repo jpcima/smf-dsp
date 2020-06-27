@@ -1,7 +1,16 @@
 # -*- mode: cmake; -*-
 
+add_library(plugin-common STATIC EXCLUDE_FROM_ALL
+  "sources/synth/synth_utility.cc"
+  "sources/utility/charset.cc"
+  "sources/utility/paths.cc"
+  "sources/utility/logs.cc")
+target_include_directories(plugin-common PUBLIC "sources")
+target_link_libraries(plugin-common PUBLIC vendor::bst vendor::gsl-lite)
+
 function(add_plugin TARGET)
   add_library("${TARGET}" MODULE ${ARGN})
+  target_link_libraries("${TARGET}" PRIVATE plugin-common)
   set_target_properties("${TARGET}" PROPERTIES PREFIX "")
   install(TARGETS "${TARGET}"
     LIBRARY DESTINATION "lib/${PROJECT_NAME}"
@@ -9,47 +18,26 @@ function(add_plugin TARGET)
 endfunction()
 
 if(TARGET vendor::fluidsynth)
-  add_plugin(s_fluid
-    "sources/synth/plugins/fluid.cc"
-    "sources/synth/synth_utility.cc"
-    "sources/utility/paths.cc"
-    "sources/utility/logs.cc")
-  target_include_directories(s_fluid PRIVATE "sources")
-  target_link_libraries(s_fluid PRIVATE vendor::fluidsynth vendor::gsl-lite)
+  add_plugin(s_fluid "sources/synth/plugins/fluid.cc")
+  target_link_libraries(s_fluid PRIVATE vendor::fluidsynth)
 endif()
 
 if(TARGET vendor::adlmidi)
-  add_plugin(s_adlmidi
-    "sources/synth/plugins/adlmidi.cc"
-    "sources/utility/paths.cc"
-    "sources/utility/logs.cc")
-  target_include_directories(s_adlmidi PRIVATE "sources")
-  target_link_libraries(s_adlmidi PRIVATE vendor::adlmidi vendor::gsl-lite)
+  add_plugin(s_adlmidi "sources/synth/plugins/adlmidi.cc")
+  target_link_libraries(s_adlmidi PRIVATE vendor::adlmidi)
 endif()
 
 if(TARGET vendor::opnmidi)
-  add_plugin(s_opnmidi
-    "sources/synth/plugins/opnmidi.cc"
-    "sources/utility/paths.cc"
-    "sources/utility/logs.cc")
-  target_include_directories(s_opnmidi PRIVATE "sources")
-  target_link_libraries(s_opnmidi PRIVATE vendor::opnmidi vendor::gsl-lite)
+  add_plugin(s_opnmidi "sources/synth/plugins/opnmidi.cc")
+  target_link_libraries(s_opnmidi PRIVATE vendor::opnmidi)
 endif()
 
 if(TARGET vendor::scc)
-  add_plugin(s_scc
-    "sources/synth/plugins/scc.cc"
-    "sources/utility/paths.cc"
-    "sources/utility/logs.cc")
-  target_include_directories(s_scc PRIVATE "sources")
-  target_link_libraries(s_scc PRIVATE vendor::scc vendor::gsl-lite)
+  add_plugin(s_scc "sources/synth/plugins/scc.cc")
+  target_link_libraries(s_scc PRIVATE vendor::scc)
 endif()
 
 if(TARGET vendor::mt32emu)
-  add_plugin(s_mt32emu
-    "sources/synth/plugins/mt32emu.cc"
-    "sources/utility/paths.cc"
-    "sources/utility/logs.cc")
-  target_include_directories(s_mt32emu PRIVATE "sources")
-  target_link_libraries(s_mt32emu PRIVATE vendor::mt32emu vendor::gsl-lite)
+  add_plugin(s_mt32emu "sources/synth/plugins/mt32emu.cc")
+  target_link_libraries(s_mt32emu PRIVATE vendor::mt32emu)
 endif()

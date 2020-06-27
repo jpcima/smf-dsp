@@ -5,6 +5,7 @@
 
 #include "../synth.h"
 #include "../synth_utility.h"
+#include "utility/charset.h"
 #include "utility/paths.h"
 #include "utility/logs.h"
 #include <fluidlite.h>
@@ -60,6 +61,8 @@ static void fluid_log_info(int, const char *message, void *)
 
 ///
 
+static fluid_fileapi_t fluid_plugin_fileapi;
+
 static void fluid_plugin_init(const char *base_dir)
 {
     fluid_synth_base_dir.assign(base_dir);
@@ -69,6 +72,14 @@ static void fluid_plugin_init(const char *base_dir)
     fluid_set_log_function(FLUID_WARN, (fluid_log_function_t)&fluid_log_warning, nullptr);
     fluid_set_log_function(FLUID_INFO, (fluid_log_function_t)&fluid_log_info, nullptr);
     fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
+
+    fluid_init_default_fileapi(&fluid_plugin_fileapi);
+    fluid_plugin_fileapi.fopen = [](fluid_fileapi_t *fileapi, const char *path) -> void *
+    {
+        return fopen_utf8(path, "rb");
+    };
+
+    fluid_set_default_fileapi(&fluid_plugin_fileapi);
 }
 
 static void fluid_plugin_shutdown()
@@ -78,6 +89,8 @@ static void fluid_plugin_shutdown()
     fluid_set_log_function(FLUID_WARN, nullptr, nullptr);
     fluid_set_log_function(FLUID_INFO, nullptr, nullptr);
     fluid_set_log_function(FLUID_PANIC, nullptr, nullptr);
+
+    fluid_set_default_fileapi(nullptr);
 }
 
 static const char *default_soundfont_value[] = {"A320U.sf2", nullptr};
