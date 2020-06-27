@@ -412,13 +412,15 @@ static void mt32emu_synth_generate(synth_object *obj, float *frames, size_t nfra
     constexpr size_t frames_max = 512;
     float buffer[2 * frames_max];
 
+    const float gain = 0.5f; // need to attenuate a little
+
     while (nframes > 0) {
         size_t frames_cur = std::min(nframes, frames_max);
         std::fill(frames, frames + 2 * frames_cur, 0);
         for (unsigned devno = 0; devno < 2; ++devno) {
             mt32emu_render_float(devices[devno].get(), buffer, frames_cur);
             for (size_t i = 0; i < 2 * frames_cur; ++i)
-                frames[i] += buffer[i];
+                frames[i] += gain * buffer[i];
         }
         frames += 2 * frames_cur;
         nframes -= frames_cur;
