@@ -247,8 +247,6 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/scc")
     "thirdparty/scc/emidi_alpha/COpllDevice.cpp"
     "thirdparty/scc/emidi_alpha/CPSGDrum.cpp"
     "thirdparty/scc/emidi_alpha/CSccDevice.cpp"
-    "thirdparty/scc/emidi_alpha/CSMF.cpp"
-    "thirdparty/scc/emidi_alpha/CSMFPlay.cpp"
     "thirdparty/scc/emidi_alpha/device/emu2149.c"
     "thirdparty/scc/emidi_alpha/device/emu2212.c"
     "thirdparty/scc/emidi_alpha/device/emu2413.c")
