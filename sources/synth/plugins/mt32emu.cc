@@ -168,7 +168,7 @@ static int mt32emu_synth_activate(synth_object *obj)
         }
 
         if (devno == 0)
-            Log::e("mt32emu: number of partials %u", mt32emu_get_partial_count(device));
+            Log::i("mt32emu: number of partials %u", mt32emu_get_partial_count(device));
 
         // setup part assignment
         const uint8_t device_part_channel[2][9] = {
