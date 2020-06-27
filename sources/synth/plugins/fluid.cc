@@ -155,6 +155,15 @@ static int fluid_synth_activate(synth_object *obj)
             sf_absolute = fluid_synth_base_dir + sf;
             sf = (char *)sf_absolute.c_str();
         }
+
+        // work around a crash with certain fluidsynth revisions
+        FILE *fh = fopen_utf8(sf, "rb");
+        if (!fh) {
+            Log::e("[fluid] soundfont does not exist: %s", sf);
+            continue;
+        }
+        fclose(fh);
+
         Log::i("[fluid] load soundfont: %s", sf);
         int sfid = fluid_synth_sfload(synth, sf, true);
         if (sfid == -1)
