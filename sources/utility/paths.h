@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <string>
 
 std::string get_home_directory();

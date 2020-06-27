@@ -7,7 +7,8 @@
 #include "fonts.h"
 #include "utility/SDL++.h"
 #include <bst/utf.hpp>
-#include <gsl.hpp>
+#include <gsl/gsl>
+#include <vector>
 #include <stdexcept>
 
 struct Font_Atlas {

@@ -7,7 +7,7 @@
 #include "utility/misc.h"
 #include <SimpleIni.h>
 #include <SDL_pixels.h>
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <memory>
 #include <cassert>
 

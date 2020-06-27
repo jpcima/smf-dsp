@@ -8,7 +8,7 @@
 #include "utility/geometry.h"
 #include "utility/SDL++.h"
 #include <SDL.h>
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <mutex>
 #include <vector>
 #include <memory>

@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <gsl.hpp>
+#include <gsl/gsl>
 
 template <class Ch> bool string_starts_with(gsl::basic_string_span<const Ch> text, gsl::basic_string_span<const Ch> prefix);
 template <class Ch> bool string_ends_with(gsl::basic_string_span<const Ch> text, gsl::basic_string_span<const Ch> suffix);

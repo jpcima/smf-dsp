@@ -5,7 +5,7 @@
 
 #pragma once
 #include "utility/geometry.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 struct Font;
 
 class Main_Layout {

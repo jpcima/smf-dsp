@@ -7,7 +7,7 @@
 #include "ui/paint.h"
 #include "utility/paths.h"
 #include "utility/logs.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <getopt.h>
 #if defined(__linux__)
 #include <jack/jack.h>

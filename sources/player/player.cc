@@ -18,7 +18,7 @@
 #include "utility/charset.h"
 #include "utility/uv++.h"
 #include "utility/logs.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <stdexcept>
 #include <cstdio>
 #include <cstring>

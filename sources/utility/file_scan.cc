@@ -5,7 +5,7 @@
 
 #include "file_scan.h"
 #include "paths.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 
 File_Scan::File_Scan(
     std::string path,

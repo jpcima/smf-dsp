@@ -7,7 +7,7 @@
 #include "adev_jack.h"
 #include "utility/strings.h"
 #include "utility/logs.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <cmath>
 #include <cstring>
 

@@ -5,7 +5,7 @@
 
 #pragma once
 #include "file_entry.h"
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <vector>
 #include <string>
 #include <functional>

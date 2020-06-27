@@ -12,7 +12,7 @@
 #include "utility/strings.h"
 #include "utility/SDL++.h"
 #include <bst/utf.hpp>
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <algorithm>
 #include <cstdlib>
 #include <cassert>

@@ -26,7 +26,7 @@
 #include "utility/strings.h"
 #include "utility/logs.h"
 #include <SDL_image.h>
-#include <gsl.hpp>
+#include <gsl/gsl>
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
