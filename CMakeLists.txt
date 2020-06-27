@@ -74,7 +74,7 @@ target_link_libraries(fmidiplay PRIVATE
   vendor::uchardet
   vendor::gsl-lite
   vendor::any-lite
-  vendor::bst
+  vendor::utf
   vendor::simpleini
   vendor::ring-buffer
   vendor::fmidi

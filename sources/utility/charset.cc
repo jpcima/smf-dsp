@@ -9,7 +9,7 @@
 #include <unicode/ucol.h>
 #include <unicode/uiter.h>
 #include <unicode/unorm2.h>
-#include <bst/utf.hpp>
+#include <utf/utf.hpp>
 #include <array>
 #include <type_traits>
 #include <stdexcept>
@@ -72,15 +72,15 @@ bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding)
 
 template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive)
 {
-    typedef bst::utf::utf_traits<CharSrc> Src;
-    typedef bst::utf::utf_traits<CharDst> Dst;
+    typedef utf::utf_traits<CharSrc> Src;
+    typedef utf::utf_traits<CharDst> Dst;
 
     dst.clear();
     dst.reserve(src.size() * Dst::max_width);
 
     for (auto si = src.begin(), se = src.end(); si != se;) {
-        bst::utf::code_point cp = Src::decode(si, se);
-        if (cp == bst::utf::incomplete || cp == bst::utf::illegal) {
+        utf::code_point cp = Src::decode(si, se);
+        if (cp == utf::incomplete || cp == utf::illegal) {
             if (!permissive)
                 return false;
         }

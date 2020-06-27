@@ -6,7 +6,7 @@
 #include "text.h"
 #include "fonts.h"
 #include "utility/SDL++.h"
-#include <bst/utf.hpp>
+#include <utf/utf.hpp>
 #include <gsl/gsl>
 #include <vector>
 #include <stdexcept>
@@ -79,9 +79,9 @@ void Text_Painter::draw_ucs4(gsl::basic_string_span<const char32_t> str)
 void Text_Painter::draw_utf8(gsl::cstring_span str)
 {
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
-        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
-        if (ch == bst::utf::incomplete) break;
-        if (ch == bst::utf::illegal) continue;
+        char32_t ch = utf::utf_traits<char>::decode(cur, end);
+        if (ch == utf::incomplete) break;
+        if (ch == utf::illegal) continue;
         draw_char(ch);
     }
 }
@@ -106,9 +106,9 @@ size_t Text_Painter::measure_utf8(gsl::cstring_span str)
 {
     size_t tw = 0;
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
-        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
-        if (ch == bst::utf::incomplete) break;
-        if (ch == bst::utf::illegal) continue;
+        char32_t ch = utf::utf_traits<char>::decode(cur, end);
+        if (ch == utf::incomplete) break;
+        if (ch == utf::illegal) continue;
         tw += measure_char(ch);
     }
     return tw;

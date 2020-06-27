@@ -5,12 +5,11 @@
 //  accompanying file LICENSE_1_0.txt or copy at
 //  http://www.boost.org/LICENSE_1_0.txt)
 //
-#ifndef BST_UTF_HPP_INCLUDED
-#define BST_UTF_HPP_INCLUDED
+#ifndef UTF_UTF_HPP_INCLUDED
+#define UTF_UTF_HPP_INCLUDED
 
 #include <cstdint>
 
-namespace bst {
 ///
 /// \brief Namespace that holds basic operations on UTF encoded sequences
 ///
@@ -19,11 +18,11 @@ namespace bst {
 namespace utf {
     /// \cond INTERNAL
     #ifdef __GNUC__
-    #   define BST_LOCALE_LIKELY(x)   __builtin_expect((x),1)
-    #   define BST_LOCALE_UNLIKELY(x) __builtin_expect((x),0)
+    #   define UTF_LIKELY(x)   __builtin_expect((x),1)
+    #   define UTF_UNLIKELY(x) __builtin_expect((x),0)
     #else
-    #   define BST_LOCALE_LIKELY(x)   (x)
-    #   define BST_LOCALE_UNLIKELY(x) (x)
+    #   define UTF_LIKELY(x)   (x)
+    #   define UTF_UNLIKELY(x) (x)
     #endif
     /// \endcond
 
@@ -54,87 +53,6 @@ namespace utf {
         return true;
     }
 
-    #ifdef BST_LOCALE_DOXYGEN
-    ///
-    /// \brief UTF Traits class - functions to convert UTF sequences to and from Unicode code points
-    ///
-    template<typename CharType,int size=sizeof(CharType)>
-    struct utf_traits {
-        ///
-        /// The type of the character
-        ///
-        typedef CharType char_type;
-        ///
-        /// Read one code point from the range [p,e) and return it.
-        ///
-        /// - If the sequence that was read is incomplete sequence returns \ref incomplete,
-        /// - If illegal sequence detected returns \ref illegal
-        ///
-        /// Requirements
-        ///
-        /// - Iterator is valid input iterator
-        ///
-        /// Postconditions
-        ///
-        /// - p points to the last consumed character
-        ///
-        template<typename Iterator>
-        static code_point decode(Iterator &p,Iterator e);
-
-        ///
-        /// Maximal width of valid sequence in the code units:
-        ///
-        /// - UTF-8  - 4
-        /// - UTF-16 - 2
-        /// - UTF-32 - 1
-        ///
-        static const int max_width;
-        ///
-        /// The width of specific code point in the code units.
-        ///
-        /// Requirement: value is a valid Unicode code point
-        /// Returns value in range [1..max_width]
-        ///
-        static int width(code_point value);
-
-        ///
-        /// Get the size of the trail part of variable length encoded sequence.
-        ///
-        /// Returns -1 if C is not valid lead character
-        ///
-        static int trail_length(char_type c);
-        ///
-        /// Returns true if c is trail code unit, always false for UTF-32
-        ///
-        static bool is_trail(char_type c);
-        ///
-        /// Returns true if c is lead code unit, always true of UTF-32
-        ///
-        static bool is_lead(char_type c);
-
-        ///
-        /// Convert valid Unicode code point \a value to the UTF sequence.
-        ///
-        /// Requirements:
-        ///
-        /// - \a value is valid code point
-        /// - \a out is an output iterator should be able to accept at least width(value) units
-        ///
-        /// Returns the iterator past the last written code unit.
-        ///
-        template<typename Iterator>
-        static Iterator encode(code_point value,Iterator out);
-        ///
-        /// Decodes valid UTF sequence that is pointed by p into code point.
-        ///
-        /// If the sequence is invalid or points to end the behavior is undefined
-        ///
-        template<typename Iterator>
-        static code_point decode_valid(Iterator &p);
-    };
-
-    #else
-
     template<typename CharType,int size=sizeof(CharType)>
     struct utf_traits;
 
@@ -148,13 +66,13 @@ namespace utf {
             unsigned char c = ci;
             if(c < 128)
                 return 0;
-            if(BST_LOCALE_UNLIKELY(c < 194))
+            if(UTF_UNLIKELY(c < 194))
                 return -1;
             if(c < 224)
                 return 1;
             if(c < 240)
                 return 2;
-            if(BST_LOCALE_LIKELY(c <=244))
+            if(UTF_LIKELY(c <=244))
                 return 3;
             return -1;
         }
@@ -169,7 +87,7 @@ namespace utf {
             else if(value <=0x7FF) {
                 return 2;
             }
-            else if(BST_LOCALE_LIKELY(value <=0xFFFF)) {
+            else if(UTF_LIKELY(value <=0xFFFF)) {
                 return 3;
             }
             else {
@@ -191,7 +109,7 @@ namespace utf {
         template<typename Iterator>
         static code_point decode(Iterator &p,Iterator e)
         {
-            if(BST_LOCALE_UNLIKELY(p==e))
+            if(UTF_UNLIKELY(p==e))
                 return incomplete;
 
             unsigned char lead = *p++;
@@ -199,7 +117,7 @@ namespace utf {
             // First byte is fully validated here
             int trail_size = trail_length(lead);
 
-            if(BST_LOCALE_UNLIKELY(trail_size < 0))
+            if(UTF_UNLIKELY(trail_size < 0))
                 return illegal;
 
             //
@@ -215,21 +133,21 @@ namespace utf {
             unsigned char tmp;
             switch(trail_size) {
             case 3:
-                if(BST_LOCALE_UNLIKELY(p==e))
+                if(UTF_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
                 if (!is_trail(tmp))
                     return illegal;
                 c = (c << 6) | ( tmp & 0x3F);
             case 2:
-                if(BST_LOCALE_UNLIKELY(p==e))
+                if(UTF_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
                 if (!is_trail(tmp))
                     return illegal;
                 c = (c << 6) | ( tmp & 0x3F);
             case 1:
-                if(BST_LOCALE_UNLIKELY(p==e))
+                if(UTF_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
                 if (!is_trail(tmp))
@@ -239,11 +157,11 @@ namespace utf {
 
             // Check code point validity: no surrogates and
             // valid range
-            if(BST_LOCALE_UNLIKELY(!is_valid_codepoint(c)))
+            if(UTF_UNLIKELY(!is_valid_codepoint(c)))
                 return illegal;
 
             // make sure it is the most compact representation
-            if(BST_LOCALE_UNLIKELY(width(c)!=trail_size + 1))
+            if(UTF_UNLIKELY(width(c)!=trail_size + 1))
                 return illegal;
 
             return c;
@@ -261,7 +179,7 @@ namespace utf {
 
             if(lead < 224)
                 trail_size = 1;
-            else if(BST_LOCALE_LIKELY(lead < 240)) // non-BMP rare
+            else if(UTF_LIKELY(lead < 240)) // non-BMP rare
                 trail_size = 2;
             else
                 trail_size = 3;
@@ -292,7 +210,7 @@ namespace utf {
                 *out++ = static_cast<char_type>((value >> 6) | 0xC0);
                 *out++ = static_cast<char_type>((value & 0x3F) | 0x80);
             }
-            else if(BST_LOCALE_LIKELY(value <= 0xFFFF)) {
+            else if(UTF_LIKELY(value <= 0xFFFF)) {
                 *out++ = static_cast<char_type>((value >> 12) | 0xE0);
                 *out++ = static_cast<char_type>(((value >> 6) & 0x3F) | 0x80);
                 *out++ = static_cast<char_type>((value & 0x3F) | 0x80);
@@ -350,10 +268,10 @@ namespace utf {
         template<typename It>
         static code_point decode(It &current,It last)
         {
-            if(BST_LOCALE_UNLIKELY(current == last))
+            if(UTF_UNLIKELY(current == last))
                 return incomplete;
             uint16_t w1=*current++;
-            if(BST_LOCALE_LIKELY(w1 < 0xD800 || 0xDFFF < w1)) {
+            if(UTF_LIKELY(w1 < 0xD800 || 0xDFFF < w1)) {
                 return w1;
             }
             if(w1 > 0xDBFF)
@@ -369,7 +287,7 @@ namespace utf {
         static code_point decode_valid(It &current)
         {
             uint16_t w1=*current++;
-            if(BST_LOCALE_LIKELY(w1 < 0xD800 || 0xDFFF < w1)) {
+            if(UTF_LIKELY(w1 < 0xD800 || 0xDFFF < w1)) {
                 return w1;
             }
             uint16_t w2=*current++;
@@ -384,7 +302,7 @@ namespace utf {
         template<typename It>
         static It encode(code_point u,It out)
         {
-            if(BST_LOCALE_LIKELY(u<=0xFFFF)) {
+            if(UTF_LIKELY(u<=0xFFFF)) {
                 *out++ = static_cast<char_type>(u);
             }
             else {
@@ -424,11 +342,11 @@ namespace utf {
         template<typename It>
         static code_point decode(It &current,It last)
         {
-            if(BST_LOCALE_UNLIKELY(current == last))
-                return bst::utf::incomplete;
+            if(UTF_UNLIKELY(current == last))
+                return utf::incomplete;
             code_point c=*current++;
-            if(BST_LOCALE_UNLIKELY(!is_valid_codepoint(c)))
-                return bst::utf::illegal;
+            if(UTF_UNLIKELY(!is_valid_codepoint(c)))
+                return utf::illegal;
             return c;
         }
         static const int max_width = 1;
@@ -445,11 +363,9 @@ namespace utf {
 
     }; // utf32
 
-    #endif
-
-
+    #undef UTF_LIKELY
+    #undef UTF_UNLIKELY
 } // utf
-} // bst
 
 
 #endif

@@ -11,7 +11,7 @@
 #include "utility/paths.h"
 #include "utility/charset.h"
 #include "utility/SDL++.h"
-#include <bst/utf.hpp>
+#include <utf/utf.hpp>
 #include <algorithm>
 
 static constexpr int title_top_padding = 4;
@@ -391,9 +391,9 @@ bool Modal_Text_Input_Box::handle_text_input(const SDL_TextInputEvent &event)
     uint32_t cursor = cursor_;
 
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
-        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
-        if (ch == bst::utf::incomplete) break;
-        if (ch == bst::utf::illegal) continue;
+        char32_t ch = utf::utf_traits<char>::decode(cur, end);
+        if (ch == utf::incomplete) break;
+        if (ch == utf::illegal) continue;
         input_text_.insert(input_text_.begin() + cursor, ch);
         const Font_Glyph *g = font_text_input_->glyph(ch);
         input_gsize_.insert(input_gsize_.begin() + cursor, g ? g->size : 1);

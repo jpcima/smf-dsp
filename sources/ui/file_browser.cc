@@ -11,7 +11,7 @@
 #include "utility/charset.h"
 #include "utility/strings.h"
 #include "utility/SDL++.h"
-#include <bst/utf.hpp>
+#include <utf/utf.hpp>
 #include <gsl/gsl>
 #include <algorithm>
 #include <cstdlib>
@@ -177,9 +177,9 @@ bool File_Browser::handle_text_input(const SDL_TextInputEvent &event)
     gsl::cstring_span str = event.text;
 
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
-        char32_t ch = bst::utf::utf_traits<char>::decode(cur, end);
-        if (ch == bst::utf::incomplete) break;
-        if (ch == bst::utf::illegal) continue;
+        char32_t ch = utf::utf_traits<char>::decode(cur, end);
+        if (ch == utf::incomplete) break;
+        if (ch == utf::illegal) continue;
         move_to_character(ch);
     }
 
@@ -209,7 +209,7 @@ void File_Browser::move_to_character(uint32_t character)
         gsl::cstring_span name = entry.name;
 
         gsl::cstring_span::iterator it = name.begin();
-        uint32_t leadchar = bst::utf::utf_traits<char>::decode(it, name.end());
+        uint32_t leadchar = utf::utf_traits<char>::decode(it, name.end());
 
         if (unicode_tolower(character) == unicode_tolower(leadchar))
             newsel = i;

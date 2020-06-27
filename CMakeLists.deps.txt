@@ -26,9 +26,9 @@ target_include_directories(any-lite INTERFACE "thirdparty/any-lite/include")
 add_library(vendor::any-lite ALIAS any-lite)
 
 ###
-add_library(bst INTERFACE)
-target_include_directories(bst INTERFACE "thirdparty/bst")
-add_library(vendor::bst ALIAS bst)
+add_library(utf INTERFACE)
+target_include_directories(utf INTERFACE "thirdparty/utf")
+add_library(vendor::utf ALIAS utf)
 
 ###
 add_library(simpleini STATIC EXCLUDE_FROM_ALL "thirdparty/simpleini/ConvertUTF.cpp")
