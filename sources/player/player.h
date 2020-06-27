@@ -10,6 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <vector>
 #include <queue>
 #include <functional>
 struct Player_Command;
@@ -58,7 +59,7 @@ private:
 
     Player_State make_state() const;
 
-    void switch_instrument(Midi_Instrument &ins);
+    std::vector<Midi_Instrument *> instruments() const;
 
     bool start_ticking();
     bool stop_ticking();
@@ -88,7 +89,6 @@ private:
     std::unique_ptr<Seek_State> seek_state_;
 
     // instrument
-    Midi_Instrument *ins_ = nullptr;
     std::unique_ptr<Midi_Port_Instrument> midiport_ins_;
     std::unique_ptr<Midi_Synth_Instrument> synth_ins_;
 

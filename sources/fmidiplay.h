@@ -48,6 +48,7 @@ public:
     void request_update();
     void update_modals();
     void choose_midi_output(bool ask, gsl::cstring_span choice);
+    void choose_synth(bool ask, gsl::cstring_span choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
     void choose_theme(gsl::cstring_span choice);
@@ -89,6 +90,7 @@ private:
     std::unique_ptr<Player> player_;
 
     std::string last_midi_output_choice_;
+    std::string last_synth_choice_;
     std::string last_theme_choice_;
 
     std::unique_ptr<Player_State> ps_;

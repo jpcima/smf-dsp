@@ -27,13 +27,20 @@ Player::Player()
     : quit_(false),
       play_list_(new Linear_Play_List),
       seek_state_(new Seek_State),
-      midiport_ins_(new Midi_Port_Instrument),
-      synth_ins_(new Midi_Synth_Instrument)
+      midiport_ins_(new Midi_Port_Instrument)
 {
-    ins_ = midiport_ins_.get();
-
     // scan and initialize plugins
     Synth_Host::plugins();
+
+    // create audio device
+    if (Audio_Device *adev = init_audio_device()) {
+        synth_ins_.reset(new Midi_Synth_Instrument);
+        adev->set_callback([](float *output, unsigned nframes, void *user_data) {
+            Player *self = reinterpret_cast<Player *>(user_data);
+            self->synth_ins_->generate_audio(output, nframes);
+        }, this);
+        adev->start();
+    }
 
     // initialize seeker
     seek_state_->set_message_callback(+[](const uint8_t *msg, uint32_t len, void *ptr) {
@@ -144,11 +151,11 @@ void Player::process_command_queue()
         case PC_Pause:
             if (pl_) {
                 Player_Clock &c = *clock_;
-                Midi_Instrument &ins = *ins_;
                 if (!c.active())
                     start_ticking();
                 else {
-                    ins.all_sound_off();
+                    for (Midi_Instrument *ins : instruments())
+                        ins->all_sound_off();
                     stop_ticking();
                 }
             }
@@ -193,25 +200,31 @@ void Player::process_command_queue()
         }
         case PC_Set_Midi_Output: {
             Midi_Port_Instrument &ins = *midiport_ins_;
+            const std::string &id = static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id;
+            Log::i("Change MIDI output: %s", id.c_str());
             bool active = stop_ticking();
-            switch_instrument(ins);
-            ins.open_midi_output(static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id);
+            ins.open_midi_output(id);
             if (active) start_ticking();
             break;
         }
         case PC_Set_Synth: {
-            Midi_Synth_Instrument &ins = *synth_ins_;
+            Midi_Synth_Instrument *ins = synth_ins_.get();
+            if (!ins)
+                break;
+
+            const std::string &id = static_cast<Pcmd_Set_Synth &>(*cmd).synth_plugin_id;
+            Log::i("Change synthesizer: %s", id.c_str());
+
             bool active = stop_ticking();
-            Audio_Device *adev = init_audio_device();
+            Audio_Device *adev = adev_.get();
 
             const double audio_rate = adev->sample_rate();
             const double audio_latency = adev->latency();
-            ins.configure_audio(audio_rate, audio_latency);
+            ins->configure_audio(audio_rate, audio_latency);
             Log::i("Audio rate: %f Hz", audio_rate);
             Log::i("Audio latency: %f ms", 1e3 * audio_latency);
 
-            switch_instrument(ins);
-            ins.open_midi_output(static_cast<Pcmd_Set_Synth &>(*cmd).synth_plugin_id);
+            ins->open_midi_output(id);
 
             if (active) start_ticking();
             break;
@@ -239,9 +252,10 @@ void Player::rewind()
 
     fmidi_player_rewind(pl);
 
-    Midi_Instrument &ins = *ins_;
-    ins.initialize();
-    ins.flush_events();
+    for (Midi_Instrument *ins : instruments()) {
+        ins->initialize();
+        ins->flush_events();
+    }
 }
 
 void Player::goto_time(double t)
@@ -275,16 +289,17 @@ void Player::reset_current_playback()
     pl_.reset();
     smf_.reset();
 
-    Midi_Instrument &ins = *ins_;
-    ins.initialize();
-    ins.flush_events();
+    for (Midi_Instrument *ins : instruments()) {
+        ins->initialize();
+        ins->flush_events();
+    }
 }
 
 void Player::begin_seeking()
 {
-    Midi_Instrument &ins = *ins_;
     // trust the sequencer to send initialization events, don't do it ourselves
-    ins.flush_events();
+    for (Midi_Instrument *ins : instruments())
+        ins->flush_events();
 
     Seek_State &sks = *seek_state_;
     sks.clear();
@@ -370,7 +385,6 @@ void Player::on_sequence_event(const fmidi_event_t &event)
 
 void Player::play_message(const uint8_t *msg, uint32_t len)
 {
-    Midi_Instrument &ins = *ins_;
     uint64_t now = uv_hrtime();
     double ts = 0;
     int flags = 0;
@@ -380,7 +394,8 @@ void Player::play_message(const uint8_t *msg, uint32_t len)
         flags |= Midi_Message_Is_First;
         ts_started_ = true;
     }
-    ins.send_message(msg, len, ts, flags);
+    for (Midi_Instrument *ins : instruments())
+        ins->send_message(msg, len, ts, flags);
     ts_last_ = now;
 }
 
@@ -526,8 +541,7 @@ void Player::extract_smf_metadata()
 Player_State Player::make_state() const
 {
     Player_State ps;
-    Midi_Instrument &ins = *ins_;
-    ps.kb = ins.keyboard_state();
+    ps.kb = instruments().front()->keyboard_state();
     ps.repeat_mode = repeat_mode_;
 
     fmidi_player_t *pl = pl_.get();
@@ -546,18 +560,13 @@ Player_State Player::make_state() const
     return ps;
 }
 
-void Player::switch_instrument(Midi_Instrument &ins)
+std::vector<Midi_Instrument *> Player::instruments() const
 {
-    Midi_Instrument &old_ins = *ins_;
-
-    if (&ins == &old_ins)
-        return;
-
-    old_ins.initialize();
-    old_ins.flush_events();
-    old_ins.close_midi_output();
-
-    ins_ = &ins;
+    std::vector<Midi_Instrument *> ins;
+    ins.push_back(midiport_ins_.get());
+    if (synth_ins_)
+        ins.push_back(synth_ins_.get());
+    return ins;
 }
 
 bool Player::start_ticking()
@@ -575,12 +584,13 @@ bool Player::start_ticking()
 bool Player::stop_ticking()
 {
     Player_Clock &clock = *clock_;
-    Midi_Instrument &ins = *ins_;
 
     if (!clock.active())
         return false;
 
-    ins.flush_events();
+    for (Midi_Instrument *ins : instruments())
+        ins->flush_events();
+
     clock.stop();
     return true;
 }
@@ -588,10 +598,12 @@ bool Player::stop_ticking()
 Audio_Device *Player::init_audio_device()
 {
     Audio_Device *adev = adev_.get();
-    if (adev)
-        return adev;
 
     adev = Audio_Device::create_best_for_system();
+    if (!adev) {
+        Log::e("Cannot create an audio device for this system");
+        return nullptr;
+    }
     adev_.reset(adev);
 
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
@@ -604,14 +616,11 @@ Audio_Device *Player::init_audio_device()
     double desired_latency = ini->GetDoubleValue("", "synth-audio-latency", 50);
     desired_latency = 1e-3 * std::max(1.0, std::min(500.0, desired_latency));
 
-    if (!adev->init(desired_sample_rate, desired_latency))
+    if (!adev->init(desired_sample_rate, desired_latency)) {
         Log::e("Cannot initialize the audio device");
-
-    adev->set_callback([](float *output, unsigned nframes, void *user_data) {
-        Player *self = reinterpret_cast<Player *>(user_data);
-        self->synth_ins_->generate_audio(output, nframes);
-    }, this);
-    adev->start();
+        adev_.reset();
+        return nullptr;
+    }
 
     return adev;
 }
