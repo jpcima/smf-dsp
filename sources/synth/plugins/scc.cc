@@ -85,6 +85,46 @@ static void scc_synth_deactivate(synth_object *obj)
         sy->device[i].reset();
 }
 
+static dsa::CMIDIMsg scc_interpret_channel_midi(const unsigned char *msg, size_t size)
+{
+    dsa::CMIDIMsg::MsgType msgtype = dsa::CMIDIMsg::UNKNOWN_MESSAGE;
+    int msgch = 0;
+
+    if (size == 2) {
+        msgch = msg[0] & 0x0f;
+        switch (msg[0] & 0xf0) {
+        case 0xc0: msgtype = dsa::CMIDIMsg::PROGRAM_CHANGE; break;
+        case 0xd0: msgtype = dsa::CMIDIMsg::CHANNEL_PRESSURE; break;
+        }
+    }
+    else if (size == 3) {
+        msgch = msg[0] & 0x0f;
+        switch (msg[0] & 0xf0) {
+        case 0x80: msgtype = dsa::CMIDIMsg::NOTE_OFF; break;
+        case 0x90: msgtype = msg[2] ? dsa::CMIDIMsg::NOTE_ON : dsa::CMIDIMsg::NOTE_OFF; break;
+        case 0xa0: msgtype = dsa::CMIDIMsg::POLYPHONIC_KEY_PRESSURE; break;
+        case 0xe0: msgtype = dsa::CMIDIMsg::PITCH_BEND_CHANGE; break;
+        case 0xb0:
+            switch (msg[1]) {
+            case 0x78: msgtype = dsa::CMIDIMsg::ALL_SOUND_OFF; break;
+            case 0x79: msgtype = dsa::CMIDIMsg::RESET_ALL_CONTROLLERS; break;
+            case 0x7a: msgtype = dsa::CMIDIMsg::LOCAL_CONTROL; break;
+            case 0x7b: msgtype = dsa::CMIDIMsg::ALL_NOTES_OFF; break;
+            case 0x7c: msgtype = dsa::CMIDIMsg::OMNI_OFF; break;
+            case 0x7d: msgtype = dsa::CMIDIMsg::OMNI_ON; break;
+            case 0x7e: msgtype = dsa::CMIDIMsg::POLYPHONIC_OPERATION; break;
+            case 0x7f: msgtype = dsa::CMIDIMsg::MONOPHONIC_OPERATION; break;
+            }
+            break;
+        }
+    }
+
+    if (msgtype == dsa::CMIDIMsg::UNKNOWN_MESSAGE)
+        return dsa::CMIDIMsg();
+
+    return dsa::CMIDIMsg(msgtype, msgch, msg + 1, size - 1);
+}
+
 static void scc_synth_write(synth_object *obj, const unsigned char *msg, size_t size)
 {
     scc_synth_object *sy = (scc_synth_object *)obj;
@@ -92,15 +132,9 @@ static void scc_synth_write(synth_object *obj, const unsigned char *msg, size_t 
 
     #pragma message("scc MIDI not realtime-safe")
 
-    dsa::CMIDIMsgInterpreter mi;
-    for (size_t i = 0; i < size; ++i)
-        mi.Interpret(msg[i]);
-
-    if (mi.GetMsgCount() < 1)
+    dsa::CMIDIMsg mm = scc_interpret_channel_midi(msg, size);
+    if (mm.m_type == dsa::CMIDIMsg::UNKNOWN_MESSAGE)
         return;
-
-    const dsa::CMIDIMsg &mm = mi.GetMsg();
-    //Log::e("%s", mm.c_str());
 
     sy->module[(mm.m_ch * 2) % mods].SendMIDIMsg(mm);
     if (mm.m_ch != 9)
