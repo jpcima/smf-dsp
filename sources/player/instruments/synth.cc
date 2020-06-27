@@ -34,7 +34,6 @@ struct Midi_Synth_Instrument::Impl {
     bool have_next_message_ = false;
     Message_Header next_header_;
     uint8_t next_message_[midi_message_max];
-    std::atomic_uint message_count_{0};
     std::atomic_bool messages_initialized_{false};
 
     std::mutex host_mutex_;
@@ -67,25 +66,30 @@ Midi_Synth_Instrument::~Midi_Synth_Instrument()
 
 void Midi_Synth_Instrument::flush_events()
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
+    Ring_Buffer &midibuf = *impl.midibuf_;
 
     unsigned long counter = 0;
     auto interval = std::chrono::milliseconds(1);
     bool warned = false;
 
-    while (impl.message_count_.load() > 0) {
+    const size_t capacity = midibuf.capacity();
+    size_t unused = midibuf.size_free();
+
+    while (!impl.messages_initialized_.load() || unused < capacity) {
         if (counter > 1000 && !warned) {
-            Log::w("Events are taking a long time to flush (%u left)", impl.message_count_.load());
+            Log::w("Messages are taking a long time to flush (%lu bytes left)", capacity - unused);
             warned = true;
         }
         std::this_thread::sleep_for(interval);
         ++counter;
+        unused = midibuf.size_free();
     }
 }
 
 void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
     Synth_Host &host = *impl.host_;
 
     close_midi_output();
@@ -98,7 +102,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
         Log::e("Could not open synth: %s", gsl::to_string(id).c_str());
 
     impl.messages_initialized_.store(false);
-    impl.wait_audio_cycle();
+    flush_events();
 
     impl.eff_audio_rate_ = impl.config.rate;
     impl.eff_audio_latency_ = impl.config.latency;
@@ -106,19 +110,19 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
 void Midi_Synth_Instrument::close_midi_output()
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
     Synth_Host &host = *impl.host_;
 
     std::lock_guard<std::mutex> lock(impl.host_mutex_);
     host.unload();
 
     impl.messages_initialized_.store(false);
-    impl.wait_audio_cycle();
+    flush_events();
 }
 
 void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags)
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
     Ring_Buffer &midibuf = *impl.midibuf_;
 
     if (len > midi_message_max)
@@ -130,14 +134,13 @@ void Midi_Synth_Instrument::handle_send_message(const uint8_t *data, unsigned le
     while (midibuf.size_free() < size_need)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-    impl.message_count_.fetch_add(1);
     midibuf.put(hdr);
     midibuf.put(data, len);
 }
 
 void Midi_Synth_Instrument::configure_audio(double audio_rate, double audio_latency)
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
 
     impl.config.rate = audio_rate;
     impl.config.latency = audio_latency;
@@ -145,7 +148,7 @@ void Midi_Synth_Instrument::configure_audio(double audio_rate, double audio_late
 
 void Midi_Synth_Instrument::generate_audio(float *output, unsigned nframes)
 {
-    Impl& impl = *impl_;
+    Impl &impl = *impl_;
     Synth_Host &host = *impl.host_;
     double srate = impl.eff_audio_rate_;
 
@@ -156,7 +159,6 @@ void Midi_Synth_Instrument::generate_audio(float *output, unsigned nframes)
         midibuf.discard(midibuf.size_used());
 
         impl.have_next_message_ = false;
-        impl.message_count_.store(0);
     }
 
     unsigned frame_index = 0;
@@ -201,7 +203,6 @@ void Midi_Synth_Instrument::Impl::process_midi(double time_incr)
         }
 
         have_next_message_ = false;
-        message_count_.fetch_sub(1);
     }
 }
 
