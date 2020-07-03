@@ -99,10 +99,10 @@ private:
     uint64_t ts_last_ = 0;
 
     // audio
-    std::unique_ptr<Audio_Device> adev_;
     analyzer_10band level_analyzer_;
     float current_levels_[10] {};
     std::mutex current_levels_mutex_;
+    std::unique_ptr<Audio_Device> adev_;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;
