@@ -33,6 +33,7 @@
 #endif
 #include <gsl/gsl>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
