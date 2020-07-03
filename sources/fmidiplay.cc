@@ -130,7 +130,14 @@ SDL_Window *Application::init_window()
 
 SDL_Renderer *Application::init_renderer()
 {
-    SDL_Renderer *rr = SDL_CreateRenderer(window_.get(), -1, 0);
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+
+    uint32_t flags = 0;
+    if (ini->GetBoolValue("", "force-software-renderer"))
+        flags |= SDL_RENDERER_SOFTWARE;
+
+    SDL_Renderer *rr = SDL_CreateRenderer(window_.get(), -1, flags);
     if (!rr)
         return nullptr;
 
@@ -1108,6 +1115,11 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
 
     if (!ini->GetValue("", "theme")) {
         ini->SetValue("", "theme", "default", "; Theme of the graphical interface");
+        ini_update = true;
+    }
+
+    if (!ini->GetValue("", "force-software-renderer")) {
+        ini->SetBoolValue("", "force-software-renderer", false, "; Force software rendering in case of graphical problems");
         ini_update = true;
     }
 
