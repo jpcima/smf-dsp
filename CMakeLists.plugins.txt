@@ -6,7 +6,7 @@ add_library(plugin-common STATIC EXCLUDE_FROM_ALL
   "sources/utility/paths.cc"
   "sources/utility/logs.cc")
 target_include_directories(plugin-common PUBLIC "sources")
-target_link_libraries(plugin-common PUBLIC vendor::utf vendor::gsl-lite)
+target_link_libraries(plugin-common PUBLIC vendor::utf vendor::gsl-lite sys::iconv)
 
 function(add_plugin TARGET)
   add_library("${TARGET}" MODULE ${ARGN})
