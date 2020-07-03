@@ -17,6 +17,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   string(APPEND CMAKE_CXX_FLAGS " -Wall")
 endif()
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check.c" "int main() { return 0; }")
+try_compile(HAVE_LINKER_FLAG_AS_NEEDED "${CMAKE_CURRENT_BINARY_DIR}" SOURCES "${CMAKE_CURRENT_BINARY_DIR}/check.c" LINK_OPTIONS "-Wl,--as-needed")
+function(link_what_you_use TARGET)
+  if(HAVE_LINKER_FLAG_AS_NEEDED)
+    set_property(TARGET "${TARGET}" APPEND PROPERTY LINK_OPTIONS "-Wl,--as-needed")
+  endif()
+endfunction()
+
 include("CMakeLists.deps.txt")
 
 add_executable(smf-dsp WIN32
@@ -108,6 +116,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
   target_link_libraries(smf-dsp PRIVATE sys::mediakit)
 endif()
+
+link_what_you_use(smf-dsp)
 
 install(TARGETS smf-dsp
   RUNTIME DESTINATION "bin"

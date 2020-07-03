@@ -12,6 +12,7 @@ function(add_plugin TARGET)
   add_library("${TARGET}" MODULE ${ARGN})
   target_link_libraries("${TARGET}" PRIVATE plugin-common)
   set_target_properties("${TARGET}" PROPERTIES PREFIX "")
+  link_what_you_use("${TARGET}")
   install(TARGETS "${TARGET}"
     LIBRARY DESTINATION "lib/${PROJECT_NAME}"
     COMPONENT "plugins")
