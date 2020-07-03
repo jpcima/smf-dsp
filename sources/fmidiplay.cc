@@ -847,7 +847,7 @@ void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
             if (index >= choices.size())
                 return;
 
-            last_midi_output_choice_ = choices[index];
+            last_midi_output_choice_ = (index > 0) ? choices[index] : std::string();
 
             std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
             if (!ini) ini = create_configuration();
@@ -903,7 +903,7 @@ void Application::choose_synth(bool ask, gsl::cstring_span choice)
             if (index >= choices.size())
                 return;
 
-            last_synth_choice_ = choices[index];
+            last_synth_choice_ = (index > 0) ? choices[index] : std::string();
 
             std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
             if (!ini) ini = create_configuration();
