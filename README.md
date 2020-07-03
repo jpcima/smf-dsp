@@ -48,7 +48,7 @@ Install following packages on Debian/LibraZiK/Mint:
 
 (in case JACK 1 is preferred over JACK 2, replace `libjack-jackd2-dev` with `libjack-dev`)
 
-Immediately after building, the program is available by starting `./fmidiplay`.
+Immediately after building, the program is available by starting `./smf-dsp`.
 
 ## Building synthesizers
 
