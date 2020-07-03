@@ -79,10 +79,10 @@ bool save_configuration(gsl::cstring_span name, const CSimpleIniA &ini)
 
 std::unique_ptr<CSimpleIniA> load_global_configuration()
 {
-    return load_configuration(PROGRAM_DISPLAY_NAME);
+    return load_configuration("config");
 }
 
 bool save_global_configuration(const CSimpleIniA &ini)
 {
-    return save_configuration(PROGRAM_DISPLAY_NAME, ini);
+    return save_configuration("config", ini);
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION "3.7")
 
-project(fmidiplay VERSION "0.10.0" LANGUAGES C CXX)
-set(PROJECT_DISPLAY_NAME "FMidiPlay")
+project(smf-dsp VERSION "0.10.0" LANGUAGES C CXX)
+set(PROJECT_DISPLAY_NAME "SMF-DSP")
 set(PROJECT_AUTHOR "JPC")
 math(EXPR PROJECT_LETTER_VERSION "97+${PROJECT_VERSION_PATCH}")
 string(ASCII "${PROJECT_LETTER_VERSION}" PROJECT_LETTER_VERSION)
@@ -19,7 +19,7 @@ endif()
 
 include("CMakeLists.deps.txt")
 
-add_executable(fmidiplay WIN32
+add_executable(smf-dsp WIN32
   "sources/configuration.cc"
   "sources/fmidiplay.cc"
   "sources/main.cc"
@@ -61,18 +61,18 @@ add_executable(fmidiplay WIN32
   "sources/utility/load_library.cc"
   "sources/utility/logs.cc")
 
-target_compile_definitions(fmidiplay PRIVATE
+target_compile_definitions(smf-dsp PRIVATE
   "PROGRAM_NAME=\"${PROJECT_NAME}\""
   "PROGRAM_DISPLAY_NAME=\"${PROJECT_DISPLAY_NAME}\""
   "PROGRAM_AUTHOR=\"${PROJECT_AUTHOR}\""
   "PROGRAM_VERSION=\"${PROJECT_VERSION}\"")
 
-target_include_directories(fmidiplay PRIVATE
+target_include_directories(smf-dsp PRIVATE
   "sources"
   "fontdata"
   "imagedata")
 
-target_link_libraries(fmidiplay PRIVATE
+target_link_libraries(smf-dsp PRIVATE
   vendor::uchardet
   vendor::gsl-lite
   vendor::any-lite
@@ -90,19 +90,19 @@ target_link_libraries(fmidiplay PRIVATE
   Threads::Threads)
 
 if(TARGET sys::jack)
-  target_link_libraries(fmidiplay PRIVATE sys::jack)
-  target_compile_definitions(fmidiplay PRIVATE "ADEV_JACK")
+  target_link_libraries(smf-dsp PRIVATE sys::jack)
+  target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  target_link_libraries(fmidiplay PRIVATE Boost::filesystem)
+  target_link_libraries(smf-dsp PRIVATE Boost::filesystem)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  target_link_libraries(fmidiplay PRIVATE sys::jack sys::alsa)
+  target_link_libraries(smf-dsp PRIVATE sys::jack sys::alsa)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-  target_link_libraries(fmidiplay PRIVATE sys::mediakit)
+  target_link_libraries(smf-dsp PRIVATE sys::mediakit)
 endif()
 
-install(TARGETS fmidiplay
+install(TARGETS smf-dsp
   RUNTIME DESTINATION "bin"
   COMPONENT "player")
 
