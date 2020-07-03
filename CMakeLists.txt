@@ -106,4 +106,11 @@ install(TARGETS smf-dsp
   RUNTIME DESTINATION "bin"
   COMPONENT "player")
 
+install(FILES "resources/desktop/smf-dsp.desktop"
+  DESTINATION "share/applications"
+  COMPONENT "desktop-entry")
+install(FILES "resources/desktop/smf-dsp.png"
+  DESTINATION "share/pixmaps"
+  COMPONENT "desktop-entry")
+
 include("CMakeLists.plugins.txt")

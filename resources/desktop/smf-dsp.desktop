@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Name=SMF-DSP MIDI player
+Name[fr]=Lecteur MIDI SMF-DSP
+GenericName=MIDI file player
+GenericName[fr]=Lecteur de fichiers MIDI
+Comment=Standard MIDI file player
+Comment[fr]=Lecteur de fichiers MIDI standard
+Exec=smf-dsp -- %f
+TryExec=smf-dsp
+Icon=smf-dsp
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Player;
+MimeType=audio/midi;audio/x-midi;
