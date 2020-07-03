@@ -109,7 +109,7 @@ float *analyzer_10band::compute(const float inputs[], size_t count)
     outputs[0] = lo;
 #if defined(__SSE__)
     for (int i = 0; i < (N - 2) / 4; ++i)
-        _mm_storeu_ps(&outputs[1 + 4 * i], mid[0]);
+        _mm_storeu_ps(&outputs[1 + 4 * i], mid[i]);
 #else
     for (int i = 0; i < N - 2; ++i)
         outputs[i] = mid[i];
