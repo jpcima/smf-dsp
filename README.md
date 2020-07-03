@@ -1,9 +1,6 @@
-# midiplay
-MIDI file player for desktop computer
+# smf-dsp
 
-- The program is not named yet.
-- The development is in an early stage, but the program is working well and has many features.
-- It works on Linux and Windows. Probably Mac too.
+Advanced MIDI file player for desktop computer
 
 # Keys
 
@@ -55,7 +52,7 @@ Immediately after building, the program is available by starting `./smf-dsp`.
 
 The optional synthesizers have additional requirements, and they are built only if these are present.
 
-- **Fluidsynth**: install the package `libfluidsynth-dev`.
+- **Fluidsynth**: check out the `thirdparty/fluidlite` submodule.
 - **FM-OPL3 (ADLMIDI)**: check out the `thirdparty/libADLMIDI` submodule.
 - **FM-OPN2 (OPNMIDI)**: check out the `thirdparty/libOPNMIDI` submodule.
 - **SCC (emidi)**: check out the `thirdparty/scc` submodule.
