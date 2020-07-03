@@ -57,6 +57,8 @@ uint32_t timer_push_event(uint32_t interval, void *user_data)
 
 Application::Application()
 {
+    Log::i("Configuration directory: %s", get_configuration_dir().c_str());
+
     std::unique_ptr<CSimpleIniA> ini = initialize_config();
 
     if (const char *value = ini->GetValue("", "theme"))
