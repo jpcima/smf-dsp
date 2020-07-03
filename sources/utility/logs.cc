@@ -49,8 +49,17 @@ void Log::generic(char symbol, const char *tag, const char *color, const char *f
 
     timeval tv;
     tm tm;
-    if (gettimeofday(&tv, nullptr) == -1 || !localtime_r(&tv.tv_sec, &tm))
+    if (gettimeofday(&tv, nullptr) == -1)
         throw std::system_error(errno, std::generic_category());
+
+#if !defined(_WIN32)
+    if (!localtime_r(&tv.tv_sec, &tm))
+        throw std::system_error(errno, std::generic_category());
+#else
+    errno_t localtime_errno = localtime_s(&tm, &tv.tv_sec);
+    if (localtime_errno != 0)
+        throw std::system_error(localtime_errno, std::generic_category());
+#endif
 
     char timebuf[64];
     strftime(timebuf, sizeof(timebuf), "%X", &tm);
