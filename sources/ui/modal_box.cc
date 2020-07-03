@@ -46,7 +46,7 @@ void Modal_Box::paint(SDL_Renderer *rr)
     int ybottom = bounds.y + title_top_padding + texth + title_bottom_padding;
 
     SDLpp_SetRenderDrawColor(rr, pal[Colors::box_frame]);
-    SDL_RenderDrawLine(rr, bounds.x, ybottom, bounds.right(), ybottom);
+    SDLpp_RenderDrawHLine(rr, bounds.x, bounds.right(), ybottom);
 
     paint_contents(rr);
 }

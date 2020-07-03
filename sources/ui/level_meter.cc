@@ -6,6 +6,7 @@
 #include "ui/level_meter.h"
 #include "ui/color_palette.h"
 #include "ui/paint.h"
+#include "utility/geometry.h"
 #include "utility/SDL++.h"
 
 Level_Meter::Level_Meter(const Rect &bounds)
@@ -28,11 +29,11 @@ void Level_Meter::paint(SDL_Renderer *rr, int paint)
         const float ry = 1.0f - (y - bounds.top()) * (1.0f / (bounds.h - 1));
         if (paint & Pt_Background) {
             SDLpp_SetRenderDrawColor(rr, pal[Colors::meter_bar_off]);
-            SDL_RenderDrawLine(rr, bounds.left(), y, bounds.right(), y);
+            SDLpp_RenderDrawHLine(rr, bounds.x, bounds.right(), y);
         }
         else if ((paint & Pt_Foreground) && ry < v) {
             SDLpp_SetRenderDrawColor(rr, pal[Colors::meter_bar_on]);
-            SDL_RenderDrawLine(rr, bounds.left(), y, bounds.right(), y);
+            SDLpp_RenderDrawHLine(rr, bounds.x, bounds.right(), y);
         }
     }
 }

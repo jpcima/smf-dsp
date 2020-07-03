@@ -309,7 +309,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
     // Draw MIDI channel info heading
     if (paint & Pt_Background) {
         SDLpp_SetRenderDrawColor(rr, pal[Colors::text_min_brightness]);
-        SDLpp_RenderDrawLine(rr, lo.channel_heading_underline.p1, lo.channel_heading_underline.p2);
+        SDLpp_RenderDrawHLine(rr, lo.channel_heading_underline.p1.x, lo.channel_heading_underline.p2.x, lo.channel_heading_underline.p1.y);
 
         draw_text_rect(lo.octkb_label, lo.octkb_label.text, pal[Colors::text_low_brightness]);
         draw_text_rect(lo.volume_label, lo.volume_label.text, pal[Colors::text_low_brightness]);
@@ -454,7 +454,7 @@ void Application::paint(SDL_Renderer *rr, int paint)
     }
     if (paint & Pt_Background) {
         SDLpp_SetRenderDrawColor(rr, pal[Colors::text_low_brightness]);
-        SDLpp_RenderDrawLine(rr, lo.info_underline.p1, lo.info_underline.p2);
+        SDLpp_RenderDrawHLine(rr, lo.info_underline.p1.x, lo.info_underline.p2.x, lo.info_underline.p1.y);
     }
 
     // Draw info panel

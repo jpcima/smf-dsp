@@ -59,7 +59,7 @@ void Piano::paint(SDL_Renderer *rr, int paint)
             SDLpp_SetRenderDrawColor(rr, ck);
             SDL_RenderFillRect(rr, &rk);
             SDLpp_SetRenderDrawColor(rr, cs);
-            SDL_RenderDrawLine(rr, rk.x, y + h - 1, rk.x + 2, y + h - 1);
+            SDLpp_RenderDrawHLine(rr, rk.x, rk.x + 2, y + h - 1);
         }
 
         //

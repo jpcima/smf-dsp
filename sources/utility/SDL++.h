@@ -112,3 +112,15 @@ inline SDL_Surface *SDLpp_CreateRGBA4444Surface(int width, int height)
 #endif
     return SDL_CreateRGBSurface(0, width, height, 16, rmask, gmask, bmask, amask);
 }
+
+inline void SDLpp_RenderDrawHLine(SDL_Renderer *rr, int x1, int x2, int y)
+{
+    SDL_Rect rect{x1, y, x2 - x1 + 1, 1};
+    SDL_RenderFillRect(rr, &rect);
+}
+
+inline void SDLpp_RenderDrawVLine(SDL_Renderer *rr, int x, int y1, int y2)
+{
+    SDL_Rect rect{x, y1, 1, y2 - y1 + 1};
+    SDL_RenderFillRect(rr, &rect);
+}
