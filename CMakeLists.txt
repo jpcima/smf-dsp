@@ -82,7 +82,6 @@ target_link_libraries(smf-dsp PRIVATE
   vendor::fmidi
   vendor::rtmidi
   sys::SDL2
-  sys::SDL2_image
   sys::uv
   sys::iconv
   ICU::uc
@@ -92,6 +91,14 @@ target_link_libraries(smf-dsp PRIVATE
 if(TARGET sys::jack)
   target_link_libraries(smf-dsp PRIVATE sys::jack)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")
+endif()
+
+if(TARGET sys::SDL2_image)
+  target_link_libraries(smf-dsp PRIVATE sys::SDL2_image)
+  target_compile_definitions(smf-dsp PRIVATE "HAVE_SDL2_IMAGE")
+else()
+  target_link_libraries(smf-dsp PRIVATE vendor::stb)
+  target_sources(smf-dsp PRIVATE "sources/utility/SDL_stb_image.c")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")

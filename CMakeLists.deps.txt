@@ -48,6 +48,11 @@ target_include_directories(fmidi PUBLIC "thirdparty/fmidi/sources")
 add_library(vendor::fmidi ALIAS fmidi)
 
 ###
+add_library(stb INTERFACE)
+target_include_directories(stb INTERFACE "thirdparty/stb")
+add_library(vendor::stb ALIAS stb)
+
+###
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   pkg_check_modules(alsa "alsa" REQUIRED IMPORTED_TARGET)
   add_library(alsa INTERFACE)
@@ -96,7 +101,7 @@ add_library(sys::SDL2 ALIAS SDL2)
 ###
 find_library(SDL2_IMAGE_LIBRARY "SDL2_image")
 if(NOT SDL2_IMAGE_LIBRARY)
-  message(FATAL_ERROR "Cannot find library SDL2_image")
+  message(WARNING "Cannot find library SDL2_image")
 endif()
 add_library(SDL2_image INTERFACE)
 target_link_libraries(SDL2_image INTERFACE "${SDL2_IMAGE_LIBRARY}" SDL2)

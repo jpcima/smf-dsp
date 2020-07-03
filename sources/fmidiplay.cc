@@ -26,7 +26,11 @@
 #include "utility/charset.h"
 #include "utility/strings.h"
 #include "utility/logs.h"
+#if defined(HAVE_SDL2_IMAGE)
 #include <SDL_image.h>
+#else
+#include "utility/SDL_stb_image.h"
+#endif
 #include <gsl/gsl>
 #include <algorithm>
 #include <cstdio>
