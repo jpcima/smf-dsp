@@ -122,8 +122,10 @@ void Player::process_command_queue()
         cmd_queue_.pop();
         lock.unlock();
 
-        if (quit_.load())
+        if (quit_.load()) {
+            reset_current_playback();
             return;
+        }
 
         switch (cmd->type()) {
         case PC_Play: {
@@ -201,6 +203,10 @@ void Player::process_command_queue()
         case PC_Set_Midi_Output: {
             Midi_Port_Instrument &ins = *midiport_ins_;
             const std::string &id = static_cast<Pcmd_Set_Midi_Output &>(*cmd).midi_output_id;
+
+            // reinitialize the old device
+            ins.initialize();
+
             Log::i("Change MIDI output: %s", id.c_str());
             bool active = stop_ticking();
             ins.open_midi_output(id);

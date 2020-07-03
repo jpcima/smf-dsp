@@ -74,9 +74,6 @@ std::vector<Midi_Output> Midi_Port_Instrument::get_midi_outputs()
 
 void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
 {
-    // reset previous device if open
-    initialize();
-
     close_midi_output();
 
     if (id.empty())
