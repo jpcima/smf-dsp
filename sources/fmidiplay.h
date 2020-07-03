@@ -60,6 +60,7 @@ public:
     void load_theme_configuration(const CSimpleIniA &ini);
 
     void engage_shutdown();
+    void engage_shutdown_if_esc_key();
     void advance_shutdown();
     bool should_quit() const;
 
@@ -84,6 +85,8 @@ private:
 
     bool fadeout_engaged_ = false;
     int fadeout_time_ = 0;
+
+    uint32_t esc_key_timer_ = 0;
 
     unsigned scale_factor_ = 1;
     std::unique_ptr<File_Browser> file_browser_;

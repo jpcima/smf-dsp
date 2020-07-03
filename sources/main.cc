@@ -117,6 +117,9 @@ int main(int argc, char *argv[])
             }
             app.advance_shutdown();
             break;
+        case SDL_USEREVENT + 1:
+            app.engage_shutdown_if_esc_key();
+            break;
         case SDL_QUIT:
             shutting_down = true;
             app.engage_shutdown();

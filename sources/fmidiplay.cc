@@ -39,6 +39,7 @@
 const Point Application::size_{640, 400};
 
 static constexpr unsigned fadeout_delay = 10;
+static constexpr unsigned quit_by_esc_key_delay = 500;
 
 template <int EventType>
 uint32_t timer_push_event(uint32_t interval, void *user_data)
@@ -674,7 +675,14 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         break;
     case SDL_SCANCODE_ESCAPE:
         if (keymod == KMOD_NONE && !event.repeat) {
-            engage_shutdown();
+            if (esc_key_timer_ == 0) {
+                auto handler = [](uint32_t, void *user_data) -> uint32_t {
+                    SDL_Event event { SDL_USEREVENT + 1 };
+                    SDL_PushEvent(&event);
+                    return 0;
+                };
+                esc_key_timer_ = SDL_AddTimer(quit_by_esc_key_delay, handler, this);
+            }
             return true;
         }
         break;
@@ -698,6 +706,17 @@ bool Application::handle_key_released(const SDL_KeyboardEvent &event)
             return true;
         break;
     default:
+        break;
+    }
+
+    switch (event.keysym.scancode) {
+    default:
+        break;
+    case SDL_SCANCODE_ESCAPE:
+        if (esc_key_timer_ != 0) {
+            SDL_RemoveTimer(esc_key_timer_);
+            esc_key_timer_ = 0;
+        }
         break;
     }
 
@@ -1068,6 +1087,17 @@ void Application::engage_shutdown()
         player_->push_command(std::move(cmd));
         wait_cond.wait(lock);
     }
+}
+
+void Application::engage_shutdown_if_esc_key()
+{
+    if (esc_key_timer_ == 0)
+        return;
+
+    SDL_RemoveTimer(esc_key_timer_);
+    esc_key_timer_ = 0;
+
+    engage_shutdown();
 }
 
 void Application::advance_shutdown()
