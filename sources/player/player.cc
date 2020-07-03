@@ -627,6 +627,8 @@ Audio_Device *Player::init_audio_device()
         return nullptr;
     }
 
+    Log::s("Initialized audio device: %s", adev->audio_system_name());
+
     return adev;
 }
 

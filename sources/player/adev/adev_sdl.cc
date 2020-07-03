@@ -29,8 +29,6 @@ bool Audio_Device_SDL::init(double desired_sample_rate, double desired_latency)
 {
     shutdown();
 
-    Log::i("Audio interface: SDL");
-
     SDL_AudioSpec spec;
     std::memset(&spec, 0, sizeof(spec));
     spec.format = AUDIO_F32;

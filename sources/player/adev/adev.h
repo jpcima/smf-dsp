@@ -11,6 +11,7 @@ public:
     virtual ~Audio_Device() {}
 
     static Audio_Device *create_best_for_system();
+    virtual const char *audio_system_name() const noexcept = 0;
 
     typedef void (audio_callback_t)(float *output, unsigned nframes, void *user_data);
 

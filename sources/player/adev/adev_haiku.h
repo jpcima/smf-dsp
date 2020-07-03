@@ -11,6 +11,8 @@
 
 class Audio_Device_Haiku : public Audio_Device {
 public:
+    const char *audio_system_name() const noexcept override { return "MediaKit"; }
+
     bool init(double desired_sample_rate, double desired_latency) override;
     void shutdown() override;
     bool start() override;
