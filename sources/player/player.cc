@@ -35,10 +35,10 @@ Player::Player()
     // create audio device
     if (Audio_Device *adev = init_audio_device()) {
         synth_ins_.reset(new Midi_Synth_Instrument);
-        adev->set_callback([](float *output, unsigned nframes, void *user_data) {
-            Player *self = reinterpret_cast<Player *>(user_data);
-            self->synth_ins_->generate_audio(output, nframes);
-        }, this);
+        adev->set_callback(&audio_callback, this);
+        analyzer_10band &an = level_analyzer_;
+        an.init(adev->sample_rate());
+        an.setup(1.0, 10e3, 100e-3);
         adev->start();
     }
 
@@ -557,6 +557,11 @@ Player_State Player::make_state() const
     if (!pll.at_end())
         ps.file_path = pll.current();
 
+    {
+        std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(current_levels_mutex_));
+        std::memcpy(ps.audio_levels, current_levels_, 10 * sizeof(float));
+    }
+
     return ps;
 }
 
@@ -623,4 +628,15 @@ Audio_Device *Player::init_audio_device()
     }
 
     return adev;
+}
+
+void Player::audio_callback(float *output, unsigned nframes, void *user_data)
+{
+    Player *self = reinterpret_cast<Player *>(user_data);
+    self->synth_ins_->generate_audio(output, nframes);
+
+    const float *levels = self->level_analyzer_.compute(output, nframes);
+    std::unique_lock<std::mutex> levels_lock(self->current_levels_mutex_, std::try_to_lock);
+    if (levels_lock.owns_lock())
+        std::memcpy(self->current_levels_, levels, 10 * sizeof(float));
 }

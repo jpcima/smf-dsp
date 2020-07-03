@@ -76,6 +76,7 @@ public:
     Text_Rect author_label;
     Text_Rect version_label;
     Rect logo_rect;
+    Rect level_meter_rect[10];
 
     static void measure_text(Text_Rect &tr);
 };

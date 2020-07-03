@@ -164,6 +164,9 @@ void Color_Palette::save_defaults(CSimpleIniA &ini, const char *section, bool ov
     fill_color(Colors::digit_on, "#99aaff");
     fill_color(Colors::digit_off, "#666666");
 
+    fill_color(Colors::meter_bar_on, "digit-on");
+    fill_color(Colors::meter_bar_off, "digit-off");
+
     fill_color(Colors::box_frame, "text-low-brightness");
     fill_color(Colors::box_background, "text-min-brightness");
     fill_color(Colors::box_title, "text-low-brightness");

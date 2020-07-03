@@ -26,4 +26,5 @@ struct Player_State {
     unsigned speed = 100;
     std::string file_path;
     Player_Song_Metadata song_metadata;
+    float audio_levels[10] {};
 };

@@ -260,9 +260,15 @@ void Main_Layout::create_layout(Rect bounds)
         measure_text(author_label);
         measure_text(version_label);
         author_label.bounds.x = r.take_from_right(std::max(author_label.bounds.w, version_label.bounds.w)).x;
-        author_label.bounds.y = r.y;
+        author_label.bounds.y = r.y + 1;
         version_label.bounds.x = author_label.bounds.x;
-        version_label.bounds.y = r.y + 4 + author_label.bounds.h;
+        version_label.bounds.y = r.y + 5 + author_label.bounds.h;
+
+        r.chop_from_right(7);
+        for (unsigned i = 0; i < 10; ++i) {
+            r.chop_from_right(2);
+            level_meter_rect[9 - i] = r.take_from_right(8).from_top(24);
+        }
     }
 }
 

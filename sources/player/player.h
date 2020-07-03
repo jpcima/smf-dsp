@@ -5,6 +5,7 @@
 
 #pragma once
 #include "state.h"
+#include "audio/analyzer_10band.h"
 #include <fmidi/fmidi.h>
 #include <thread>
 #include <mutex>
@@ -65,6 +66,7 @@ private:
     bool stop_ticking();
 
     Audio_Device *init_audio_device();
+    static void audio_callback(float *output, unsigned nframes, void *user_data);
 
 private:
     std::thread thread_;
@@ -98,6 +100,9 @@ private:
 
     // audio
     std::unique_ptr<Audio_Device> adev_;
+    analyzer_10band level_analyzer_;
+    float current_levels_[10] {};
+    std::mutex current_levels_mutex_;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;

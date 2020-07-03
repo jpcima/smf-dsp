@@ -14,6 +14,7 @@
 #include "ui/file_browser.h"
 #include "ui/file_entry.h"
 #include "ui/metadata_display.h"
+#include "ui/level_meter.h"
 #include "ui/piano.h"
 #include "ui/modal_box.h"
 #include "ui/text.h"
@@ -73,6 +74,9 @@ Application::Application()
 
     Metadata_Display *mdd = new Metadata_Display(layout->info_box);
     metadata_display_.reset(mdd);
+
+    for (int i = 0; i < 10; ++i)
+        level_meter_[i].reset(new Level_Meter(layout->level_meter_rect[i]));
 
     std::string initial_path;
     if (const char *value = ini->GetValue("", "initial-path"))
@@ -278,6 +282,17 @@ void Application::paint(SDL_Renderer *rr, int paint)
             draw_text_rect(lo.repeat_label, lo.repeat_label.text, pal[Colors::digit_on]);
         if ((ps.repeat_mode & (Repeat_Multi|Repeat_Single)) == Repeat_Multi)
             draw_text_rect(lo.multi_label, lo.multi_label.text, pal[Colors::digit_on]);
+    }
+
+    // Draw audio levels
+    for (int i = 0; i < 10; ++i) {
+        Level_Meter &lm = *level_meter_[i];
+        const float dbmin = -60.0;
+        const float dbmax = 0.0;
+        const float db = 20.0f * std::log10(
+            std::max(ps.audio_levels[i], std::pow(10.0f, 0.05f * dbmin)));
+        lm.value((db - dbmin) * (1.0f / (dbmax - dbmin)));
+        lm.paint(rr, paint);
     }
 
     // Draw MIDI channel info heading

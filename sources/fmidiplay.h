@@ -15,6 +15,7 @@
 class File_Browser;
 struct File_Entry;
 class Metadata_Display;
+class Level_Meter;
 class Modal_Box;
 class Player;
 struct Player_State;
@@ -87,6 +88,7 @@ private:
     unsigned scale_factor_ = 1;
     std::unique_ptr<File_Browser> file_browser_;
     std::unique_ptr<Metadata_Display> metadata_display_;
+    std::unique_ptr<Level_Meter> level_meter_[10];
     std::unique_ptr<Player> player_;
 
     std::string last_midi_output_choice_;
