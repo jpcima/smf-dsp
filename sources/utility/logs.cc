@@ -52,11 +52,12 @@ void Log::generic(char symbol, const char *tag, const char *color, const char *f
     if (gettimeofday(&tv, nullptr) == -1)
         throw std::system_error(errno, std::generic_category());
 
+    time_t ts = tv.tv_sec;
 #if !defined(_WIN32)
-    if (!localtime_r(&tv.tv_sec, &tm))
+    if (!localtime_r(&ts, &tm))
         throw std::system_error(errno, std::generic_category());
 #else
-    errno_t localtime_errno = localtime_s(&tm, &tv.tv_sec);
+    errno_t localtime_errno = localtime_s(&tm, &ts);
     if (localtime_errno != 0)
         throw std::system_error(localtime_errno, std::generic_category());
 #endif
