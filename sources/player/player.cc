@@ -633,10 +633,24 @@ Audio_Device *Player::init_audio_device()
 void Player::audio_callback(float *output, unsigned nframes, void *user_data)
 {
     Player *self = reinterpret_cast<Player *>(user_data);
-    self->synth_ins_->generate_audio(output, nframes);
+    constexpr unsigned maxframes = 512;
 
-    const float *levels = self->level_analyzer_.compute(output, nframes);
-    std::unique_lock<std::mutex> levels_lock(self->current_levels_mutex_, std::try_to_lock);
-    if (levels_lock.owns_lock())
-        std::memcpy(self->current_levels_, levels, 10 * sizeof(float));
+    while (nframes > 0) {
+        unsigned curframes = std::min(nframes, maxframes);
+        self->synth_ins_->generate_audio(output, curframes);
+
+        ///
+        float mixdown[maxframes];
+        for (unsigned i = 0; i < curframes; ++i)
+            mixdown[i] = float(M_SQRT1_2) * (output[2 * i] + output[2 * i + 1]);
+
+        const float *levels = self->level_analyzer_.compute(mixdown, curframes);
+        std::unique_lock<std::mutex> levels_lock(self->current_levels_mutex_, std::try_to_lock);
+        if (levels_lock.owns_lock())
+            std::memcpy(self->current_levels_, levels, 10 * sizeof(float));
+
+        ///
+        nframes -= curframes;
+        output += 2 * curframes;
+    }
 }
