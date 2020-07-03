@@ -285,8 +285,6 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/munt")
     "thirdparty/munt/mt32emu/src/c_interface/c_interface.cpp"
     "thirdparty/munt/mt32emu/src/sha1/sha1.cpp"
     "thirdparty/munt/mt32emu/src/srchelper/InternalResampler.cpp"
-    "thirdparty/munt/mt32emu/src/srchelper/SamplerateAdapter.cpp"
-    "thirdparty/munt/mt32emu/src/srchelper/SoxrAdapter.cpp"
     "thirdparty/munt/mt32emu/src/srchelper/srctools/src/FIRResampler.cpp"
     "thirdparty/munt/mt32emu/src/srchelper/srctools/src/IIR2xResampler.cpp"
     "thirdparty/munt/mt32emu/src/srchelper/srctools/src/LinearResampler.cpp"
