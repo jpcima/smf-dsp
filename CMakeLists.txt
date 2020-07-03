@@ -67,7 +67,8 @@ add_executable(smf-dsp WIN32
   "sources/utility/portfts.cc"
   "sources/utility/uv++.cc"
   "sources/utility/load_library.cc"
-  "sources/utility/logs.cc")
+  "sources/utility/logs.cc"
+  "sources/utility/desktop.cc")
 
 target_compile_definitions(smf-dsp PRIVATE
   "PROGRAM_NAME=\"${PROJECT_NAME}\""
@@ -129,5 +130,12 @@ install(FILES "resources/desktop/smf-dsp.desktop"
 install(FILES "resources/desktop/smf-dsp.png"
   DESTINATION "share/pixmaps"
   COMPONENT "desktop-entry")
+
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$" AND NOT CMAKE_CROSSCOMPILING)
+  find_program(XDG_OPEN_PROGRAM "xdg-open")
+  if(NOT XDG_OPEN_PROGRAM)
+    message(WARNING "Cannot find the runtime dependency xdg-open")
+  endif()
+endif()
 
 include("CMakeLists.plugins.txt")

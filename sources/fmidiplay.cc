@@ -25,6 +25,7 @@
 #include "utility/paths.h"
 #include "utility/charset.h"
 #include "utility/strings.h"
+#include "utility/desktop.h"
 #include "utility/logs.h"
 #if defined(HAVE_SDL2_IMAGE)
 #include <SDL_image.h>
@@ -675,6 +676,12 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
     case SDL_SCANCODE_F9:
         if (keymod == KMOD_NONE) {
             choose_theme(last_theme_choice_);
+            return true;
+        }
+        break;
+    case SDL_SCANCODE_F12:
+        if (keymod == KMOD_NONE) {
+            open_file_externally(get_configuration_dir());
             return true;
         }
         break;
