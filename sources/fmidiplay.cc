@@ -42,6 +42,8 @@ const Point Application::size_{640, 400};
 static constexpr unsigned fadeout_delay = 10;
 static constexpr unsigned quit_by_esc_key_delay = 500;
 
+static constexpr char default_synth_id[] = "adlmidi";
+
 template <int EventType>
 uint32_t timer_push_event(uint32_t interval, void *user_data)
 {
@@ -1130,7 +1132,16 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
     }
 
     if (!ini->GetValue("", "synth-device")) {
-        ini->SetValue("", "synth-device", "", "; Selected device for synthesis");
+        const std::vector<Synth_Host::Plugin_Info> &plugins = Synth_Host::plugins();
+        const char *default_synth_name = nullptr;
+
+        for (size_t i = 0, n = plugins.size(); i < n && !default_synth_name; ++i) {
+            const Synth_Host::Plugin_Info &info = plugins[i];
+            if (info.id == default_synth_id)
+                default_synth_name = info.name.c_str();
+        }
+
+        ini->SetValue("", "synth-device", default_synth_name ? default_synth_name : "", "; Selected device for synthesis");
         ini_update = true;
     }
 
