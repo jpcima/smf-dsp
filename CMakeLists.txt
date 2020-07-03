@@ -18,7 +18,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check.c" "int main() { return 0; }")
-try_compile(HAVE_LINKER_FLAG_AS_NEEDED "${CMAKE_CURRENT_BINARY_DIR}" SOURCES "${CMAKE_CURRENT_BINARY_DIR}/check.c" LINK_OPTIONS "-Wl,--as-needed")
+try_compile(HAVE_LINKER_FLAG_AS_NEEDED "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/check.c" LINK_LIBRARIES "-Wl,--as-needed")
 function(link_what_you_use TARGET)
   if(HAVE_LINKER_FLAG_AS_NEEDED)
     set_property(TARGET "${TARGET}" APPEND PROPERTY LINK_OPTIONS "-Wl,--as-needed")
