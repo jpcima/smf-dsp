@@ -302,7 +302,9 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/munt")
   target_include_directories(mt32emu PUBLIC "thirdparty/munt/mt32emu/src")
   #
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen")
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen/config.h" "")
+  if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen/config.h")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen/config.h" "")
+  endif()
   target_include_directories(mt32emu PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/mt32emu_gen")
   #
   add_library(vendor::mt32emu ALIAS mt32emu)
