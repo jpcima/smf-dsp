@@ -88,53 +88,7 @@ int main(int argc, char *argv[])
     SDL_RenderPresent(rr);
 
     // Event handling
-    SDL_Event event;
-    bool shutting_down = false;
-    while (!app.should_quit() && SDL_WaitEvent(&event)) {
-        bool update = false;
-
-        switch (event.type) {
-        case SDL_KEYDOWN:
-            if (!shutting_down)
-                update = app.handle_key_pressed(event.key);
-            break;
-        case SDL_KEYUP:
-            if (!shutting_down)
-                update = app.handle_key_released(event.key);
-            break;
-        case SDL_TEXTINPUT:
-            if (!shutting_down)
-                update = app.handle_text_input(event.text);
-            break;
-        case SDL_WINDOWEVENT:
-            update = true;
-            break;
-        case SDL_USEREVENT:
-            update = true;
-            if (!shutting_down) {
-                app.request_update();
-                app.update_modals();
-            }
-            app.advance_shutdown();
-            break;
-        case SDL_USEREVENT + 1:
-            app.engage_shutdown_if_esc_key();
-            break;
-        case SDL_QUIT:
-            shutting_down = true;
-            app.engage_shutdown();
-            break;
-        default:
-            //Log::i("SDL event %X", event.type);
-            break;
-        }
-
-        if (update) {
-            app.paint_cached_background(rr);
-            app.paint(rr, Pt_Foreground);
-            SDL_RenderPresent(rr);
-        }
-    }
+    app.exec();
 
     Log::i("Quit");
 

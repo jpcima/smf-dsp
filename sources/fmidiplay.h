@@ -32,6 +32,7 @@ public:
 
     SDL_Window *init_window();
     SDL_Renderer *init_renderer();
+    void exec();
 
     void set_scale_factor(SDL_Window *win, unsigned sf);
     void paint(SDL_Renderer *rr, int paint);

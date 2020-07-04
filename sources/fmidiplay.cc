@@ -156,6 +156,59 @@ SDL_Renderer *Application::init_renderer()
     return rr;
 }
 
+void Application::exec()
+{
+    SDL_Renderer *rr = renderer_.get();
+
+    SDL_Event event;
+    bool shutting_down = false;
+    while (!should_quit() && SDL_WaitEvent(&event)) {
+        bool update = false;
+
+        switch (event.type) {
+        case SDL_KEYDOWN:
+            if (!shutting_down)
+                update = handle_key_pressed(event.key);
+            break;
+        case SDL_KEYUP:
+            if (!shutting_down)
+                update = handle_key_released(event.key);
+            break;
+        case SDL_TEXTINPUT:
+            if (!shutting_down)
+                update = handle_text_input(event.text);
+            break;
+        case SDL_WINDOWEVENT:
+            update = true;
+            break;
+        case SDL_USEREVENT:
+            update = true;
+            if (!shutting_down) {
+                request_update();
+                update_modals();
+            }
+            advance_shutdown();
+            break;
+        case SDL_USEREVENT + 1:
+            engage_shutdown_if_esc_key();
+            break;
+        case SDL_QUIT:
+            shutting_down = true;
+            engage_shutdown();
+            break;
+        default:
+            //Log::i("SDL event %X", event.type);
+            break;
+        }
+
+        if (update) {
+            paint_cached_background(rr);
+            paint(rr, Pt_Foreground);
+            SDL_RenderPresent(rr);
+        }
+    }
+}
+
 void Application::set_scale_factor(SDL_Window *win, unsigned sf)
 {
     if (sf < 1) sf = 1;
