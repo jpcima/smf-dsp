@@ -2,6 +2,8 @@
 
 Advanced MIDI file player for desktop computer
 
+![screenshot](docs/screen.png)
+
 # Keys
 
 The keys are recognized by physical location and not label.
