@@ -131,6 +131,15 @@ SDL_Window *Application::init_window()
     if (!win)
         return nullptr;
 
+    static const uint8_t png_data[] = {
+        #include "icon.dat"
+    };
+    size_t png_size = sizeof(png_data);
+
+    SDLpp_Surface_u icon(IMG_Load_RW(SDL_RWFromConstMem(png_data, png_size), true));
+    if (icon)
+        SDL_SetWindowIcon(win, icon.get());
+
     window_.reset(win);
     return win;
 }
@@ -1090,7 +1099,7 @@ void Application::load_default_theme()
     pal = Color_Palette::create_default();
 
     static const uint8_t png_data[] = {
-        #include "icon.dat"
+        #include "theme-image.dat"
     };
     size_t png_size = sizeof(png_data);
 
