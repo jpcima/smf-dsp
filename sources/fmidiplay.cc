@@ -687,14 +687,8 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         break;
     case SDL_SCANCODE_ESCAPE:
         if (keymod == KMOD_NONE && !event.repeat) {
-            if (esc_key_timer_ == 0) {
-                auto handler = [](uint32_t, void *user_data) -> uint32_t {
-                    SDL_Event event { SDL_USEREVENT + 1 };
-                    SDL_PushEvent(&event);
-                    return 0;
-                };
-                esc_key_timer_ = SDL_AddTimer(quit_by_esc_key_delay, handler, this);
-            }
+            if (esc_key_timer_ == 0)
+                esc_key_timer_ = SDL_AddTimer(quit_by_esc_key_delay, &timer_push_event<SDL_USEREVENT + 1>, this);
             return true;
         }
         break;
