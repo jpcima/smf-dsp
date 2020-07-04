@@ -45,6 +45,26 @@ static constexpr unsigned quit_by_esc_key_delay = 500;
 
 static constexpr char default_synth_id[] = "adlmidi";
 
+static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
+    {"F1", "Open the help screen"},
+    {"F2", "Select a MIDI device for playback"},
+    {"F3", "Select a synthesizer device for playback"},
+    {"F9", "Select a theme for the user interface"},
+    {"F12", "Open the configuration directory"},
+    {"Tab", "Switch between file browser and track info"},
+    {"Esc", "Quit the program"},
+    {u8"Page \u2191\u2193", "Go to next/previous track in playlist/folder"},
+    {"Space", "Pause/unpause"},
+    {"Home", "Seek to beginning of current track"},
+    {"End", "Seek to end of current track"},
+    {u8"\u2190\u2191\u2193\u2192", "Navigate in the file browser"},
+    {u8"\u2190\u2192", u8"In track info view, seek track by ±5 seconds"},
+    {u8"Shift \u2190\u2192", u8"In any view, seek track by ±10 seconds"},
+    {"[]", "Increase/decrease speed by 1%"},
+    {"/", "Scan songs in the current folder and play them at random"},
+    {"`", "Switch between repeat modes: On/Off, and Single/Multi"},
+};
+
 template <int EventType>
 uint32_t timer_push_event(uint32_t interval, void *user_data)
 {
@@ -723,6 +743,12 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
             return true;
         }
         break;
+    case SDL_SCANCODE_F1:
+        if (keymod == KMOD_NONE) {
+            open_help_dialog();
+            return true;
+        }
+        break;
     case SDL_SCANCODE_F2:
         if (keymod == KMOD_NONE) {
             choose_midi_output(true, last_midi_output_choice_);
@@ -889,6 +915,69 @@ void Application::update_modals()
     Modal_Box &modal = *modal_.back();
     if (modal.has_completed())
         modal_.pop_back();
+}
+
+void Application::open_help_dialog()
+{
+    const Rect bounds = Rect(0, 0, size_.x, size_.y).reduced(Point(100, 50));
+
+    class Help_Box : public Modal_Box {
+    public:
+        using Modal_Box::Modal_Box;
+
+        void paint_contents(SDL_Renderer *rr) override
+        {
+            Rect r = get_content_bounds();
+            const Color_Palette &pal = Color_Palette::get_current();
+
+            Text_Painter tp;
+            tp.rr = rr;
+            tp.font = &font_s12;
+            tp.fg = pal[Colors::box_foreground];
+            int fw = tp.font->width();
+            int fh = tp.font->height();
+
+            const size_t count = sizeof(help_items) / sizeof(help_items[0]);
+
+            for (size_t i = 0; i < count; ++i) {
+                Rect row = r.take_from_top(fh);
+                Rect cols[2];
+                cols[0] = Rect(row).take_from_left(fw * 10);
+                cols[1] = Rect(row);
+                cols[1].chop_from_left(cols[0].w + fw * 2);
+
+                for (int c = 0; c < 2; ++c) {
+                    SDLpp_ClipState clip;
+                    SDLpp_SaveClipState(rr, clip);
+                    SDL_RenderSetClipRect(rr, &cols[c]);
+                    tp.pos = cols[c].origin();
+                    tp.draw_utf8(!c ? help_items[i].first : help_items[i].second);
+                    SDLpp_RestoreClipState(rr, clip);
+                }
+            }
+        }
+
+        bool handle_key_pressed(const SDL_KeyboardEvent &event) override
+        {
+            int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
+
+            switch (event.keysym.scancode) {
+            case SDL_SCANCODE_ESCAPE:
+                if (keymod == KMOD_NONE) {
+                    finish();
+                    return true;
+                }
+                break;
+            default:
+                break;
+            }
+
+            return false;
+        }
+    };
+
+    Help_Box *modal = new Help_Box(bounds, "Help");
+    modal_.emplace_back(modal);
 }
 
 void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
