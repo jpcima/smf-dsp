@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include "fmidiplay.h"
+#include "application.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
 #include "utility/logs.h"

@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include "fmidiplay.h"
+#include "application.h"
 #include "player/player.h"
 #include "player/playlist.h"
 #include "player/instrument.h"

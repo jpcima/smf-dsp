@@ -29,7 +29,7 @@ include("CMakeLists.deps.txt")
 
 add_executable(smf-dsp WIN32
   "sources/configuration.cc"
-  "sources/fmidiplay.cc"
+  "sources/application.cc"
   "sources/main.cc"
   "sources/audio/analyzer_10band.cc"
   "sources/player/player.cc"
