@@ -10,6 +10,7 @@ The listed key names are based on the QWERTY keyboard type, it will vary for a d
 
 | Key        | Function                                                                     |
 |------------|------------------------------------------------------------------------------|
+| F1         | Open the help screen                                                         |
 | F2         | Select a MIDI device for playback                                            |
 | F3         | Select a synthesizer device for playback                                     |
 | F9         | Select a theme for the user interface                                        |
