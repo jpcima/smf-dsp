@@ -49,6 +49,7 @@ static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
     {"F1", "Open the help screen"},
     {"F2", "Select a MIDI device for playback"},
     {"F3", "Select a synthesizer device for playback"},
+    {"F4", "Configure global audio effects"},
     {"F9", "Select a theme for the user interface"},
     {"F12", "Open the configuration directory"},
     {"Tab", "Switch between file browser and track info"},
@@ -63,6 +64,27 @@ static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
     {"[]", "Increase/decrease speed by 1%"},
     {"/", "Scan songs in the current folder and play them at random"},
     {"`", "Switch between repeat modes: On/Off, and Single/Multi"},
+};
+
+struct Fx_Parameter {
+    const char *name;
+    int default_value;
+    enum Type { Integer, Boolean };
+    Type type;
+    enum Flag { HasSeparator = 1 };
+    unsigned flags;
+};
+
+static const Fx_Parameter fx_parameters[] = {
+    {"EQ", 0, Fx_Parameter::Boolean},
+    {"EQ Low", 50, Fx_Parameter::Integer},
+    {"EQ Mid-Low", 50, Fx_Parameter::Integer},
+    {"EQ Mid", 50, Fx_Parameter::Integer},
+    {"EQ Mid-High", 50, Fx_Parameter::Integer},
+    {"EQ High", 50, Fx_Parameter::Integer},
+    {"Reverb", 0, Fx_Parameter::Boolean, Fx_Parameter::HasSeparator},
+    {"Reverb amount", 50, Fx_Parameter::Integer},
+    {"Reverb size", 10, Fx_Parameter::Integer},
 };
 
 template <int EventType>
@@ -761,6 +783,12 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
             return true;
         }
         break;
+    case SDL_SCANCODE_F4:
+        if (keymod == KMOD_NONE) {
+            open_fx_dialog();
+            return true;
+        }
+        break;
     case SDL_SCANCODE_F9:
         if (keymod == KMOD_NONE) {
             choose_theme(last_theme_choice_);
@@ -977,6 +1005,187 @@ void Application::open_help_dialog()
     };
 
     Help_Box *modal = new Help_Box(bounds, "Help");
+    modal_.emplace_back(modal);
+}
+
+void Application::open_fx_dialog()
+{
+    const Rect bounds = Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100));
+
+    class Fx_Box : public Modal_Box {
+    public:
+        Fx_Box(const Fx_Parameter *fxp, size_t count, const Rect &bounds, std::string title)
+            : Modal_Box(bounds, std::move(title)), items_(fxp, count),
+              values_(new int[count]{})
+        {
+            if (count > 0)
+                sel_ = 0;
+
+            gsl::span<const Fx_Parameter> items = items_;
+            int *values = values_.get();
+
+            for (size_t nth = 0; nth < items.size(); ++nth)
+                values[nth] = items[nth].default_value;
+        }
+
+        void paint_contents(SDL_Renderer *rr) override
+        {
+            Rect r = get_content_bounds();
+            const Color_Palette &pal = Color_Palette::get_current();
+
+            Text_Painter tp;
+            tp.rr = rr;
+            tp.font = &font_s12;
+            int fw = tp.font->width();
+            int fh = tp.font->height();
+
+            gsl::span<const Fx_Parameter> items = items_;
+            const size_t sel = sel_;
+            const int *values = values_.get();
+
+            for (size_t nth = 0; nth < items.size(); ++nth) {
+                Rect row = r.take_from_top(fh);
+
+                if (items[nth].flags & Fx_Parameter::HasSeparator)
+                    row = r.take_from_top(fh);
+
+                Rect cols[2];
+                cols[0] = Rect(row).take_from_left(fw * 16);
+                cols[1] = Rect(row);
+                cols[1].chop_from_left(cols[0].w + fw * 2);
+
+                tp.pos = cols[0].origin();
+                tp.fg = pal[Colors::box_foreground];
+                if (nth == sel) {
+                    tp.fg = pal[Colors::box_active_item_foreground];
+                    SDLpp_SetRenderDrawColor(rr, pal[Colors::box_active_item_background]);
+                    SDL_RenderFillRect(rr, &cols[0]);
+                }
+                tp.draw_utf8(items[nth].name);
+
+                switch (items[nth].type) {
+                default:
+                case Fx_Parameter::Integer:
+                    for (int i = 0, j = values[nth]; i < 100; ++i) {
+                        if (i < j)
+                            SDLpp_SetRenderDrawColor(rr, pal[Colors::box_foreground]);
+                        else
+                            SDLpp_SetRenderDrawColor(rr, pal[Colors::box_foreground_secondary]);
+                        SDLpp_RenderDrawVLine(rr, cols[1].x + 2 * i, cols[1].y + 1, cols[1].bottom() - 1);
+                    }
+                    break;
+                case Fx_Parameter::Boolean:
+                    tp.pos = cols[1].origin();
+                    tp.fg = pal[Colors::box_foreground];
+                    tp.draw_utf8("\u3010");
+                    if (values[nth] > 0) {
+                        tp.draw_utf8("On");
+                    }
+                    else {
+                        tp.fg = pal[Colors::box_foreground_secondary];
+                        tp.draw_utf8("Off");
+                    }
+                    tp.fg = pal[Colors::box_foreground];
+                    tp.draw_utf8("\u3011");
+                    break;
+                }
+            }
+        }
+
+        bool handle_key_pressed(const SDL_KeyboardEvent &event) override
+        {
+            int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
+
+            switch (event.keysym.scancode) {
+            case SDL_SCANCODE_ESCAPE:
+                if (keymod == KMOD_NONE) {
+                    finish();
+                    return true;
+                }
+                break;
+            case SDL_SCANCODE_UP: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0) && sel > 0)
+                    sel_ = sel - 1;
+                return true;
+            }
+            case SDL_SCANCODE_DOWN: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0) && sel + 1 < items_.size())
+                    sel_ = sel + 1;
+                return true;
+            }
+            case SDL_SCANCODE_PAGEUP: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0))
+                    sel_ = std::max<ssize_t>(0, sel - 10);
+                return true;
+            }
+            case SDL_SCANCODE_PAGEDOWN: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0))
+                    sel_ = std::min(items_.size() - 1, sel + 10);
+                return true;
+            }
+            case SDL_SCANCODE_HOME: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0))
+                    sel_ = 0;
+                return true;
+            }
+            case SDL_SCANCODE_END: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0))
+                    sel_ = items_.size() - 1;
+                return true;
+            }
+            case SDL_SCANCODE_LEFT: {
+                size_t sel = sel_;
+                int amount = (keymod & KMOD_SHIFT) ? 5 : 1;
+                if (sel != ~size_t(0)) {
+                    const Fx_Parameter &fxp = items_[sel];
+                    int &value = values_[sel];
+                    if (fxp.type == Fx_Parameter::Boolean)
+                        value = 0;
+                    else
+                        value = std::max(0, value - amount);
+                }
+                return true;
+            }
+            case SDL_SCANCODE_RIGHT: {
+                size_t sel = sel_;
+                int amount = (keymod & KMOD_SHIFT) ? 5 : 1;
+                if (sel != ~size_t(0)) {
+                    const Fx_Parameter &fxp = items_[sel];
+                    int &value = values_[sel];
+                    if (fxp.type == Fx_Parameter::Boolean)
+                        value = 100;
+                    else
+                        value = std::min(100, value + amount);
+                }
+                return true;
+            }
+            case SDL_SCANCODE_BACKSPACE: {
+                size_t sel = sel_;
+                if (sel != ~size_t(0))
+                    values_[sel] = items_[sel].default_value;
+                return true;
+            }
+            default:
+                break;
+            }
+
+            return false;
+        }
+
+    private:
+        gsl::span<const Fx_Parameter> items_;
+        size_t sel_ = ~size_t(0);
+        std::unique_ptr<int[]> values_;
+    };
+
+    const size_t fxp_count = sizeof(fx_parameters) / sizeof(fx_parameters[0]);
+    Fx_Box *modal = new Fx_Box(fx_parameters, fxp_count, bounds, "Global effects");
     modal_.emplace_back(modal);
 }
 

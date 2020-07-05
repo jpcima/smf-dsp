@@ -32,6 +32,8 @@ add_executable(smf-dsp WIN32
   "sources/application.cc"
   "sources/main.cc"
   "sources/audio/analyzer_10band.cc"
+  "sources/audio/eq_5band.cc"
+  "sources/audio/reverb.cc"
   "sources/player/player.cc"
   "sources/player/seeker.cc"
   "sources/player/playlist.cc"

@@ -50,6 +50,7 @@ public:
     void request_update();
     void update_modals();
     void open_help_dialog();
+    void open_fx_dialog();
     void choose_midi_output(bool ask, gsl::cstring_span choice);
     void choose_synth(bool ask, gsl::cstring_span choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
