@@ -24,6 +24,7 @@ enum {
     PC_Get_Midi_Outputs,
     PC_Set_Midi_Output,
     PC_Set_Synth,
+    PC_Set_Fx_Parameter,
     PC_Shutdown,
 };
 
@@ -88,6 +89,12 @@ struct Pcmd_Set_Midi_Output : Player_Command {
 struct Pcmd_Set_Synth : Player_Command {
     int type() const noexcept override { return PC_Set_Synth; }
     std::string synth_plugin_id;
+};
+
+struct Pcmd_Set_Fx_Parameter : Player_Command {
+    int type() const noexcept override { return PC_Set_Fx_Parameter; }
+    size_t index {};
+    int value {};
 };
 
 struct Pcmd_Shutdown : Player_Command {

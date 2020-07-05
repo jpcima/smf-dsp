@@ -14,6 +14,7 @@
 #include "adev/adev.h"
 #include "instruments/port.h"
 #include "instruments/synth.h"
+#include "instruments/synth_fx.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include "utility/uv++.h"
@@ -33,12 +34,16 @@ Player::Player()
     Synth_Host::plugins();
 
     // create audio device
+    Synth_Fx *fx = new Synth_Fx;
+    fx_.reset(fx);
     if (Audio_Device *adev = init_audio_device()) {
+        float sample_rate = adev->sample_rate();
         synth_ins_.reset(new Midi_Synth_Instrument);
         adev->set_callback(&audio_callback, this);
         analyzer_10band &an = level_analyzer_;
-        an.init(adev->sample_rate());
+        an.init(sample_rate);
         an.setup(1.0, 16e3, 100e-3);
+        fx->init(sample_rate);
         adev->start();
     }
 
@@ -230,9 +235,17 @@ void Player::process_command_queue()
             Log::i("Audio rate: %f Hz", audio_rate);
             Log::i("Audio latency: %f ms", 1e3 * audio_latency);
 
+            fx_enable_request_.store(id.empty() ? 0 : 1);
+
             ins->open_midi_output(id);
 
             if (active) start_ticking();
+            break;
+        }
+        case PC_Set_Fx_Parameter: {
+            const size_t index = static_cast<Pcmd_Set_Fx_Parameter &>(*cmd).index;
+            const int value = static_cast<Pcmd_Set_Fx_Parameter &>(*cmd).value;
+            fx_->set_parameter(index, value);
             break;
         }
         case PC_Shutdown: {
@@ -568,6 +581,10 @@ Player_State Player::make_state() const
         std::memcpy(ps.audio_levels, current_levels_, 10 * sizeof(float));
     }
 
+    Synth_Fx &fx = *fx_;
+    for (size_t p = 0; p < Synth_Fx::Parameter_Count; ++p)
+        ps.fx_parameters[p] = fx.get_parameter(p);
+
     return ps;
 }
 
@@ -642,6 +659,22 @@ void Player::audio_callback(float *output, unsigned nframes, void *user_data)
 {
     Player *self = reinterpret_cast<Player *>(user_data);
     self->synth_ins_->generate_audio(output, nframes);
+
+    ///
+    Synth_Fx &fx = *self->fx_;
+    bool fx_enabled;
+    switch (self->fx_enable_request_.exchange(-1)) {
+    case 0: fx_enabled = false; break;
+    case 1: fx_enabled = true; break;
+    default: fx_enabled = self->fx_enabled_; break;
+    }
+    if (self->fx_enabled_ != fx_enabled) {
+        if (fx_enabled)
+            fx.clear();
+        self->fx_enabled_ = fx_enabled;
+    }
+    if (fx_enabled)
+        fx.compute(output, nframes);
 
     ///
     const float *levels = self->level_analyzer_.compute_stereo(output, nframes);
