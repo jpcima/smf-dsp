@@ -14,6 +14,7 @@ public:
     void setup(float M, float ftop, float t60); // M=1, ftop=10e3, t60=100e-3
     void clear();
     float *compute(const float inputs[], size_t count);
+    float *compute_stereo(const float inputs[], size_t count);
 
 private:
     enum { N = 10 };
@@ -22,11 +23,11 @@ private:
     lp_butter_3 f_lo_band_;
     lp_1 f_lo_smooth_;
 #if defined(__SSE__)
-    struct bandpass_filter_sse { lp_butter_3_sse lp, hp; };
+    struct bandpass_filter_sse { lp_butter_3_sse lp; hp_butter_3_sse hp; };
     bandpass_filter_sse f_mid_band_sse_[(N - 2) / 4];
     lp_1_sse f_mid_smooth_sse_[(N - 2) / 4];
 #else
-    struct bandpass_filter { lp_butter_3 lp, hp; };
+    struct bandpass_filter { lp_butter_3 lp; hp_butter_3 hp; };
     bandpass_filter f_mid_band_[N - 2];
     lp_1 f_mid_smooth_[N - 2];
 #endif

@@ -7,7 +7,7 @@ class lp_butter_3_sse {
 
 private:
 
-    __m128 fConst0;
+    float fConst0;
     __m128 fVec0[2];
     __m128 fRec1[2];
     __m128 fRec0[3];
@@ -22,14 +22,14 @@ public:
 
     void init(float sample_rate)
     {
-        fConst0 = _mm_set1_ps(3.14159274f / sample_rate);
+        fConst0 = (3.14159274f / sample_rate);
         clear();
     }
 
     void cutoff(__m128 fc)
     {
         for (int i = 0; i < 4; ++i)
-            fControl[0][i] = std::tan((fConst0[i] * float(fc[i])));
+            fControl[0][i] = std::tan((fConst0 * float(fc[i])));
         fControl[1] = (1.0f / fControl[0]);
         fControl[2] = (1.0f / (((fControl[1] + 1.0f) / fControl[0]) + 1.0f));
         fControl[3] = (1.0f / (fControl[1] + 1.0f));

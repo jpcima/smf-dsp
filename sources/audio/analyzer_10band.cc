@@ -6,19 +6,17 @@ void analyzer_10band::init(float sample_rate)
     f_lo_band_.init(sample_rate);
     f_lo_smooth_.init(sample_rate);
 #if defined(__SSE__)
-    for (bandpass_filter_sse &x : f_mid_band_sse_) {
-        x.lp.init(sample_rate);
-        x.hp.init(sample_rate);
+    for (int i = 0; i < (N - 2) / 4; ++i) {
+        f_mid_band_sse_[i].lp.init(sample_rate);
+        f_mid_band_sse_[i].hp.init(sample_rate);
+        f_mid_smooth_sse_[i].init(sample_rate);
     }
-    for (lp_1_sse &x : f_mid_smooth_sse_)
-        x.init(sample_rate);
 #else
-    for (bandpass_filter &x : f_mid_band_) {
-        x.lp.init(sample_rate);
-        x.hp.init(sample_rate);
+    for (int i = 0; i < N - 2; ++i) {
+        f_mid_band_[i].lp.init(sample_rate);
+        f_mid_band_[i].hp.init(sample_rate);
+        f_mid_smooth_[i].init(sample_rate);
     }
-    for (lp_1 &x : f_mid_smooth_)
-        x.init(sample_rate);
 #endif
     f_hi_band_.init(sample_rate);
     f_hi_smooth_.init(sample_rate);
@@ -57,22 +55,22 @@ void analyzer_10band::clear()
     f_lo_band_.clear();
     f_lo_smooth_.clear();
 #if defined(__SSE__)
-    for (bandpass_filter_sse &x : f_mid_band_sse_) {
-        x.lp.clear();
-        x.hp.clear();
+    for (int i = 0; i < (N - 2) / 4; ++i) {
+        f_mid_band_sse_[i].lp.clear();
+        f_mid_band_sse_[i].hp.clear();
+        f_mid_smooth_sse_[i].clear();
     }
-    for (lp_1_sse &x : f_mid_smooth_sse_)
-        x.clear();
 #else
-    for (bandpass_filter &x : f_mid_band_) {
-        x.lp.clear();
-        x.hp.clear();
+    for (int i = 0; i < N - 2; ++i) {
+        f_mid_band_[i].lp.clear();
+        f_mid_band_[i].hp.clear();
+        f_mid_smooth_[i].clear();
     }
-    for (lp_1 &x : f_mid_smooth_)
-        x.clear();
 #endif
     f_hi_band_.clear();
     f_hi_smooth_.clear();
+    for (int i = 0; i < N; ++i)
+        outputs_[i] = 0.0f;
 }
 
 float *analyzer_10band::compute(const float inputs[], size_t count)
@@ -112,9 +110,31 @@ float *analyzer_10band::compute(const float inputs[], size_t count)
         _mm_storeu_ps(&outputs[1 + 4 * i], mid[i]);
 #else
     for (int i = 0; i < N - 2; ++i)
-        outputs[i] = mid[i];
+        outputs[1 + i] = mid[i];
 #endif
     outputs[N - 1] = hi;
 
     return outputs;
+}
+
+float *analyzer_10band::compute_stereo(const float inputs[], size_t count)
+{
+    size_t index = 0;
+    constexpr size_t bufsize = 512;
+
+    while (index < count) {
+        size_t cur = count - index;
+        cur = (cur < bufsize) ? cur : bufsize;
+
+        float mixdown[bufsize];
+        for (size_t i = 0; i < cur; ++i) {
+            const float *frame = &inputs[2 * (index + i)];
+            mixdown[i] = float(M_SQRT1_2) * (frame[0] + frame[1]);
+        }
+
+        compute(mixdown, cur);
+        index += cur;
+    }
+
+    return outputs_;
 }
