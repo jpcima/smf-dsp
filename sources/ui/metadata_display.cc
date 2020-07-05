@@ -87,13 +87,13 @@ void Metadata_Display::paint(SDL_Renderer *rr)
             if (!md.author.empty())
                 tp.draw_utf8(md.author);
             else
-                tp.draw_utf8("[Unknown]");
+                tp.draw_utf8("\u3010" "Unknown" "\u3011");
             break;
         case 2:
             if (!md.name.empty())
                 tp.draw_utf8(md.name);
             else
-                tp.draw_utf8("[Unknown]");
+                tp.draw_utf8("\u3010" "Unknown" "\u3011");
             break;
         case 3:
             if (md.text.size() >= 1)
