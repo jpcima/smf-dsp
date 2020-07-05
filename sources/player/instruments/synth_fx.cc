@@ -14,8 +14,11 @@ static const Fx_Parameter fx_parameters[] = {
     {"Reverb size", 10, Fx_Parameter::Integer},
 };
 
+static constexpr size_t fx_parameter_count =
+    sizeof(fx_parameters) / sizeof(fx_parameters[0]);
+
 static_assert(
-    sizeof(fx_parameters) / sizeof(fx_parameters[0]) == Synth_Fx::Parameter_Count,
+    fx_parameter_count == Synth_Fx::Parameter_Count,
     "The parameter count does not match");
 
 Synth_Fx::Synth_Fx()
@@ -158,5 +161,5 @@ void Synth_Fx::set_parameter(size_t index, int value)
 
 gsl::span<const Fx_Parameter> Synth_Fx::parameters()
 {
-    return fx_parameters;
+    return gsl::span<const Fx_Parameter>(fx_parameters, fx_parameter_count);
 }
