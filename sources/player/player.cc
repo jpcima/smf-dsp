@@ -38,7 +38,7 @@ Player::Player()
         adev->set_callback(&audio_callback, this);
         analyzer_10band &an = level_analyzer_;
         an.init(adev->sample_rate());
-        an.setup(1.0, 10e3, 100e-3);
+        an.setup(1.0, 16e3, 100e-3);
         adev->start();
     }
 
