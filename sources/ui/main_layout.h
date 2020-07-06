@@ -54,6 +54,7 @@ public:
     // channel heading
     Line channel_heading_underline;
     Text_Rect octkb_label;
+    Rect octkb_triangle;
     Text_Rect volume_label;
     Text_Rect pan_label;
     Text_Rect instrument_label;

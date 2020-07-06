@@ -143,6 +143,8 @@ void Main_Layout::create_layout(Rect bounds)
 
         r.chop_from_right(2);
 
+        octkb_triangle = r.from_right(8).from_bottom(4).off_by({-1, -3});
+
         octkb_label.font = &font_fmdsp_medium;
         octkb_label.text = "8 OCTAVE KEYBOARD";
         octkb_label.bounds.x = r.take_from_right(Piano::best_width()).x;

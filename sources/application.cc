@@ -406,6 +406,16 @@ void Application::paint(SDL_Renderer *rr, int paint)
         draw_text_rect(lo.volume_label, lo.volume_label.text, pal[Colors::text_low_brightness]);
         draw_text_rect(lo.pan_label, lo.pan_label.text, pal[Colors::text_low_brightness]);
         draw_text_rect(lo.instrument_label, lo.instrument_label.text, pal[Colors::text_low_brightness]);
+
+        auto draw_down_triangle = [rr](Rect r) {
+            int x1 = r.left();
+            int x2 = r.right();
+            for (int row = 0; row < r.h && x1 < x2; ++row, ++x1, --x2)
+                SDLpp_RenderDrawHLine(rr, x1, x2, r.y + row);
+        };
+
+        SDLpp_SetRenderDrawColor(rr, pal[Colors::text_high_brightness]);
+        draw_down_triangle(lo.octkb_triangle);
     }
 
     // Draw MIDI channel info
