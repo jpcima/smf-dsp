@@ -77,7 +77,7 @@ static int opnmidi_synth_activate(synth_object *obj)
     if (opn2_setNumChips(player, sy->chip_count) != 0)
         Log::e("opnmidi: cannot set chip count %d", sy->chip_count);
 
-    Log::i("opnmidi: use %d \"%s\"", opn2_getNumChips(player), opn2_chipEmulatorName(player));
+    Log::i("opnmidi: use %d chips \"%s\"", opn2_getNumChips(player), opn2_chipEmulatorName(player));
 
     int bank_no = 0;
     unsigned scan_count = 0;
