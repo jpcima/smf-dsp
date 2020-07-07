@@ -1,5 +1,9 @@
 language: c++
 
+branches:
+  except:
+    - automatic
+
 matrix:
   include:
     - os: linux
@@ -10,7 +14,8 @@ matrix:
         - mkdir build
         - cd build
         - cmake -DCMAKE_BUILD_TYPE=Release ..
-        - cmake --build . -j $(nproc)
+        - make -j$(nproc)
+        - cd ..
       addons:
         apt:
           packages:
@@ -22,3 +27,47 @@ matrix:
             - libpulse-dev
             - libasound2-dev
             - libfluidsynth-dev
+    - os: linux
+      dist: bionic
+      env:
+        - _BUILD=win32
+        - _MINGW=mingw32
+        - _HOST=i686-w64-mingw32
+      before_install:
+        - docker pull jpcima/arch-mingw
+      install:
+        - container=$(docker run -d -i -t -v /home:/home jpcima/arch-mingw /bin/bash)
+        - |
+          cross() {
+            docker exec -w "$(pwd)" -e "_BUILD=$_BUILD" -e "_MINGW=$_MINGW" -e "_HOST=$_HOST" -i -t "$container" "$@"
+          }
+      script:
+        - cross bash .travis/script-mingw.sh
+        - mkdir -p release/
+        - mkdir -p temp/smf-dsp-"$_BUILD"/
+        - for f in ../../build/*.{exe,dll}; do ln "$f" temp/smf-dsp-"$_BUILD"/; done
+        - cd temp
+        - zip -9 -r ../release/smf-dsp-"$_BUILD".zip smf-dsp-"$_BUILD"/
+        - cd ..
+
+before_deploy:
+  - |
+    if test "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false"; then
+      export TRAVIS_TAG=automatic
+      git tag -f "$TRAVIS_TAG"
+    fi
+
+deploy:
+  provider: releases
+  api_key: "$GITHUB_TOKEN"
+  file: release/*
+  file_glob: true
+  prerelease: true
+  overwrite: true
+  edge: true
+  on:
+    branch: master
+
+env:
+  global:
+    secure: "ot8UR1/k0r8yCKRIRXLy3SEaZ1RnvkhoGs1+uVzkYuJHmVx4zw6ZU/kM7gDMDaAZ0b/89r+CdTX7nD5lHkxt4ktCjgl3Cx5RUSkg27X5H8WeTdIqYXt6r7U16EArnuv9vuovQ2n7FXsss//W9iQdI96YLkUtSm8Vr32Yo8IujcbIjs2i4FjpqDhpYBwggM/DH2jNk+gWnQBFV33Sn2q43eVVFz/ihg4Bof4nXXOCh1szWnR73qePvRRwUcHZK+MlLTiS53myHUsTEvrG0KAN0Tg5y03zR78bA/JXmDljaTRECX9AQkpqrspbgQai+cRv8CiqVbfPTIItRLzZ8onXdi23zfV8kLYeeiGu09DGIgaDAew+sVS71RGS97Eod6i645iU9rAe8YEb3URc1xu7uV1k4Dwd9lYYzrjooKC1cbiNomxWuBIUSydcvPiklVB80XmcjFLwEFdxp4OCujcnM1yiGDx/o3rB9LDDEbEd9e67MIz8k4VhBzGG0doapMEqrn5qtxRhqznb3V29SZ3XLk3zJgiKtkNDNGK4bxfUyLcxmJ3i/s9q4v1lQD34hdW/SVtgkjabXwolfmhI04mvL2uAZ7cKTRRzhI+TIWGB7riRAICFbcDa6wXBjLD+UpdouzKzSJbeUgzQvjsPnH+la5ES4knlaB8gkC7GMhQJmyE="
