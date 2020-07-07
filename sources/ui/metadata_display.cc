@@ -37,7 +37,7 @@ void Metadata_Display::paint(SDL_Renderer *rr)
         Log::i("Author: %s", md.author.c_str());
         Log::i("Name: %s", md.name.c_str());
         for (size_t i = 0, n = md.text.size(); i < n; ++i)
-            Log::i("Text[%zu]: %s", i, md.text[i].c_str());
+            Log::i("Text[%lu]: %s", (unsigned long)(i), md.text[i].c_str());
     }
 
     Rect r = bounds.reduced(Point(0, 2));

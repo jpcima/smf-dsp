@@ -78,7 +78,7 @@ void Midi_Synth_Instrument::flush_events()
 
     while (!impl.messages_initialized_.load() || unused < capacity) {
         if (counter > 1000 && !warned) {
-            Log::w("Messages are taking a long time to flush (%lu bytes left)", capacity - unused);
+            Log::w("Messages are taking a long time to flush (%lu bytes left)", (unsigned long)(capacity - unused));
             warned = true;
         }
         std::this_thread::sleep_for(interval);
