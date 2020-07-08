@@ -110,19 +110,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
 {
     initialize_app_module(instance);
 
-    LPWSTR cmdline = GetCommandLineW();
-
-    unsigned argc;
-    LPWSTR *argvw = CommandLineToArgvW(cmdline, (int *)&argc);
-    if (!argvw)
-        return 1;
+    unsigned argc = __argc;
+    LPWSTR *wargv = __wargv;
 
     std::unique_ptr<std::string[]> args{new std::string[argc]};
     for (unsigned i = 0; i < argc; ++i)
-      convert_utf<WCHAR, char>(argvw[i], args[i], true);
-
-    LocalFree(argvw);
-    argvw = nullptr;
+      convert_utf<WCHAR, char>(wargv[i], args[i], true);
 
     std::unique_ptr<char *[]> argv{new char *[argc + 1]};
     argv[argc] = nullptr;
