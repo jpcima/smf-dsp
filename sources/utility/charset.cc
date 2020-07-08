@@ -195,6 +195,20 @@ int filemode_utf8(const char *path)
     return st.st_mode;
 }
 
+bool make_directory(gsl::cstring_span path)
+{
+#ifndef _WIN32
+    return mkdir(gsl::to_string(path).c_str(), 0755) == 0;
+#else
+    std::wstring wpath;
+    if (!convert_utf<char, wchar_t>(path, wpath, false)) {
+        errno = EINVAL;
+        return -1;
+    }
+    return _wmkdir(wpath.c_str()) == 0;
+#endif
+}
+
 //
 Dir::Dir(const gsl::cstring_span path)
 {

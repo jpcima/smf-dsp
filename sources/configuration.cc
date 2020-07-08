@@ -53,25 +53,25 @@ const std::string &get_configuration_dir()
 #if defined(_WIN32)
         path = known_folder_path(CSIDL_LOCAL_APPDATA|CSIDL_FLAG_CREATE);
         path.append(PROGRAM_DISPLAY_NAME "/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
 #elif defined(__HAIKU__)
         path = get_home_directory();
         if (path.empty())
             return std::string();
         path.append("config/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
         path.append("settings/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
         path.append(PROGRAM_DISPLAY_NAME "/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
 #else
         path = get_home_directory();
         if (path.empty())
             return std::string();
         path.append(".config/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
         path.append(PROGRAM_DISPLAY_NAME "/");
-        mkdir(path.c_str(), 0755);
+        make_directory(path);
 #endif
         path.shrink_to_fit();
         return path;

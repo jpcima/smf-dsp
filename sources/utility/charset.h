@@ -25,6 +25,8 @@ FILE *fopen_utf8(const char *path, const char *mode);
 int filemode_utf8(const char *path);
 
 // directories
+bool make_directory(gsl::cstring_span path);
+
 class Dir {
 public:
     explicit Dir(const gsl::cstring_span path);
