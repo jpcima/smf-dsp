@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+#include <cerrno>
 #if defined(_WIN32)
 #include <windows.h>
 #include <shlobj.h>
@@ -32,7 +33,11 @@ static std::string known_folder_path(int csidl, std::error_code &ec)
     wpath[PATH_MAX] = L'\0';
 
     std::string path;
-    convert_utf<WCHAR, char>(wpath, path, true);
+    if (!convert_utf<WCHAR, char>(wpath, path, false)) {
+        ec = std::error_code(EINVAL, std::generic_category());
+        return std::string();
+    }
+
     return normalize_path_separators(path + '/');
 }
 
