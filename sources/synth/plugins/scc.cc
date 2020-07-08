@@ -164,7 +164,7 @@ static void scc_synth_set_option(synth_object *obj, const char *name, synth_valu
     scc_synth_object *sy = (scc_synth_object *)obj;
 
     if (!strcmp(name, "modules-count"))
-        sy->module_count = std::max(16L, std::min(2L, value.i));
+        sy->module_count = std::min(16L, std::max(2L, value.i));
 }
 
 static const synth_interface the_synth_interface = {
