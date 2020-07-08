@@ -1,0 +1,54 @@
+#include "version_info.h"
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION     VER_FILEVERSION
+    PRODUCTVERSION  VER_PRODUCTVERSION
+    FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+    FILEFLAGS       0
+    FILEOS          VOS__WINDOWS32
+    FILETYPE        VFT_APP
+    FILESUBTYPE     0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+#ifdef VER_COMPANYNAME_STR
+            VALUE "CompanyName",      VER_COMPANYNAME_STR
+#endif
+#ifdef VER_FILEDESCRIPTION_STR
+            VALUE "FileDescription",  VER_FILEDESCRIPTION_STR
+#endif
+#ifdef VER_FILEVERSION_STR
+            VALUE "FileVersion",      VER_FILEVERSION_STR
+#endif
+#ifdef VER_INTERNALNAME_STR
+            VALUE "InternalName",     VER_INTERNALNAME_STR
+#endif
+#ifdef VER_LEGALCOPYRIGHT_STR
+            VALUE "LegalCopyright",   VER_LEGALCOPYRIGHT_STR
+#endif
+#ifdef VER_LEGALTRADEMARKS1_STR
+            VALUE "LegalTrademarks1", VER_LEGALTRADEMARKS1_STR
+#endif
+#ifdef VER_LEGALTRADEMARKS2_STR
+            VALUE "LegalTrademarks2", VER_LEGALTRADEMARKS2_STR
+#endif
+#ifdef VER_ORIGINALFILENAME_STR
+            VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
+#endif
+#ifdef VER_PRODUCTNAME_STR
+            VALUE "ProductName",      VER_PRODUCTNAME_STR
+#endif
+#ifdef VER_PRODUCTVERSION_STR
+            VALUE "ProductVersion",   VER_PRODUCTVERSION_STR
+#endif
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

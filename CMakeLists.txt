@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION "3.7")
 project(smf-dsp VERSION "0.10.0" LANGUAGES C CXX)
 set(PROJECT_DISPLAY_NAME "SMF-DSP")
 set(PROJECT_AUTHOR "JPC")
+set(PROJECT_DESCRIPTION "Advanced MIDI file player")
 math(EXPR PROJECT_LETTER_VERSION "97+${PROJECT_VERSION_PATCH}")
 string(ASCII "${PROJECT_LETTER_VERSION}" PROJECT_LETTER_VERSION)
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}${PROJECT_LETTER_VERSION}")
@@ -40,6 +41,7 @@ add_executable(smf-dsp WIN32
   "sources/configuration.cc"
   "sources/application.cc"
   "sources/main.cc"
+  "sources/version_info.rc"
   "sources/audio/analyzer_10band.cc"
   "sources/audio/eq_5band.cc"
   "sources/audio/reverb.cc"
@@ -132,6 +134,12 @@ endif()
 
 link_what_you_use(smf-dsp)
 
+#
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/version_info")
+target_include_directories(smf-dsp PRIVATE "${PROJECT_BINARY_DIR}/version_info")
+configure_file("sources/version_info.h.in" "${PROJECT_BINARY_DIR}/version_info/version_info.h" @ONLY)
+
+#
 install(TARGETS smf-dsp
   RUNTIME DESTINATION "bin"
   COMPONENT "player")
