@@ -2,6 +2,8 @@
 
 Advanced MIDI file player for desktop computer
 
+[![Build Status](https://travis-ci.com/jpcima/smf-dsp.svg?branch=master)](https://travis-ci.com/jpcima/smf-dsp)
+
 ![screenshot](docs/screen.png)
 
 # Keys
