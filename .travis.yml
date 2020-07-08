@@ -7,6 +7,48 @@ branches:
 matrix:
   include:
     - os: linux
+      dist: bionic
+      env:
+        - _BUILD=win32
+        - _HOST=i686-w64-mingw32
+      before_install:
+        - docker pull jpcima/arch-mingw
+      install:
+        - container=$(docker run -d -i -t -v /home:/home jpcima/arch-mingw /bin/bash)
+        - |
+          cross() {
+            docker exec -w "$(pwd)" -e "_BUILD=$_BUILD" -e "_MINGW=$_MINGW" -e "_HOST=$_HOST" -i -t "$container" "$@"
+          }
+      script:
+        - cross bash .travis/script-mingw.sh
+        - mkdir -p release/
+        - mkdir -p temp/smf-dsp-"$_BUILD"/
+        - for f in build/*.{exe,dll}; do cp -f "$f" temp/smf-dsp-"$_BUILD"/; done
+        - cd temp
+        - zip -9 -r ../release/smf-dsp-"$_BUILD".zip smf-dsp-"$_BUILD"/
+        - cd ..
+    - os: linux
+      dist: bionic
+      env:
+        - _BUILD=win64
+        - _HOST=x86_64-w64-mingw32
+      before_install:
+        - docker pull jpcima/arch-mingw
+      install:
+        - container=$(docker run -d -i -t -v /home:/home jpcima/arch-mingw /bin/bash)
+        - |
+          cross() {
+            docker exec -w "$(pwd)" -e "_BUILD=$_BUILD" -e "_MINGW=$_MINGW" -e "_HOST=$_HOST" -i -t "$container" "$@"
+          }
+      script:
+        - cross bash .travis/script-mingw.sh
+        - mkdir -p release/
+        - mkdir -p temp/smf-dsp-"$_BUILD"/
+        - for f in build/*.{exe,dll}; do cp -f "$f" temp/smf-dsp-"$_BUILD"/; done
+        - cd temp
+        - zip -9 -r ../release/smf-dsp-"$_BUILD".zip smf-dsp-"$_BUILD"/
+        - cd ..
+    - os: linux
       dist: xenial
       env:
         - Build=linux64
@@ -27,28 +69,6 @@ matrix:
             - libpulse-dev
             - libasound2-dev
             - libfluidsynth-dev
-    - os: linux
-      dist: bionic
-      env:
-        - _BUILD=win32
-        - _MINGW=mingw32
-        - _HOST=i686-w64-mingw32
-      before_install:
-        - docker pull jpcima/arch-mingw
-      install:
-        - container=$(docker run -d -i -t -v /home:/home jpcima/arch-mingw /bin/bash)
-        - |
-          cross() {
-            docker exec -w "$(pwd)" -e "_BUILD=$_BUILD" -e "_MINGW=$_MINGW" -e "_HOST=$_HOST" -i -t "$container" "$@"
-          }
-      script:
-        - cross bash .travis/script-mingw.sh
-        - mkdir -p release/
-        - mkdir -p temp/smf-dsp-"$_BUILD"/
-        - for f in build/*.{exe,dll}; do cp -f "$f" temp/smf-dsp-"$_BUILD"/; done
-        - cd temp
-        - zip -9 -r ../release/smf-dsp-"$_BUILD".zip smf-dsp-"$_BUILD"/
-        - cd ..
 
 before_deploy:
   - |
