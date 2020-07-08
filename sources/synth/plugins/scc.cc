@@ -31,7 +31,7 @@ static void scc_plugin_shutdown()
 }
 
 static const synth_option the_synth_options[] = {
-    {"modules-count", "Number of emulated modules (2-16)", 'i', {.i = 8}},
+    {"modules-count", "Number of emulated modules (2-16)", 'i', {.i = 4}},
 };
 
 static const synth_option *scc_plugin_option(size_t index)
