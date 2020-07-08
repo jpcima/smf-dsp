@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "load_library.h"
+#include "paths.h"
 #ifndef _WIN32
 #include <dlfcn.h>
 #else
@@ -29,10 +30,19 @@ void *Dl_sym(Dl_Handle handle, const char *name)
 #else
 Dl_Handle Dl_open(const char *name)
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     std::wstring wname;
     if (!convert_utf<char, wchar_t>(name, wname, false))
         return nullptr;
     return (Dl_Handle)LoadLibraryW(wname.c_str());
+#elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+    std::wstring wlibname;
+    if (!convert_utf<char, wchar_t>(path_file_name(name), wlibname, false))
+        return nullptr;
+    return (Dl_Handle)LoadPackagedLibrary(wlibname.c_str(), 0);
+#else
+#error Unhandled WINAPI family
+#endif
 }
 
 void Dl_close(Dl_Handle handle)
