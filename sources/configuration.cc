@@ -13,42 +13,6 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <shlobj.h>
-#include <direct.h>
-#define mkdir(path, mode) _mkdir(path)
-#endif
-
-#if defined(_WIN32)
-static std::string known_folder_path(int csidl, std::error_code &ec)
-{
-    ec.clear();
-
-    WCHAR wpath[PATH_MAX + 1];
-    HRESULT result = SHGetFolderPathW(nullptr, csidl, nullptr, SHGFP_TYPE_CURRENT, wpath);
-
-    if (result != S_OK) {
-        ec = std::error_code(result, std::system_category());
-        return std::string();
-    }
-
-    wpath[PATH_MAX] = L'\0';
-
-    std::string path;
-    if (!convert_utf<WCHAR, char>(wpath, path, false)) {
-        ec = std::error_code(EINVAL, std::generic_category());
-        return std::string();
-    }
-
-    return normalize_path_separators(path + '/');
-}
-
-static std::string known_folder_path(int csidl)
-{
-    std::error_code ec;
-    std::string path = known_folder_path(csidl, ec);
-    if (ec)
-        throw std::system_error(ec);
-    return path;
-}
 #endif
 
 const std::string &get_configuration_dir()

@@ -20,3 +20,8 @@ gsl::cstring_span path_file_name(gsl::cstring_span path);
 gsl::cstring_span path_directory(gsl::cstring_span path);
 
 std::string get_display_path(gsl::cstring_span path);
+
+#if defined(_WIN32)
+std::string known_folder_path(int csidl, std::error_code &ec);
+std::string known_folder_path(int csidl);
+#endif

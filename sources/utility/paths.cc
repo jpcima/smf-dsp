@@ -16,6 +16,7 @@
 #include <unistd.h>
 #if defined(_WIN32)
 #include <windows.h>
+#include <shlobj.h>
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h>
 #elif defined(__HAIKU__)
@@ -30,23 +31,18 @@
 std::string get_home_directory()
 {
 #ifndef _WIN32
-    const char *vars[] = {"HOME"};
-#else
-    const char *vars[] = {"HOME", "USERPROFILE"};
-#endif
-
-    for (const char *var : vars) {
-        if (const char *env = getenv(var)) {
-            std::string dir = normalize_path_separators(env);
-            if (!is_path_absolute(dir))
-                continue;
+    if (const char *env = getenv("HOME")) {
+        std::string dir = normalize_path_separators(env);
+        if (is_path_absolute(dir)) {
             if (dir.back() != '/')
                 dir.push_back('/');
             return dir;
         }
     }
-
     return std::string();
+#else
+    return known_folder_path(CSIDL_PROFILE|CSIDL_FLAG_CREATE);
+#endif
 }
 
 std::string get_current_directory()
@@ -343,3 +339,37 @@ std::string get_display_path(gsl::cstring_span path)
 
     return result;
 }
+
+#if defined(_WIN32)
+std::string known_folder_path(int csidl, std::error_code &ec)
+{
+    ec.clear();
+
+    WCHAR wpath[PATH_MAX + 1];
+    HRESULT result = SHGetFolderPathW(nullptr, csidl, nullptr, SHGFP_TYPE_CURRENT, wpath);
+
+    if (result != S_OK) {
+        ec = std::error_code(result, std::system_category());
+        return std::string();
+    }
+
+    wpath[PATH_MAX] = L'\0';
+
+    std::string path;
+    if (!convert_utf<WCHAR, char>(wpath, path, false)) {
+        ec = std::error_code(EINVAL, std::generic_category());
+        return std::string();
+    }
+
+    return normalize_path_separators(path + '/');
+}
+
+std::string known_folder_path(int csidl)
+{
+    std::error_code ec;
+    std::string path = known_folder_path(csidl, ec);
+    if (ec)
+        throw std::system_error(ec);
+    return path;
+}
+#endif
