@@ -6,12 +6,17 @@
 #include "application.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
+#include "utility/charset.h"
 #include "utility/logs.h"
 #include <gsl/gsl>
 #include <getopt.h>
+#include <memory>
 #if defined(__linux__)
 #include <jack/jack.h>
 #include <alsa/asoundlib.h>
+#endif
+#if defined(_WIN32)
+#include <windows.h>
 #endif
 
 #if defined(__linux__)
@@ -21,7 +26,11 @@ static void alsa_log_callback(const char *, int, const char *, int, const char *
 }
 #endif
 
+#if !defined(_WIN32)
 int main(int argc, char *argv[])
+#else
+int real_main(int argc, char *argv[])
+#endif
 {
     // Initialize command line
     for (int c; (c = getopt(argc, argv, "")) != -1;) {
@@ -94,3 +103,29 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+#if defined(_WIN32)
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+{
+    LPWSTR cmdline = GetCommandLineW();
+
+    unsigned argc;
+    LPWSTR *argvw = CommandLineToArgvW(cmdline, (int *)&argc);
+    if (!argvw)
+        return 1;
+
+    std::unique_ptr<std::string[]> args{new std::string[argc]};
+    for (unsigned i = 0; i < argc; ++i)
+      convert_utf<WCHAR, char>(argvw[i], args[i], true);
+
+    LocalFree(argvw);
+    argvw = nullptr;
+
+    std::unique_ptr<char *[]> argv{new char *[argc + 1]};
+    argv[argc] = nullptr;
+    for (unsigned i = 0; i < argc; ++i)
+      argv[i] = const_cast<char *>(args[i].c_str());
+
+    return real_main(argc, argv.get());
+}
+#endif
