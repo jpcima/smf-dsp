@@ -38,7 +38,8 @@ static std::string get_native_executable_path()
     bool need_more_buffer;
     do {
         buf.reset(new wchar_t[bufsize]);
-        HMODULE mod = GetModuleHandle(nullptr);
+        //HMODULE mod = GetModuleHandle(nullptr);
+        HMODULE mod = get_app_module();
         DWORD ret = GetModuleFileNameW(mod, buf.get(), bufsize);
         if (ret == 0)
             throw std::runtime_error("GetModuleFileNameW");
@@ -88,3 +89,17 @@ std::string get_executable_path()
 {
     return normalize_path_separators(get_native_executable_path());
 }
+
+#if defined(_WIN32)
+static HINSTANCE module_instance = nullptr;
+
+void initialize_app_module(HINSTANCE instance)
+{
+    module_instance = instance;
+}
+
+HINSTANCE get_app_module()
+{
+    return module_instance;
+}
+#endif

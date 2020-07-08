@@ -6,6 +6,7 @@
 #include "application.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
+#include "utility/module.h"
 #include "utility/charset.h"
 #include "utility/logs.h"
 #include <gsl/gsl>
@@ -105,8 +106,10 @@ int real_main(int argc, char *argv[])
 }
 
 #if defined(_WIN32)
-int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
 {
+    initialize_app_module(instance);
+
     LPWSTR cmdline = GetCommandLineW();
 
     unsigned argc;

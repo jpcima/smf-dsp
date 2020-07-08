@@ -5,5 +5,13 @@
 
 #pragma once
 #include <string>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 std::string get_executable_path();
+
+#if defined(_WIN32)
+void initialize_app_module(HINSTANCE instance);
+HINSTANCE get_app_module();
+#endif
