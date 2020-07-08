@@ -61,10 +61,10 @@ private:
 //
 extern Font font_s12;
 extern Font font_s14;
-extern Font font_s16;
-extern Font font_s12b;
-extern Font font_s14b;
-extern Font font_s16b;
+//extern Font font_s16;
+//extern Font font_s12b;
+//extern Font font_s14b;
+//extern Font font_s16b;
 extern Font font_fmdsp_small;
 extern Font font_fmdsp_medium;
 extern Font font_digit;
