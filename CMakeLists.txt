@@ -86,6 +86,7 @@ add_executable(smf-dsp WIN32
   "sources/ui/level_meter.cc"
   "sources/utility/charset.cc"
   "sources/utility/paths.cc"
+  "sources/utility/module.cc"
   "sources/utility/file_scan.cc"
   "sources/utility/portfts.cc"
   "sources/utility/uv++.cc"

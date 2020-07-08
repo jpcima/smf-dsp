@@ -7,6 +7,7 @@
 #include "synth_utility.h"
 #include "configuration.h"
 #include "utility/paths.h"
+#include "utility/module.h"
 #include "utility/charset.h"
 #include "utility/logs.h"
 #include <algorithm>

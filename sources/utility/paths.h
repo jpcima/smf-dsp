@@ -9,7 +9,6 @@
 
 std::string get_home_directory();
 std::string get_current_directory();
-std::string get_executable_path();
 bool is_path_absolute(gsl::cstring_span path);
 bool is_path_separator(char32_t character);
 void append_path_separator(std::string &path);
