@@ -68,4 +68,5 @@ void Log::generic(char symbol, const char *tag, const char *color, const char *f
     fprintf(stderr, "%s.%03d [%c] %-8s %s", timebuf, (unsigned)tv.tv_usec / 1000 % 1000, symbol, tag, color);
     vfprintf(stderr, format, ap);
     fprintf(stderr, "%s\n", "\033[0m");
+    fflush(stderr);
 }
