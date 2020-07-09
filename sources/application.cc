@@ -911,7 +911,8 @@ bool Application::filter_file_name(const std::string &name)
         ext, ext + 3, ext,
         [](char c) -> char { return (c >= 'a' && c <= 'z') ? (c - 'a' + 'A') : c; });
 
-    return !memcmp(ext, "MID", 3) || !memcmp(ext, "RMI", 3) || !memcmp(ext, "KAR", 3);
+    return !memcmp(ext, "MID", 3) || !memcmp(ext, "RMI", 3) || !memcmp(ext, "KAR", 3) ||
+        !memcmp(ext, "MUS", 3);
 }
 
 bool Application::filter_file_entry(const File_Entry &ent)

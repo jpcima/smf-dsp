@@ -346,7 +346,7 @@ void Player::resume_play_list()
 
         if (FILE *fh = fopen_utf8(current.c_str(), "rb")) {
             auto fh_cleanup = gsl::finally([fh] { fclose(fh); });
-            smf.reset(fmidi_smf_stream_read(fh));
+            smf.reset(fmidi_auto_stream_read(fh));
         }
 
         if (!smf)
