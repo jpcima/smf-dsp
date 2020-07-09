@@ -143,7 +143,7 @@ else()
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  target_link_libraries(smf-dsp PRIVATE Boost::filesystem)
+  target_link_libraries(smf-dsp PRIVATE vendor::filesystem)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(smf-dsp PRIVATE sys::jack sys::alsa)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")

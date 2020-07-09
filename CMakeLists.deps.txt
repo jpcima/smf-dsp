@@ -31,6 +31,11 @@ target_include_directories(utf INTERFACE "thirdparty/utf")
 add_library(vendor::utf ALIAS utf)
 
 ###
+add_library(filesystem INTERFACE)
+target_include_directories(filesystem INTERFACE "thirdparty/filesystem/include")
+add_library(vendor::filesystem ALIAS filesystem)
+
+###
 add_library(simpleini STATIC EXCLUDE_FROM_ALL "thirdparty/simpleini/ConvertUTF.cpp")
 target_compile_definitions(simpleini PUBLIC "SI_CONVERT_GENERIC=1")
 target_include_directories(simpleini INTERFACE "thirdparty/simpleini")
@@ -139,11 +144,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_compile_definitions(iconv INTERFACE "WINICONV_CONST=")
 endif()
 add_library(sys::iconv ALIAS iconv)
-
-###
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  find_package(Boost COMPONENTS "filesystem" REQUIRED)
-endif()
 
 ###
 if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")

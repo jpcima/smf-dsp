@@ -6,20 +6,18 @@
 #include "portfts.h"
 
 #if !PORTFTS_HAVE_FTS
-#include "charset.h"
-#include <boost/filesystem.hpp>
+#include <ghc/fs_std.hpp>
 #include <string>
 #include <memory>
 #include <iostream>
-namespace fs = boost::filesystem;
-namespace sy = boost::system;
+#include <system_error>
 
 struct pFTS {
     fs::recursive_directory_iterator it;
     int flags;
     bool init;
     bool error;
-    std::string path;
+    fs::path path;
     pFTSENT ent_buf;
     std::string path_buf;
     std::string name_buf;
@@ -38,7 +36,7 @@ pFTS *portfts_open(const char *path, int flags)
     fts->flags = flags;
     fts->init = true;
     fts->error = false;
-    fts->path.assign(path);
+    fts->path = fs::u8path(path);
     return fts.release();
 }
 
@@ -50,22 +48,22 @@ int portfts_close(pFTS *fts)
 
 static int determine_file_type(const fs::path &path, bool logical)
 {
-    sy::error_code ec;
+    std::error_code ec;
     fs::file_status status = logical ? fs::status(path, ec) : fs::symlink_status(path, ec);
     if (ec) {
-        if (logical && ec == sy::errc::no_such_file_or_directory) {
-            ec = sy::error_code();
+        if (logical && status.type() == fs::file_type::not_found) {
+            ec = std::error_code();
             status = fs::symlink_status(path, ec);
-            if (!ec && status.type() == fs::symlink_file)
+            if (!ec && status.type() == fs::file_type::symlink)
                 return pFTS_SLNONE;
         }
         if (ec)
-            return (ec == sy::errc::no_such_file_or_directory) ? 0 : pFTS_NS;
+            return (status.type() == fs::file_type::not_found) ? 0 : pFTS_NS;
     }
     switch (status.type()) {
-    case fs::directory_file: return pFTS_D;
-    case fs::regular_file: return pFTS_F;
-    case fs::symlink_file: return pFTS_SL;
+    case fs::file_type::directory: return pFTS_D;
+    case fs::file_type::regular: return pFTS_F;
+    case fs::file_type::symlink: return pFTS_SL;
     default: return pFTS_DEFAULT;
     }
 }
@@ -76,15 +74,8 @@ static pFTSENT *build_entry(pFTS *fts, int type, const fs::path &path, int level
         return nullptr;
 
     fts->ent_buf.fts_info = type;
-#ifndef _WIN32
-    fts->path_buf = path.native();
-    fts->name_buf = path.filename().native();
-#else
-    if (!convert_utf<wchar_t, char>(path.native(), fts->path_buf, false))
-        fts->ent_buf.fts_info = pFTS_ERR;
-    if (!convert_utf<wchar_t, char>(path.filename().native(), fts->name_buf, false))
-        fts->ent_buf.fts_info = pFTS_ERR;
-#endif
+    fts->path_buf = path.generic_u8string();
+    fts->name_buf = path.filename().generic_u8string();
     fts->ent_buf.fts_path = fts->path_buf.c_str();
     fts->ent_buf.fts_name = fts->name_buf.c_str();
     fts->ent_buf.fts_level = level;
@@ -93,11 +84,12 @@ static pFTSENT *build_entry(pFTS *fts, int type, const fs::path &path, int level
 
 pFTSENT *portfts_read(pFTS *fts)
 {
-    sy::error_code ec;
+    std::error_code ec;
 
     bool logical = fts->flags & pFTS_LOGICAL;
-    fs::symlink_option sym_opt = logical ?
-        fs::symlink_option::recurse : fs::symlink_option::none;
+    fs::directory_options sym_opt = logical ?
+        fs::directory_options::follow_directory_symlink :
+        fs::directory_options::none;
 
     if (fts->error)
         return nullptr;
@@ -118,9 +110,9 @@ pFTSENT *portfts_read(pFTS *fts)
     if (fts->it != fs::recursive_directory_iterator()) {
         const fs::directory_entry &ent = *fts->it;
         const fs::path &path = ent.path();
-        fts_ent = build_entry(fts, determine_file_type(path, logical), path, fts->it.level() + 1);
+        fts_ent = build_entry(fts, determine_file_type(path, logical), path, fts->it.depth() + 1);
 
-        ec = sy::error_code();
+        ec = std::error_code();
         fts->it.increment(ec);
         if (ec)
             fts->error = true;
