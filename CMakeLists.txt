@@ -73,6 +73,7 @@ add_executable(smf-dsp WIN32
   "sources/player/adev/adev_sdl.cc"
   "sources/player/adev/adev_haiku.cc"
   "sources/player/adev/adev_jack.cc"
+  "sources/player/adev/adev_rtaudio.cc"
   "sources/player/instruments/dummy.cc"
   "sources/player/instruments/port.cc"
   "sources/player/instruments/synth.cc"
@@ -132,6 +133,11 @@ target_link_libraries(smf-dsp PRIVATE
 if(TARGET sys::jack)
   target_link_libraries(smf-dsp PRIVATE sys::jack)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+  target_compile_definitions(smf-dsp PRIVATE "ADEV_RTAUDIO")
+  target_link_libraries(smf-dsp PRIVATE vendor::rtaudio)
 endif()
 
 if(TARGET sys::SDL2_image)

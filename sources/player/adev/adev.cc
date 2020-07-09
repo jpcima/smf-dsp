@@ -7,6 +7,7 @@
 #include "adev_sdl.h"
 #include "adev_haiku.h"
 #include "adev_jack.h"
+#include "adev_rtaudio.h"
 #include <memory>
 #include <cstring>
 
@@ -19,8 +20,13 @@ Audio_Device *Audio_Device::create_best_for_system()
     if (!adev && Audio_Device_Jack::is_available())
         adev.reset(new Audio_Device_Jack);
 #endif
+#if defined(ADEV_RTAUDIO)
+    if (!adev)
+        adev.reset(new Audio_Device_Rt);
+#else
     if (!adev)
         adev.reset(new Audio_Device_SDL);
+#endif
 #else
     if (!adev)
         adev.reset(new Audio_Device_Haiku);
