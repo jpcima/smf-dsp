@@ -1,7 +1,7 @@
 // =============================================================================
 //
 // The Fmidi library - a free software toolkit for MIDI file processing
-// Single-file implementation, based on software revision: eee4c80
+// Single-file implementation, based on software revision: 4b716b9
 //
 // =============================================================================
 //          Copyright Jean Pierre Cimalando 2018-2020.
@@ -2474,9 +2474,21 @@ fmidi_smf_t *fmidi_mus_mem_read(const uint8_t *data, size_t length)
     evbuf.reserve(8192);
 
     uint32_t ev_delta = 0;
-    uint32_t note_volume[16] = {};
-    for (unsigned i = 0; i < 16; ++i)
-        note_volume[i] = 64;
+    uint32_t note_velocity[16] = {};
+
+    for (unsigned channel = 0; channel < 16; ++channel) {
+        // initial velocity
+        note_velocity[channel] = 64;
+        // channel volume
+        fmidi_event_t *event = fmidi_event_alloc(evbuf, 3);
+        event->type = fmidi_event_message;
+        event->delta = ev_delta;
+        event->datalen = 3;
+        uint8_t *data = event->data;
+        data[0] = 0xb0 | channel;
+        data[1] = 7;
+        data[2] = 127;
+    }
 
     for (bool score_end = false; !score_end;) {
         uint32_t ev_desc;
@@ -2503,7 +2515,7 @@ fmidi_smf_t *fmidi_mus_mem_read(const uint8_t *data, size_t length)
                 RET_FAIL(nullptr, fmidi_err_format);
             midi[0] = 0x80 | ev_channel;
             midi[1] = data1 & 127;
-            midi[2] = 0;
+            midi[2] = 64;
             midi_size = 3;
             break;
         }
@@ -2516,11 +2528,11 @@ fmidi_smf_t *fmidi_mus_mem_read(const uint8_t *data, size_t length)
                 uint32_t data2;
                 if ((ms = mb.readintLE(&data2, 1)))
                     RET_FAIL(nullptr, fmidi_err_format);
-                note_volume[ev_channel] = data2 & 127;
+                note_velocity[ev_channel] = data2 & 127;
             }
             midi[0] = 0x90 | ev_channel;
             midi[1] = data1 & 127;
-            midi[2] = note_volume[ev_channel];
+            midi[2] = note_velocity[ev_channel];
             midi_size = 3;
             break;
         }
