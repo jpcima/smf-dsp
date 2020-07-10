@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jpcima.smf_dsp</id>
+
+  <name>SMF-DSP MIDI player</name>
+  <summary>Advanced MIDI file player</summary>
+
+  <metadata_license>BSL-1.0</metadata_license>
+  <project_license>BSL-1.0</project_license>
+
+  <description>
+    <p>
+      This MIDI file player is a graphical program inspired by raster interfaces of retro computers. It includes a set of chip music and soundfont synthesizers for its playback.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">smf-dsp.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/jpcima/smf-dsp/master/docs/screen.png</image>
+    </screenshot>
+  </screenshots>
+</component>

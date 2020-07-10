@@ -174,6 +174,9 @@ install(FILES "resources/desktop/smf-dsp.desktop"
 install(FILES "resources/desktop/smf-dsp.png"
   DESTINATION "share/pixmaps"
   COMPONENT "desktop-entry")
+install(FILES "resources/desktop/io.github.jpcima.smf_dsp.metainfo.xml"
+  DESTINATION "share/metainfo"
+  COMPONENT "desktop-entry")
 
 if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$" AND NOT CMAKE_CROSSCOMPILING)
   find_program(XDG_OPEN_PROGRAM "xdg-open")
