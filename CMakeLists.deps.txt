@@ -76,6 +76,20 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 ###
+find_library(SOUNDIO_LIBRARY "soundio")
+find_path(SOUNDIO_INCLUDE_DIR "soundio/soundio.h")
+if(NOT SOUNDIO_LIBRARY OR NOT SOUNDIO_INCLUDE_DIR)
+  message(STATUS "Cannot find soundio")
+else()
+  message(STATUS "Found soundio library: ${SOUNDIO_LIBRARY}")
+  message(STATUS "Found soundio headers: ${SOUNDIO_INCLUDE_DIR}")
+  add_library(soundio INTERFACE)
+  target_include_directories(soundio INTERFACE "${SOUNDIO_INCLUDE_DIR}")
+  target_link_libraries(soundio INTERFACE "${SOUNDIO_LIBRARY}")
+  add_library(sys::soundio ALIAS soundio)
+endif()
+
+###
 add_library(rtmidi STATIC EXCLUDE_FROM_ALL "thirdparty/rtmidi/RtMidi.cpp")
 target_include_directories(rtmidi PUBLIC "thirdparty/rtmidi")
 target_compile_definitions(rtmidi PUBLIC "__RTMIDI_DUMMY__")

@@ -73,6 +73,7 @@ add_executable(smf-dsp WIN32
   "sources/player/adev/adev_sdl.cc"
   "sources/player/adev/adev_haiku.cc"
   "sources/player/adev/adev_jack.cc"
+  "sources/player/adev/adev_soundio.cc"
   "sources/player/adev/adev_rtaudio.cc"
   "sources/player/instruments/dummy.cc"
   "sources/player/instruments/port.cc"
@@ -131,13 +132,23 @@ target_link_libraries(smf-dsp PRIVATE
   Threads::Threads)
 
 if(TARGET sys::jack)
-  target_link_libraries(smf-dsp PRIVATE sys::jack)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")
+  target_link_libraries(smf-dsp PRIVATE sys::jack)
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+if(TARGET sys::soundio)
+  target_compile_definitions(smf-dsp PRIVATE "ADEV_SOUNDIO")
+  target_link_libraries(smf-dsp PRIVATE sys::soundio)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$" AND NOT TARGET sys::soundio)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_RTAUDIO")
   target_link_libraries(smf-dsp PRIVATE vendor::rtaudio)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+  target_compile_definitions(smf-dsp PRIVATE "ADEV_HAIKU")
+  target_link_libraries(smf-dsp PRIVATE sys::mediakit)
 endif()
 
 if(TARGET sys::SDL2_image)
@@ -152,8 +163,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_link_libraries(smf-dsp PRIVATE vendor::filesystem)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(smf-dsp PRIVATE sys::jack sys::alsa)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-  target_link_libraries(smf-dsp PRIVATE sys::mediakit)
 endif()
 
 link_what_you_use(smf-dsp)

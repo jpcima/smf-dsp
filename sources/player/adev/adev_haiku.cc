@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#if defined(__HAIKU__)
+#if defined(ADEV_HAIKU)
 #include "adev_haiku.h"
 #include <cmath>
 

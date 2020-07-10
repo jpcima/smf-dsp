@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#if defined(__HAIKU__)
+#if defined(ADEV_HAIKU)
 #include "adev.h"
 #include <MediaKit.h>
 #include <memory>
