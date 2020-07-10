@@ -59,7 +59,7 @@ static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
     {"Space", "Pause/unpause"},
     {"Home", "Seek to beginning of current track"},
     {"End", "Seek to end of current track"},
-    {u8"\u2190\u2191\u2193\u2192", "Navigate in the file browser"},
+    {u8"\u2190\u2191\u2193\u2192", "Navigate in the file browser and menus"},
     {u8"\u2190\u2192", u8"In track info view, seek track by ±5 seconds"},
     {u8"Shift \u2190\u2192", u8"In any view, seek track by ±10 seconds"},
     {"[]", "Increase/decrease speed by 1%"},
