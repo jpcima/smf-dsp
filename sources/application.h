@@ -39,6 +39,8 @@ public:
     void paint_cached_background(SDL_Renderer *rr);
     bool handle_key_pressed(const SDL_KeyboardEvent &event);
     bool handle_key_released(const SDL_KeyboardEvent &event);
+    bool handle_mouse_pressed(const SDL_MouseButtonEvent &event);
+    bool handle_mouse_released(const SDL_MouseButtonEvent &event);
     bool handle_text_input(const SDL_TextInputEvent &event);
 
     void play_file(const std::string &dir, const File_Entry *entries, size_t index, size_t count);

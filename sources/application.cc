@@ -205,6 +205,14 @@ void Application::exec()
             if (!shutting_down)
                 update = handle_key_released(event.key);
             break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (!shutting_down)
+                update = handle_mouse_pressed(event.button);
+            break;
+        case SDL_MOUSEBUTTONUP:
+            if (!shutting_down)
+                update = handle_mouse_released(event.button);
+            break;
         case SDL_TEXTINPUT:
             if (!shutting_down)
                 update = handle_text_input(event.text);
@@ -832,6 +840,26 @@ bool Application::handle_key_released(const SDL_KeyboardEvent &event)
         break;
     }
 
+    return false;
+}
+
+bool Application::handle_mouse_pressed(const SDL_MouseButtonEvent &event)
+{
+    if (modal_.empty()) {
+        open_help_dialog();
+        return true;
+    }
+    else {
+        for (size_t i = 0, n = modal_.size(); i < n; ++i)
+            modal_.pop_back();
+        return true;
+    }
+
+    return false;
+}
+
+bool Application::handle_mouse_released(const SDL_MouseButtonEvent &event)
+{
     return false;
 }
 
