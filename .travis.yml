@@ -4,6 +4,10 @@ branches:
   except:
     - automatic
 
+cache:
+  directories:
+    - download
+
 matrix:
   include:
     - os: linux
@@ -53,11 +57,18 @@ matrix:
       env:
         - Build=linux64
       script:
-        - mkdir build
+        - mkdir -p build/
         - cd build
-        - cmake -DCMAKE_BUILD_TYPE=Release ..
+        - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
         - make -j$(nproc)
         - cd ..
+        - mkdir -p download/
+        - wget -O {download/,https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/}linuxdeploy-x86_64.AppImage
+        - chmod +x download/linuxdeploy-x86_64.AppImage
+        - make -C build install DESTDIR="$(pwd)/target"
+        - download/linuxdeploy-x86_64.AppImage --appdir="$(pwd)/target" --output=appimage
+        - mkdir -p release/
+        - mv -vf *.AppImage release/
       addons:
         apt:
           packages:
