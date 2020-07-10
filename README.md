@@ -6,6 +6,15 @@ Advanced MIDI file player for desktop computer
 
 ![screenshot](docs/screen.png)
 
+# Usage
+
+Press F1 for help screen.
+Press F12 to access advanced options, which can be edited in configuration files.
+
+The changes made in configuration files are effective after restarting.
+
+Some synthesizers require a ROM or SoundFont to be provided, and specified in the configuration.
+
 # Keys
 
 The keys are recognized by physical location and not label.
