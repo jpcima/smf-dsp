@@ -23,8 +23,8 @@ SigLevel = Optional TrustAll
 Server = https://github.com/jpcima/arch-mingw-w64/releases/download/repo.\$arch/
 EOF
 
-yes | pacman-key --refresh-keys
 pacman -Sqy --noconfirm
+pacman -Sq --noconfirm --needed archlinux-keyring
 pacman -Sq --noconfirm base-devel mingw-w64-gcc mingw-w64-winpthreads mingw-w64-cmake mingw-w64-pkg-config mingw-w64-win-iconv mingw-w64-icu mingw-w64-libuv mingw-w64-sdl2 dll-bundler-git
 
 # ---------------------------------------------------------------------------------------------------------------------
