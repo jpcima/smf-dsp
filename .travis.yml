@@ -56,19 +56,31 @@ matrix:
       dist: xenial
       env:
         - Build=linux64
+      before_install:
+        - mkdir -p download/
+        - |
+          getfile() {
+            local url="$1"
+            local base="$2"
+            test -z "$base" && base="$(basename "$1")"
+            test -f download/"$base" || wget -O download/"$base" "$url"
+          }
+        - getfile https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-x86_64.AppImage
+        - getfile https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+      install:
+        - sudo install -m 755 download/appimagetool-x86_64.AppImage /usr/bin/appimagetool
+        - sudo install -m 755 download/linuxdeploy-x86_64.AppImage /usr/bin/linuxdeploy
       script:
         - mkdir -p build/
         - cd build
         - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
         - make -j$(nproc)
         - cd ..
-        - mkdir -p download/
-        - wget -O {download/,https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/}linuxdeploy-x86_64.AppImage
-        - chmod +x download/linuxdeploy-x86_64.AppImage
         - make -C build install DESTDIR="$(pwd)/target"
-        - download/linuxdeploy-x86_64.AppImage --appdir="$(pwd)/target" --output=appimage
+        - linuxdeploy --appdir="$(pwd)/target"
+        - appimagetool "$(pwd)/target"
         - mkdir -p release/
-        - mv -vf *.AppImage release/
+        - mv -f *.AppImage release/
       addons:
         apt:
           packages:
