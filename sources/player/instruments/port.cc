@@ -49,7 +49,15 @@ std::vector<Midi_Output> Midi_Port_Instrument::get_midi_outputs()
         std::string api_name = RtMidi::getApiName(api);
         bool has_virtual_port = api != RtMidi::WINDOWS_MM;
 
-        RtMidiOut out(api);
+        std::unique_ptr<RtMidiOut> out;
+        try {
+            out.reset(new RtMidiOut(api));
+        }
+        catch (RtMidiError &ex) {
+            (void)ex; //Log::e("%s\n", ex.getMessage().c_str());
+        }
+        if (!out)
+            continue;
 
         if (has_virtual_port) {
             Midi_Output port;
@@ -58,8 +66,8 @@ std::vector<Midi_Output> Midi_Port_Instrument::get_midi_outputs()
             ports.push_back(std::move(port));
         }
 
-        for (size_t i = 0, n = out.getPortCount(); i < n; ++i) {
-            std::string port_name = out.getPortName(i);
+        for (size_t i = 0, n = out->getPortCount(); i < n; ++i) {
+            std::string port_name = out->getPortName(i);
             if (port_name.empty())
                 continue;
             Midi_Output port;
@@ -90,7 +98,15 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
 
     // open client
     midi_error_status_ = 0;
-    RtMidiOut *out = new RtMidiOut(api, PROGRAM_DISPLAY_NAME);
+    RtMidiOut *out;
+    try {
+        out = new RtMidiOut(api, PROGRAM_DISPLAY_NAME);
+    }
+    catch (RtMidiError &ex) {
+        Log::e("%s\n", ex.getMessage().c_str());
+    }
+    if (!out)
+        out = new RtMidiOut(RtMidi::RTMIDI_DUMMY, PROGRAM_DISPLAY_NAME);
     out_.reset(out);
 
     out->setErrorCallback(
