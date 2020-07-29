@@ -36,6 +36,7 @@ public:
 
     void set_scale_factor(SDL_Window *win, unsigned sf);
     void paint(SDL_Renderer *rr, int paint);
+    void paint_scaled(SDL_Renderer *rr, int paint, unsigned scale);
     void paint_cached_background(SDL_Renderer *rr);
     bool handle_key_pressed(const SDL_KeyboardEvent &event);
     bool handle_key_released(const SDL_KeyboardEvent &event);

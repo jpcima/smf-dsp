@@ -261,12 +261,17 @@ void Application::set_scale_factor(SDL_Window *win, unsigned sf)
 
 void Application::paint(SDL_Renderer *rr, int paint)
 {
+    paint_scaled(rr, paint, scale_factor_);
+}
+
+void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
+{
     const Main_Layout &lo = *layout_;
     const Color_Palette &pal = Color_Palette::get_current();
 
     SDLpp_ClipState clip;
 
-    SDL_RenderSetScale(rr, scale_factor_, scale_factor_);
+    SDL_RenderSetScale(rr, scale, scale);
     SDL_SetRenderDrawBlendMode(rr, SDL_BLENDMODE_BLEND);
 
     auto draw_text_rect = [rr](const Main_Layout::Text_Rect &tr, gsl::cstring_span str, const SDL_Color &color) {
@@ -616,7 +621,7 @@ void Application::paint_cached_background(SDL_Renderer *rr)
             throw std::runtime_error("SDL_CreateSoftwareRenderer");
         auto sr_cleanup = gsl::finally([sr] { SDL_DestroyRenderer(sr); });
 
-        paint(sr, Pt_Background);
+        paint_scaled(sr, Pt_Background, 1);
         SDL_RenderPresent(sr);
 
         bg = SDL_CreateTextureFromSurface(rr, su);
