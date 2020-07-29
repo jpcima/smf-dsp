@@ -7,8 +7,10 @@
 #include "utility/paths.h"
 #include "utility/logs.h"
 #include <opnmidi.h>
+#include <algorithm>
 #include <memory>
 #include <cstring>
+#include <cctype>
 
 ///
 struct OPN2_MIDIPlayer_delete { void operator()(OPN2_MIDIPlayer *x) const { opn2_close(x); } };
@@ -21,6 +23,7 @@ struct opnmidi_synth_object {
 
     int chip_count = 0;
     std::string instrument_bank;
+    std::string emulator;
 };
 
 static std::string opnmidi_synth_base_dir;
@@ -37,6 +40,23 @@ static void opnmidi_plugin_shutdown()
 static const synth_option the_synth_options[] = {
     {"chip-count", "Number of emulated chips", 'i', {.i = 4}},
     {"instrument-bank", "Bank number, or WOPN file path", 's', {.s = "0"}},
+    {"emulator", "Name of the chip emulator", 's', {.s = "mame"}},
+};
+
+struct named_emulator {
+    const char *name;
+    int value;
+};
+
+static const named_emulator the_emulators[] = {
+    {"mame", OPNMIDI_EMU_MAME},
+    {"mame2612", OPNMIDI_EMU_MAME},
+    {"nuked", OPNMIDI_EMU_NUKED},
+    {"gens", OPNMIDI_EMU_GENS},
+    {"gx", OPNMIDI_EMU_GX},
+    {"neko", OPNMIDI_EMU_NP2},
+    {"mame2608", OPNMIDI_EMU_MAME_2608},
+    {"pmdwin", OPNMIDI_EMU_PMDWIN},
 };
 
 static const synth_option *opnmidi_plugin_option(size_t index)
@@ -71,7 +91,23 @@ static int opnmidi_synth_activate(synth_object *obj)
         return -1;
     sy->player.reset(player);
 
-    if (opn2_switchEmulator(player, OPNMIDI_EMU_MAME) != 0)
+    int emulator = -1;
+    const unsigned num_emulators = sizeof(the_emulators) / sizeof(the_emulators[0]);
+
+    std::string emu_id(sy->emulator);
+    std::transform(emu_id.begin(), emu_id.end(), emu_id.begin(),
+                   [](unsigned char c) -> char { return std::tolower(c); });
+
+    for (unsigned i = 0; i < num_emulators && emulator == -1; ++i) {
+        if (emu_id == the_emulators[i].name)
+            emulator = the_emulators[i].value;
+    }
+    if (emulator == -1) {
+        Log::e("opnmidi: cannot find an emulator named \"%s\"", sy->emulator.c_str());
+        emulator = the_emulators[0].value;
+    }
+
+    if (opn2_switchEmulator(player, emulator) != 0)
         Log::e("opnmidi: cannot set emulator");
 
     if (opn2_setNumChips(player, sy->chip_count) != 0)
@@ -192,6 +228,8 @@ static void opnmidi_synth_set_option(synth_object *obj, const char *name, synth_
         sy->chip_count = value.i;
     else if (!strcmp(name, "instrument-bank"))
         sy->instrument_bank.assign(value.s);
+    else if (!strcmp(name, "emulator"))
+        sy->emulator.assign(value.s);
 }
 
 static const synth_interface the_synth_interface = {

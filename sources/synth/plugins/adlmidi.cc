@@ -7,8 +7,10 @@
 #include "utility/paths.h"
 #include "utility/logs.h"
 #include <adlmidi.h>
+#include <algorithm>
 #include <memory>
 #include <cstring>
+#include <cctype>
 
 ///
 struct ADL_MIDIPlayer_delete { void operator()(ADL_MIDIPlayer *x) const { adl_close(x); } };
@@ -21,6 +23,7 @@ struct adlmidi_synth_object {
 
     int chip_count = 0;
     std::string instrument_bank;
+    std::string emulator;
 };
 
 static std::string adlmidi_synth_base_dir;
@@ -37,6 +40,20 @@ static void adlmidi_plugin_shutdown()
 static const synth_option the_synth_options[] = {
     {"chip-count", "Number of emulated chips", 'i', {.i = 4}},
     {"instrument-bank", "Bank number, or WOPL file path", 's', {.s = "0"}},
+    {"emulator", "Name of the chip emulator", 's', {.s = "dosbox"}},
+};
+
+struct named_emulator {
+    const char *name;
+    int value;
+};
+
+static const named_emulator the_emulators[] = {
+    {"dosbox", ADLMIDI_EMU_DOSBOX},
+    {"nuked", ADLMIDI_EMU_NUKED},
+    {"nuked 1.7", ADLMIDI_EMU_NUKED_174},
+    {"opal", ADLMIDI_EMU_OPAL},
+    {"java", ADLMIDI_EMU_JAVA},
 };
 
 static const synth_option *adlmidi_plugin_option(size_t index)
@@ -71,7 +88,23 @@ static int adlmidi_synth_activate(synth_object *obj)
         return -1;
     sy->player.reset(player);
 
-    if (adl_switchEmulator(player, ADLMIDI_EMU_DOSBOX) != 0)
+    int emulator = -1;
+    const unsigned num_emulators = sizeof(the_emulators) / sizeof(the_emulators[0]);
+
+    std::string emu_id(sy->emulator);
+    std::transform(emu_id.begin(), emu_id.end(), emu_id.begin(),
+                   [](unsigned char c) -> char { return std::tolower(c); });
+
+    for (unsigned i = 0; i < num_emulators && emulator == -1; ++i) {
+        if (emu_id == the_emulators[i].name)
+            emulator = the_emulators[i].value;
+    }
+    if (emulator == -1) {
+        Log::e("adlmidi: cannot find an emulator named \"%s\"", sy->emulator.c_str());
+        emulator = the_emulators[0].value;
+    }
+
+    if (adl_switchEmulator(player, emulator) != 0)
         Log::e("adlmidi: cannot set emulator");
 
     if (adl_setNumChips(player, sy->chip_count) != 0)
@@ -184,6 +217,8 @@ static void adlmidi_synth_set_option(synth_object *obj, const char *name, synth_
         sy->chip_count = value.i;
     else if (!strcmp(name, "instrument-bank"))
         sy->instrument_bank.assign(value.s);
+    else if (!strcmp(name, "emulator"))
+        sy->emulator.assign(value.s);
 }
 
 static const synth_interface the_synth_interface = {
