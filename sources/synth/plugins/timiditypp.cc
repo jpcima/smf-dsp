@@ -15,6 +15,17 @@
 #include <cstdlib>
 #include <cstring>
 
+void ZMusic_Print(int type, const char *msg, va_list args)
+{
+    if (type >= 100)
+        Log::ve(msg, args);
+    else if (type >= 50)
+        Log::vw(msg, args);
+    else if (type >= 10)
+        Log::vi(msg, args);
+}
+
+///
 struct timiditypp_synth_object {
     string_list_ptr soundfonts;
     std::unique_ptr<MusicIO::FileSystemSoundFontReader> reader;

@@ -19,6 +19,11 @@ public:
     static void e(const char *format, ...) PRINTF_ATTR(1, 2);
     static void s(const char *format, ...) PRINTF_ATTR(1, 2);
 
+    static void vi(const char *format, va_list ap);
+    static void vw(const char *format, va_list ap);
+    static void ve(const char *format, va_list ap);
+    static void vs(const char *format, va_list ap);
+
     #undef PRINTF_ATTR
 
 private:

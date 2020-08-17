@@ -14,7 +14,7 @@ void Log::i(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    generic('-', "info", "\033[36m", format, ap);
+    vi(format, ap);
     va_end(ap);
 }
 
@@ -22,7 +22,7 @@ void Log::w(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    generic('!', "warn", "\033[33m", format, ap);
+    vw(format, ap);
     va_end(ap);
 }
 
@@ -30,7 +30,7 @@ void Log::e(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    generic('x', "error", "\033[31m", format, ap);
+    ve(format, ap);
     va_end(ap);
 }
 
@@ -38,8 +38,28 @@ void Log::s(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    generic('*', "success", "\033[32m", format, ap);
+    vs(format, ap);
     va_end(ap);
+}
+
+void Log::vi(const char *format, va_list ap)
+{
+    generic('-', "info", "\033[36m", format, ap);
+}
+
+void Log::vw(const char *format, va_list ap)
+{
+    generic('!', "warn", "\033[33m", format, ap);
+}
+
+void Log::ve(const char *format, va_list ap)
+{
+    generic('x', "error", "\033[31m", format, ap);
+}
+
+void Log::vs(const char *format, va_list ap)
+{
+    generic('*', "success", "\033[32m", format, ap);
 }
 
 void Log::generic(char symbol, const char *tag, const char *color, const char *format, va_list ap)
