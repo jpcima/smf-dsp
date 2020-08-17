@@ -13,3 +13,6 @@
 [submodule "thirdparty/FluidLite"]
 	path = thirdparty/fluidlite
 	url = https://github.com/divideconcept/FluidLite.git
+[submodule "thirdparty/timidityplus"]
+	path = thirdparty/timidityplus
+	url = https://github.com/jpcima/timidityplus.git
