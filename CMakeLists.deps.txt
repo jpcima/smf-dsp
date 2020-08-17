@@ -204,7 +204,6 @@ endif()
 
 ###
 find_package(Threads REQUIRED)
-add_library(threads INTERFACE)
 
 ###
 add_library(fluidsynth STATIC EXCLUDE_FROM_ALL
@@ -385,5 +384,6 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/timidityplus")
     "thirdparty/timidityplus/zmusic/critsec.cpp")
   target_include_directories(timiditypp PUBLIC "thirdparty/timidityplus")
   target_include_directories(timiditypp PRIVATE "thirdparty/timidityplus/timiditypp")
+  target_link_libraries(timiditypp PRIVATE Threads::Threads)
   add_library(vendor::timiditypp ALIAS timiditypp)
 endif()
