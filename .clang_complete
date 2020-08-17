@@ -41,4 +41,6 @@
 -DMT32EMU_VERSION_MINOR=0
 -DMT32EMU_VERSION_PATCH=0
 
+-Ithirdparty/timidityplus
+
 -I/usr/include/SDL2

@@ -357,3 +357,33 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/munt")
   #
   add_library(vendor::mt32emu ALIAS mt32emu)
 endif()
+
+###
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/timidityplus")
+  add_library(timiditypp STATIC EXCLUDE_FROM_ALL
+    "thirdparty/timidityplus/common.cpp"
+    "thirdparty/timidityplus/configfile.cpp"
+    "thirdparty/timidityplus/effect.cpp"
+    "thirdparty/timidityplus/fft4g.cpp"
+    "thirdparty/timidityplus/filter.cpp"
+    "thirdparty/timidityplus/freq.cpp"
+    "thirdparty/timidityplus/instrum.cpp"
+    "thirdparty/timidityplus/mblock.cpp"
+    "thirdparty/timidityplus/mix.cpp"
+    "thirdparty/timidityplus/playmidi.cpp"
+    "thirdparty/timidityplus/quantity.cpp"
+    "thirdparty/timidityplus/readmidic.cpp"
+    "thirdparty/timidityplus/recache.cpp"
+    "thirdparty/timidityplus/resample.cpp"
+    "thirdparty/timidityplus/reverb.cpp"
+    "thirdparty/timidityplus/sbkconv.cpp"
+    "thirdparty/timidityplus/sffile.cpp"
+    "thirdparty/timidityplus/sfitem.cpp"
+    "thirdparty/timidityplus/smplfile.cpp"
+    "thirdparty/timidityplus/sndfont.cpp"
+    "thirdparty/timidityplus/tables.cpp"
+    "thirdparty/timidityplus/zmusic/critsec.cpp")
+  target_include_directories(timiditypp PUBLIC "thirdparty/timidityplus")
+  target_include_directories(timiditypp PRIVATE "thirdparty/timidityplus/timiditypp")
+  add_library(vendor::timiditypp ALIAS timiditypp)
+endif()

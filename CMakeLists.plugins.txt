@@ -42,3 +42,8 @@ if(TARGET vendor::mt32emu)
   add_plugin(s_mt32emu "sources/synth/plugins/mt32emu.cc")
   target_link_libraries(s_mt32emu PRIVATE vendor::mt32emu)
 endif()
+
+if(TARGET vendor::timiditypp)
+  add_plugin(s_timiditypp "sources/synth/plugins/timiditypp.cc")
+  target_link_libraries(s_timiditypp PRIVATE vendor::timiditypp)
+endif()
