@@ -98,7 +98,7 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
 
     // open client
     midi_error_status_ = 0;
-    RtMidiOut *out;
+    RtMidiOut *out = nullptr;
     try {
         out = new RtMidiOut(api, PROGRAM_DISPLAY_NAME);
     }
