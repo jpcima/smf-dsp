@@ -24,6 +24,7 @@ struct adlmidi_synth_object {
     int chip_count = 0;
     std::string instrument_bank;
     std::string emulator;
+    std::string volume_model;
 };
 
 static std::string adlmidi_synth_base_dir;
@@ -41,6 +42,7 @@ static const synth_option the_synth_options[] = {
     {"chip-count", "Number of emulated chips", 'i', {.i = 4}},
     {"instrument-bank", "Bank number, or WOPL file path", 's', {.s = "0"}},
     {"emulator", "Name of the chip emulator", 's', {.s = "dosbox"}},
+    {"volume-model", "Name of the volume model", 's', {.s = "auto"}},
 };
 
 struct named_emulator {
@@ -54,6 +56,26 @@ static const named_emulator the_emulators[] = {
     {"nuked 1.7", ADLMIDI_EMU_NUKED_174},
     {"opal", ADLMIDI_EMU_OPAL},
     {"java", ADLMIDI_EMU_JAVA},
+};
+
+struct named_volume_model {
+    const char *name;
+    int value;
+};
+
+static const named_volume_model the_volume_models[] = {
+    {"auto", ADLMIDI_VolumeModel_AUTO},
+    {"generic", ADLMIDI_VolumeModel_Generic},
+    {"native-opl3", ADLMIDI_VolumeModel_NativeOPL3},
+    {"cmf", ADLMIDI_VolumeModel_CMF},
+    {"dmx", ADLMIDI_VolumeModel_DMX},
+    {"apogee", ADLMIDI_VolumeModel_APOGEE},
+    {"9x", ADLMIDI_VolumeModel_9X},
+    {"dmx-fixed", ADLMIDI_VolumeModel_DMX_Fixed},
+    {"apogee-fixed", ADLMIDI_VolumeModel_APOGEE_Fixed},
+    {"ail", ADLMIDI_VolumeModel_AIL},
+    {"9x-generic-fm", ADLMIDI_VolumeModel_9X_GENERIC_FM},
+    {"hmi", ADLMIDI_VolumeModel_HMI},
 };
 
 static const synth_option *adlmidi_plugin_option(size_t index)
@@ -88,13 +110,17 @@ static int adlmidi_synth_activate(synth_object *obj)
         return -1;
     sy->player.reset(player);
 
+    auto str_to_lower = [](std::string text) -> std::string {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) -> char { return std::tolower(c); });
+        return text;
+    };
+
+    //
     int emulator = -1;
     const unsigned num_emulators = sizeof(the_emulators) / sizeof(the_emulators[0]);
 
-    std::string emu_id(sy->emulator);
-    std::transform(emu_id.begin(), emu_id.end(), emu_id.begin(),
-                   [](unsigned char c) -> char { return std::tolower(c); });
-
+    const std::string emu_id = str_to_lower(sy->emulator);
     for (unsigned i = 0; i < num_emulators && emulator == -1; ++i) {
         if (emu_id == the_emulators[i].name)
             emulator = the_emulators[i].value;
@@ -104,8 +130,25 @@ static int adlmidi_synth_activate(synth_object *obj)
         emulator = the_emulators[0].value;
     }
 
+    //
+    int volume_model = -1;
+    const unsigned num_volume_models = sizeof(the_volume_models) / sizeof(the_volume_models[0]);
+
+    const std::string volmodel_id = str_to_lower(sy->volume_model);
+    for (unsigned i = 0; i < num_volume_models && volume_model == -1; ++i) {
+        if (volmodel_id == the_volume_models[i].name)
+            volume_model = the_volume_models[i].value;
+    }
+    if (volume_model == -1) {
+        Log::e("adlmidi: cannot find a volume model named \"%s\"", sy->volume_model.c_str());
+        volume_model = the_volume_models[0].value;
+    }
+
+    //
     if (adl_switchEmulator(player, emulator) != 0)
         Log::e("adlmidi: cannot set emulator");
+
+    adl_setVolumeRangeModel(player, volume_model);
 
     if (adl_setNumChips(player, sy->chip_count) != 0)
         Log::e("adlmidi: cannot set chip count %d", sy->chip_count);
@@ -219,6 +262,8 @@ static void adlmidi_synth_set_option(synth_object *obj, const char *name, synth_
         sy->instrument_bank.assign(value.s);
     else if (!strcmp(name, "emulator"))
         sy->emulator.assign(value.s);
+    else if (!strcmp(name, "volume-model"))
+        sy->volume_model.assign(value.s);
 }
 
 static const synth_interface the_synth_interface = {
