@@ -217,6 +217,8 @@ static void fluid_synth_write(synth_object *obj, const unsigned char *msg, size_
 #endif
             break;
         case 0xb0:
+            if (channel == 9 && (data1 == 0 || data1 == 32))
+                break; // XXX fluidlite does not process ch10 bank select correctly
             fluid_synth_cc(synth, channel, data1, data2);
             break;
         case 0xc0:
