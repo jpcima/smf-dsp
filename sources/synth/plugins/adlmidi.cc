@@ -76,6 +76,7 @@ static const named_volume_model the_volume_models[] = {
     {"ail", ADLMIDI_VolumeModel_AIL},
     {"9x-generic-fm", ADLMIDI_VolumeModel_9X_GENERIC_FM},
     {"hmi", ADLMIDI_VolumeModel_HMI},
+    {"hmi-old", ADLMIDI_VolumeModel_HMI_OLD},
 };
 
 static const synth_option *adlmidi_plugin_option(size_t index)

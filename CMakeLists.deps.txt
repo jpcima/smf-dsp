@@ -231,13 +231,13 @@ add_library(vendor::fluidsynth ALIAS fluidsynth)
 ###
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libADLMIDI")
   add_library(adlmidi STATIC EXCLUDE_FROM_ALL
-    "thirdparty/libADLMIDI/src/adldata.cpp"
     "thirdparty/libADLMIDI/src/adlmidi.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_load.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_midiplay.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_opl3.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_private.cpp"
     "thirdparty/libADLMIDI/src/adlmidi_sequencer.cpp"
+    "thirdparty/libADLMIDI/src/inst_db.cpp"
     "thirdparty/libADLMIDI/src/chips/dosbox_opl3.cpp"
     "thirdparty/libADLMIDI/src/chips/java_opl3.cpp"
     "thirdparty/libADLMIDI/src/chips/nuked_opl3.cpp"
