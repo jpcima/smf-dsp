@@ -1,9 +1,13 @@
 #include "synth_fx.h"
+#include "audio/bass_enhance.h"
 #include "audio/eq_5band.h"
 #include "audio/reverb.h"
 
 static const Fx_Parameter fx_parameters[] = {
-    {"EQ", 0, Fx_Parameter::Boolean},
+    {"Bass Enhance", 0, Fx_Parameter::Boolean},
+    {"Bass Amount", 50, Fx_Parameter::Integer},
+    {"Bass Tone", 50, Fx_Parameter::Integer},
+    {"EQ", 0, Fx_Parameter::Boolean, Fx_Parameter::HasSeparator},
     {"EQ Low", 50, Fx_Parameter::Integer},
     {"EQ Mid-Low", 50, Fx_Parameter::Integer},
     {"EQ Mid", 50, Fx_Parameter::Integer},
@@ -22,7 +26,7 @@ static_assert(
     "The parameter count does not match");
 
 Synth_Fx::Synth_Fx()
-    : eq_(new Eq_5band), rev_(new Reverb)
+    : be_(new BassEnhance), eq_(new Eq_5band), rev_(new Reverb)
 {
     gsl::span<const Fx_Parameter> params(fx_parameters);
 
@@ -36,18 +40,21 @@ Synth_Fx::~Synth_Fx()
 
 void Synth_Fx::init(float sample_rate)
 {
+    be_->init(sample_rate);
     eq_->init(sample_rate);
     rev_->init(sample_rate);
 }
 
 void Synth_Fx::clear()
 {
+    be_->clear();
     eq_->clear();
     rev_->clear();
 }
 
 void Synth_Fx::compute(float data[], unsigned nframes)
 {
+    BassEnhance &be = *be_;
     Eq_5band &eq = *eq_;
     Reverb &rev = *rev_;
     unsigned index = 0;
@@ -67,6 +74,9 @@ void Synth_Fx::compute(float data[], unsigned nframes)
             ch2[i] = frame[1];
         }
 
+        if (be_enable_)
+            be.compute(ch1, ch2, cur);
+
         if (eq_enable_)
             eq.compute(ch1, ch2, cur);
 
@@ -85,10 +95,17 @@ void Synth_Fx::compute(float data[], unsigned nframes)
 
 int Synth_Fx::get_parameter(size_t index) const
 {
+    const BassEnhance &be = *be_;
     const Eq_5band &eq = *eq_;
     const Reverb &rev = *rev_;
 
     switch (index) {
+    case P_Bass_Enhance:
+        return be_enable_ ? 100 : 0;
+    case P_Bass_Amount:
+        return static_cast<int>(be.get_parameter(0));
+    case P_Bass_Tone:
+        return static_cast<int>(be.get_parameter(1));
     case P_Eq_Enable:
         return eq_enable_ ? 100 : 0;
     case P_Eq_Low:
@@ -113,10 +130,26 @@ int Synth_Fx::get_parameter(size_t index) const
 
 void Synth_Fx::set_parameter(size_t index, int value)
 {
+    BassEnhance &be = *be_;
     Eq_5band &eq = *eq_;
     Reverb &rev = *rev_;
 
     switch (index) {
+    case P_Bass_Enhance: {
+        bool en = value > 0;
+        if (be_enable_ != en) {
+            if (!en)
+                be.clear();
+            be_enable_ = en;
+        }
+        break;
+    }
+    case P_Bass_Amount:
+        be.set_parameter(0, value);
+        break;
+    case P_Bass_Tone:
+        be.set_parameter(1, value);
+        break;
     case P_Eq_Enable: {
         bool en = value > 0;
         if (eq_enable_ != en) {

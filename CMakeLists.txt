@@ -60,6 +60,7 @@ add_executable(smf-dsp WIN32
   "sources/main.cc"
   "sources/version_info.rc"
   "sources/audio/analyzer_10band.cc"
+  "sources/audio/bass_enhance.cc"
   "sources/audio/eq_5band.cc"
   "sources/audio/reverb.cc"
   "sources/player/player.cc"

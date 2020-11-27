@@ -1,6 +1,7 @@
 #pragma once
 #include <gsl/gsl>
 #include <memory>
+class BassEnhance;
 class Eq_5band;
 class Reverb;
 
@@ -28,6 +29,9 @@ public:
     static gsl::span<const Fx_Parameter> parameters();
 
     enum {
+        P_Bass_Enhance,
+        P_Bass_Amount,
+        P_Bass_Tone,
         P_Eq_Enable,
         P_Eq_Low,
         P_Eq_Mid_Low,
@@ -41,8 +45,10 @@ public:
     };
 
 private:
+    std::unique_ptr<BassEnhance> be_;
     std::unique_ptr<Eq_5band> eq_;
     std::unique_ptr<Reverb> rev_;
+    bool be_enable_ = false;
     bool eq_enable_ = false;
     bool rev_enable_ = false;
 };
