@@ -64,6 +64,7 @@ public:
     void load_theme(gsl::cstring_span theme);
     void load_default_theme();
     void load_theme_configuration(const CSimpleIniA &ini);
+    void get_fx_parameters(const CSimpleIniA &ini, int *values) const;
 
     void engage_shutdown();
     void engage_shutdown_if_esc_key();

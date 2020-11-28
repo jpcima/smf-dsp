@@ -94,6 +94,9 @@ Application::Application()
     if (const char *value = ini->GetValue("", "synth-device"))
         last_synth_choice_.assign(value);
 
+    std::array<int, Synth_Fx::Parameter_Count> fx_parameters;
+    get_fx_parameters(*ini, fx_parameters.data());
+
     Rect bounds(0, 0, size_.x, size_.y);
     Main_Layout *layout = new Main_Layout;
     layout_.reset(layout);
@@ -137,6 +140,13 @@ Application::Application()
 
     choose_midi_output(false, last_midi_output_choice_);
     choose_synth(false, last_synth_choice_);
+
+    for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+        std::unique_ptr<Pcmd_Set_Fx_Parameter> cmd(new Pcmd_Set_Fx_Parameter);
+        cmd->index = i;
+        cmd->value = fx_parameters[i];
+        pl->push_command(std::move(cmd));
+    }
 }
 
 Application::~Application()
@@ -1208,6 +1218,11 @@ void Application::open_fx_dialog()
                 ValueChangeCallback(index, value);
         }
 
+        int get_value(size_t index) const
+        {
+            return values_[index];
+        }
+
         std::function<void(size_t, int)> ValueChangeCallback;
 
     private:
@@ -1223,6 +1238,26 @@ void Application::open_fx_dialog()
         cmd->index = index;
         cmd->value = value;
         player_->push_command(std::move(cmd));
+    };
+
+    modal->CompletionCallback = [modal]() {
+        std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+        if (!ini) ini = create_configuration();
+
+        bool ini_update = false;
+        gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+
+        for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+            long old_value = ini->GetLongValue("effects", params[i].name, -1);
+            long value = modal->get_value(i);
+            if (old_value != value) {
+                ini->SetLongValue("effects", params[i].name, value, nullptr, false, true);
+                ini_update = true;
+            }
+        }
+
+        if (ini_update)
+            save_global_configuration(*ini);
     };
 }
 
@@ -1472,6 +1507,17 @@ void Application::load_theme_configuration(const CSimpleIniA &ini)
     }
 }
 
+void Application::get_fx_parameters(const CSimpleIniA &ini, int *values) const
+{
+    gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+
+    for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+        long value = ini.GetLongValue("effects", params[i].name, -1);
+        values[i] = (value >= 0 && value <= 100) ?
+            (int)value : params[i].default_value;
+    }
+}
+
 void Application::engage_shutdown()
 {
     Log::i("Engage shutdown");
@@ -1563,6 +1609,13 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
     if (!ini->GetValue("", "force-software-renderer")) {
         ini->SetBoolValue("", "force-software-renderer", false, "; Force software rendering in case of graphical problems");
         ini_update = true;
+    }
+
+    for (const Fx_Parameter &param : Synth_Fx::parameters()) {
+        if (!ini->GetValue("effects", param.name)) {
+            ini->SetLongValue("effects", param.name, param.default_value);
+            ini_update = true;
+        }
     }
 
     if (ini_update)
