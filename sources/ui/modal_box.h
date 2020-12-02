@@ -31,6 +31,8 @@ public:
 
     virtual bool handle_key_pressed(const SDL_KeyboardEvent &event) { return false; };
     virtual bool handle_key_released(const SDL_KeyboardEvent &event) { return false; };
+    virtual bool handle_mouse_pressed(const SDL_MouseButtonEvent &event) { return false; };
+    virtual bool handle_mouse_released(const SDL_MouseButtonEvent &event) { return false; };
     virtual bool handle_text_input(const SDL_TextInputEvent &event) { return false; };
 
     std::function<void ()> CompletionCallback;

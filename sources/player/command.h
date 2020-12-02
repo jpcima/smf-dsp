@@ -20,6 +20,8 @@ enum {
     PC_Seek_End,
     PC_Speed,
     PC_Repeat_Mode,
+    PC_Channel_Enable,
+    PC_Channel_Toggle,
     PC_Request_State,
     PC_Get_Midi_Outputs,
     PC_Set_Midi_Output,
@@ -68,6 +70,17 @@ struct Pcmd_Speed : Player_Command {
 
 struct Pcmd_Repeat_Mode : Player_Command {
     int type() const noexcept override { return PC_Repeat_Mode; }
+};
+
+struct Pcmd_Channel_Enable : Player_Command {
+    int type() const noexcept override { return PC_Channel_Enable; }
+    unsigned channel = 0;
+    bool enable = false;
+};
+
+struct Pcmd_Channel_Toggle : Player_Command {
+    int type() const noexcept override { return PC_Channel_Toggle; }
+    unsigned channel = 0;
 };
 
 struct Pcmd_Request_State : Player_Command {

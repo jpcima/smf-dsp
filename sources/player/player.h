@@ -44,6 +44,8 @@ private:
     void goto_time(double t);
     void goto_relative_time(double o);
     void reset_current_playback();
+    void set_channel_enabled(unsigned ch, bool en);
+    void toggle_channel_enabled(unsigned ch);
 
     void begin_seeking();
     void end_seeking();
@@ -86,6 +88,9 @@ private:
     Player_Song_Metadata smf_md_;
     double current_tempo_ = 0;
     unsigned current_speed_ = 100;
+
+    // channels
+    std::bitset<16> channel_enabled_ { 0xffff };
 
     // seek state
     bool seeking_ = false;

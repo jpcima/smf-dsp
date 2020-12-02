@@ -9,6 +9,7 @@
 #include <gsl/gsl>
 #include <string>
 #include <vector>
+#include <bitset>
 
 struct Player_Song_Metadata {
     std::string name;
@@ -27,6 +28,7 @@ struct Player_State {
     unsigned speed = 100;
     std::string file_path;
     Player_Song_Metadata song_metadata;
+    std::bitset<16> channel_enabled;
     float audio_levels[10] {};
     float fx_parameters[Synth_Fx::Parameter_Count] {};
 };

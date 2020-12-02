@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <cstdio>
 #include <cstring>
+#include <cassert>
 
 Player::Player()
     : quit_(false),
@@ -193,6 +194,17 @@ void Player::process_command_queue()
         case PC_Repeat_Mode:
             repeat_mode_ = Repeat_Mode((repeat_mode_ + 1) % (Repeat_Mode_Max + 1));
             break;
+        case PC_Channel_Enable: {
+            unsigned channel = static_cast<Pcmd_Channel_Enable &>(*cmd).channel;
+            bool enable = static_cast<Pcmd_Channel_Enable &>(*cmd).enable;
+            set_channel_enabled(channel, enable);
+            break;
+        }
+        case PC_Channel_Toggle: {
+            unsigned channel = static_cast<Pcmd_Channel_Toggle &>(*cmd).channel;
+            toggle_channel_enabled(channel);
+            break;
+        }
         case PC_Request_State:
             if (StateCallback)
                 StateCallback(make_state());
@@ -314,6 +326,35 @@ void Player::reset_current_playback()
     }
 }
 
+void Player::set_channel_enabled(unsigned ch, bool en)
+{
+    assert(!seeking_);
+
+    if (ch >= 16)
+        return;
+
+    if (channel_enabled_[ch] == en)
+        return;
+
+    if (!en) {
+        uint8_t all_sound_off[3];
+        all_sound_off[0] = 0xb0 | ch;
+        all_sound_off[1] = 120;
+        all_sound_off[2] = 0;
+        play_message(all_sound_off, sizeof(all_sound_off));
+    }
+
+    channel_enabled_[ch] = en;
+}
+
+void Player::toggle_channel_enabled(unsigned ch)
+{
+    if (ch >= 16)
+        return;
+
+    set_channel_enabled(ch, !channel_enabled_[ch]);
+}
+
 void Player::begin_seeking()
 {
     // trust the sequencer to send initialization events, don't do it ourselves
@@ -385,7 +426,12 @@ void Player::tick(uint64_t elapsed)
 void Player::on_sequence_event(const fmidi_event_t &event)
 {
     switch (event.type) {
-    case fmidi_event_message:
+    case fmidi_event_message: {
+        uint8_t status = event.data[0];
+        bool is_note = (status & 0xf0) == 0x80 || (status & 0xf0) == 0x90;
+        if (is_note && !channel_enabled_[status & 0x0f])
+            break;
+
         if (!seeking_)
             play_message(event.data, event.datalen);
         else {
@@ -393,6 +439,7 @@ void Player::on_sequence_event(const fmidi_event_t &event)
             sks.add_event(event.data, event.datalen);
         }
         break;
+    }
     case fmidi_event_meta: {
         play_meta(event.data[0], event.data + 1, event.datalen - 1);
         break;
@@ -575,6 +622,9 @@ Player_State Player::make_state() const
     Play_List &pll = *play_list_;
     if (!pll.at_end())
         ps.file_path = pll.current();
+
+    for (unsigned ch = 0; ch < 16; ++ch)
+        ps.channel_enabled[ch] = channel_enabled_[ch];
 
     {
         std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(current_levels_mutex_));

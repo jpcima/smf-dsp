@@ -31,6 +31,10 @@ class RectT : public Rect_Traits<T>::storage_type {
   T ycenter() const { return this->y + (this->h - 1) / 2; }
   PointT<T> origin() const { return {this->x, this->y}; }
   PointT<T> size() const { return {this->w, this->h}; }
+  bool contains(const PointT<T> &p) const {
+      return p.x >= this->x && p.x < this->x + this->w &&
+          p.y >= this->y && p.y < this->y + this->h;
+  }
   RectT<T> intersect(const RectT<T> &r) const {
     RectT<T> ri;
     ri.x = std::max(this->x, r.x);

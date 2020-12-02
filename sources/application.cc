@@ -444,6 +444,8 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
     // Draw MIDI channel info
     for (unsigned ch = 0; ch < 16; ++ch) {
         const Channel_State &cs = ps.kb.channel[ch];
+        const bool ch_en = ps.channel_enabled[ch];
+        const SDL_Color ch_text_color = pal[ch_en ? Colors::text_high_brightness : Colors::text_low_brightness];
 
         Piano piano(lo.channel_piano[ch]);
         piano.set_keys(cs.key);
@@ -454,13 +456,13 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
             SDLpp_RenderDrawDottedHLine(rr, lo.channel_underline[ch].p1.x, lo.channel_underline[ch].p2.x, lo.channel_underline[ch].p1.y);
         }
 
-        if (paint & Pt_Background) {
+        if (paint & Pt_Foreground) {
             Rect r = lo.channel_number_label[ch];
             Text_Painter tp;
             tp.rr = rr;
             tp.font = &font_fmdsp_small;
 
-            tp.fg = pal[Colors::text_high_brightness];
+            tp.fg = ch_text_color;
             tp.font = &font_fmdsp_small;
             tp.pos = Point(r.x, r.y - 1);
             tp.draw_utf8("CH");
@@ -509,7 +511,7 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
                     patch_name = pgm ? pgm->patch_name : nullptr;
                 }
 
-                tp.fg = pal[Colors::text_high_brightness];
+                tp.fg = ch_text_color;
                 tp.font = &font_fmdsp_small;
                 tp.pos = r.origin();
                 switch (patch_spec) {
@@ -546,9 +548,9 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
             if (paint & Pt_Foreground) {
                 char text[8];
                 sprintf(text, "%3u", cs.ctl[0x07]);
-                draw_text_rect(lo.channel_volume_value[ch], text, pal[Colors::text_high_brightness]);
+                draw_text_rect(lo.channel_volume_value[ch], text, ch_text_color);
                 sprintf(text, "%3d", cs.ctl[0x0a] - 64);
-                draw_text_rect(lo.channel_pan_value[ch], text, pal[Colors::text_high_brightness]);
+                draw_text_rect(lo.channel_pan_value[ch], text, ch_text_color);
             }
         }
     }
@@ -858,16 +860,33 @@ bool Application::handle_key_released(const SDL_KeyboardEvent &event)
     return false;
 }
 
-bool Application::handle_mouse_pressed(const SDL_MouseButtonEvent &event)
+bool Application::handle_mouse_pressed(const SDL_MouseButtonEvent &event_)
 {
-    if (modal_.empty()) {
+    const Main_Layout &lo = *layout_;
+    int scale_factor = scale_factor_;
+
+    // logical mouse position, transformed according to the zoom setting
+    SDL_MouseButtonEvent event = event_;
+    event.x /= scale_factor;
+    event.y /= scale_factor;
+
+    if (!modal_.empty())
+        return modal_.back()->handle_mouse_pressed(event);
+
+    PointT<int> pos = {event.x, event.y};
+
+    if (lo.logo_rect.contains(pos)) {
         open_help_dialog();
         return true;
     }
-    else {
-        for (size_t i = 0, n = modal_.size(); i < n; ++i)
-            modal_.pop_back();
-        return true;
+
+    for (unsigned ch = 0; ch < 16; ++ch) {
+        if (lo.row_channel[ch].contains(pos)) {
+            std::unique_ptr<Pcmd_Channel_Toggle> cmd(new Pcmd_Channel_Toggle);
+            cmd->channel = ch;
+            player_->push_command(std::move(cmd));
+            return true;
+        }
     }
 
     return false;
@@ -875,6 +894,9 @@ bool Application::handle_mouse_pressed(const SDL_MouseButtonEvent &event)
 
 bool Application::handle_mouse_released(const SDL_MouseButtonEvent &event)
 {
+    if (!modal_.empty())
+        return modal_.back()->handle_mouse_released(event);
+
     return false;
 }
 
@@ -1035,6 +1057,12 @@ void Application::open_help_dialog()
             }
 
             return false;
+        }
+
+        bool handle_mouse_pressed(const SDL_MouseButtonEvent &event) override
+        {
+            finish();
+            return true;
         }
     };
 
