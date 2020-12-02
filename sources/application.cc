@@ -46,6 +46,8 @@ static constexpr unsigned quit_by_esc_key_delay = 500;
 
 static constexpr char default_synth_id[] = "adlmidi";
 
+static constexpr unsigned max_scale_factor = 2;
+
 static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
     {"F1", "Open the help screen"},
     {"F2", "Select a MIDI device for playback"},
@@ -93,6 +95,11 @@ Application::Application()
         last_midi_output_choice_.assign(value);
     if (const char *value = ini->GetValue("", "synth-device"))
         last_synth_choice_.assign(value);
+    {
+        long value = ini->GetLongValue("", "scale-factor", 0);
+        if (value > 0)
+            scale_factor_ = (unsigned)std::min(value, (long)max_scale_factor);
+    }
 
     std::array<int, Synth_Fx::Parameter_Count> fx_parameters;
     get_fx_parameters(*ini, fx_parameters.data());
@@ -157,9 +164,17 @@ Application::~Application()
 
 SDL_Window *Application::init_window()
 {
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+
+    unsigned scale_factor = scale_factor_;
+    Point win_size = size_;
+    win_size.x *= scale_factor;
+    win_size.y *= scale_factor;
+
     SDL_Window *win = SDL_CreateWindow(
         PROGRAM_DISPLAY_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        size_.x, size_.y, 0);
+        win_size.x, win_size.y, 0);
     if (!win)
         return nullptr;
 
@@ -261,12 +276,18 @@ void Application::exec()
 void Application::set_scale_factor(SDL_Window *win, unsigned sf)
 {
     if (sf < 1) sf = 1;
-    if (sf > 3) sf = 3;
+    if (sf > max_scale_factor) sf = max_scale_factor;
 
-    if (scale_factor_ != sf) {
-        scale_factor_ = sf;
-        SDL_SetWindowSize(win, size_.x * sf, size_.y * sf);
-    }
+    if (scale_factor_ == sf)
+        return;
+
+    scale_factor_ = sf;
+    SDL_SetWindowSize(win, size_.x * sf, size_.y * sf);
+
+    std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
+    if (!ini) ini = create_configuration();
+    ini->SetLongValue("", "scale-factor", sf, nullptr, false, true);
+    save_global_configuration(*ini);
 }
 
 void Application::paint(SDL_Renderer *rr, int paint)
@@ -1636,6 +1657,11 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
 
     if (!ini->GetValue("", "force-software-renderer")) {
         ini->SetBoolValue("", "force-software-renderer", false, "; Force software rendering in case of graphical problems");
+        ini_update = true;
+    }
+
+    if (!ini->GetValue("", "scale-factor")) {
+        ini->SetLongValue("", "scale-factor", 1, "; Scale factor of the display");
         ini_update = true;
     }
 
