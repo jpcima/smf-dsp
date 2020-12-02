@@ -5,8 +5,8 @@
 
 static const Fx_Parameter fx_parameters[] = {
     {"Bass Enhance", 0, Fx_Parameter::Boolean},
-    {"Bass Amount", 50, Fx_Parameter::Integer},
-    {"Bass Tone", 50, Fx_Parameter::Integer},
+    {"Bass amount", 50, Fx_Parameter::Integer},
+    {"Bass tone", 50, Fx_Parameter::Integer},
     {"EQ", 0, Fx_Parameter::Boolean, Fx_Parameter::HasSeparator},
     {"EQ Low", 50, Fx_Parameter::Integer},
     {"EQ Mid-Low", 50, Fx_Parameter::Integer},
