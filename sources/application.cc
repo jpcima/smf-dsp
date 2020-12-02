@@ -278,11 +278,15 @@ void Application::set_scale_factor(SDL_Window *win, unsigned sf)
     if (sf < 1) sf = 1;
     if (sf > max_scale_factor) sf = max_scale_factor;
 
-    if (scale_factor_ == sf)
+    unsigned old_sf = scale_factor_;
+    if (sf == old_sf)
         return;
 
     scale_factor_ = sf;
     SDL_SetWindowSize(win, size_.x * sf, size_.y * sf);
+
+    if (sf > old_sf)
+        SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
     if (!ini) ini = create_configuration();
