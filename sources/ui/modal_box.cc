@@ -98,6 +98,7 @@ bool Modal_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
         }
         break;
     case SDL_SCANCODE_RETURN:
+    case SDL_SCANCODE_KP_ENTER:
         if (keymod == KMOD_NONE) {
             finish();
             return true;
@@ -251,6 +252,7 @@ bool Modal_File_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event
 
     switch (event.keysym.scancode) {
     case SDL_SCANCODE_RETURN:
+    case SDL_SCANCODE_KP_ENTER:
         if (keymod == KMOD_NONE) {
             if (const File_Entry *ent = model.current_entry()) {
                 if (ent->type == 'D') {
@@ -305,6 +307,7 @@ bool Modal_Text_Input_Box::handle_key_pressed(const SDL_KeyboardEvent &event)
         }
         break;
     case SDL_SCANCODE_RETURN:
+    case SDL_SCANCODE_KP_ENTER:
         if (keymod == KMOD_NONE) {
             accepted_ = true;
             finish();

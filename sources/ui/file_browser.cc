@@ -157,6 +157,7 @@ bool File_Browser::handle_key_pressed(const SDL_KeyboardEvent &event)
             move_selection_by(+rows());
             return true;
         case SDL_SCANCODE_RETURN:
+        case SDL_SCANCODE_KP_ENTER:
             model_.trigger_entry(model_.selection());
             focus_on_selection();
             return true;
