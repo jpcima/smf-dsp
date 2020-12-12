@@ -3,32 +3,12 @@
 #include "audio/eq_5band.h"
 #include "audio/reverb.h"
 
-static const Fx_Parameter fx_parameters[] = {
-    {"Bass Enhance", 0, Fx_Parameter::Boolean},
-    {"Bass amount", 50, Fx_Parameter::Integer},
-    {"Bass tone", 50, Fx_Parameter::Integer},
-    {"EQ", 0, Fx_Parameter::Boolean, Fx_Parameter::HasSeparator},
-    {"EQ Low", 50, Fx_Parameter::Integer},
-    {"EQ Mid-Low", 50, Fx_Parameter::Integer},
-    {"EQ Mid", 50, Fx_Parameter::Integer},
-    {"EQ Mid-High", 50, Fx_Parameter::Integer},
-    {"EQ High", 50, Fx_Parameter::Integer},
-    {"Reverb", 0, Fx_Parameter::Boolean, Fx_Parameter::HasSeparator},
-    {"Reverb amount", 50, Fx_Parameter::Integer},
-    {"Reverb size", 10, Fx_Parameter::Integer},
-};
-
-static constexpr size_t fx_parameter_count =
-    sizeof(fx_parameters) / sizeof(fx_parameters[0]);
-
-static_assert(
-    fx_parameter_count == Synth_Fx::Parameter_Count,
-    "The parameter count does not match");
+using namespace Fx;
 
 Synth_Fx::Synth_Fx()
     : be_(new BassEnhance), eq_(new Eq_5band), rev_(new Reverb)
 {
-    gsl::span<const Fx_Parameter> params(fx_parameters);
+    gsl::span<const Fx::Parameter> params = Fx::parameters();
 
     for (size_t p = 0; p < params.size(); ++p)
         set_parameter(p, params[p].default_value);
@@ -190,9 +170,4 @@ void Synth_Fx::set_parameter(size_t index, int value)
         rev.set_parameter(0, value);
         break;
     }
-}
-
-gsl::span<const Fx_Parameter> Synth_Fx::parameters()
-{
-    return gsl::span<const Fx_Parameter>(fx_parameters, fx_parameter_count);
 }

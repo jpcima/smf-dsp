@@ -15,6 +15,7 @@
 #include "instruments/port.h"
 #include "instruments/synth.h"
 #include "instruments/synth_fx.h"
+#include "instruments/midi_fx.h"
 #include "synth/synth_host.h"
 #include "utility/charset.h"
 #include "utility/uv++.h"
@@ -35,8 +36,8 @@ Player::Player()
     Synth_Host::plugins();
 
     // create audio device
-    Synth_Fx *fx = new Synth_Fx;
-    fx_.reset(fx);
+    Synth_Fx *sfx = new Synth_Fx;
+    sfx_.reset(sfx);
     if (Audio_Device *adev = init_audio_device()) {
         float sample_rate = adev->sample_rate();
         synth_ins_.reset(new Midi_Synth_Instrument);
@@ -44,9 +45,17 @@ Player::Player()
         analyzer_10band &an = level_analyzer_;
         an.init(sample_rate);
         an.setup(1.0, 16e3, 100e-3);
-        fx->init(sample_rate);
+        sfx->init(sample_rate);
         adev->start();
     }
+
+    // create midi effects
+    Midi_Fx *mfx = new Midi_Fx;
+    mfx_.reset(mfx);
+    mfx->init(+[](void *cbdata, const uint8_t *msg, uint32_t len, double ts, int flags) {
+        return reinterpret_cast<Player *>(cbdata)->send_message(msg, len, ts, flags);
+    }, this);
+    mfx_enabled_ = true;
 
     // initialize seeker
     seek_state_->set_message_callback(+[](const uint8_t *msg, uint32_t len, void *ptr) {
@@ -247,7 +256,7 @@ void Player::process_command_queue()
             Log::i("Audio rate: %f Hz", audio_rate);
             Log::i("Audio latency: %f ms", 1e3 * audio_latency);
 
-            fx_enable_request_.store(id.empty() ? 0 : 1);
+            sfx_enable_request_.store(id.empty() ? 0 : 1);
 
             ins->open_midi_output(id);
 
@@ -257,7 +266,19 @@ void Player::process_command_queue()
         case PC_Set_Fx_Parameter: {
             const size_t index = static_cast<Pcmd_Set_Fx_Parameter &>(*cmd).index;
             const int value = static_cast<Pcmd_Set_Fx_Parameter &>(*cmd).value;
-            fx_->set_parameter(index, value);
+
+            if (index >= Fx::Parameter_Count)
+                break;
+
+            const Fx::Parameter &param = Fx::parameter(index);
+            switch (param.category) {
+            case Fx::Synth:
+                sfx_->set_parameter(index, value);
+                break;
+            case Fx::Midi:
+                mfx_->set_parameter(index, value);
+                break;
+            }
             break;
         }
         case PC_Shutdown: {
@@ -460,8 +481,10 @@ void Player::play_message(const uint8_t *msg, uint32_t len)
         flags |= Midi_Message_Is_First;
         ts_started_ = true;
     }
-    for (Midi_Instrument *ins : instruments())
-        ins->send_message(msg, len, ts, flags);
+    if (mfx_enabled_)
+        mfx_->send_message(msg, len, ts, flags);
+    else
+        send_message(msg, len, ts, flags);
     ts_last_ = now;
 }
 
@@ -476,6 +499,12 @@ void Player::play_meta(uint8_t type, const uint8_t *msg, uint32_t len)
             current_tempo_ = 60e6 / midi_tempo;
         }
     }
+}
+
+void Player::send_message(const uint8_t *msg, uint32_t len, double ts, int flags)
+{
+    for (Midi_Instrument *ins : instruments())
+        ins->send_message(msg, len, ts, flags);
 }
 
 ///
@@ -631,9 +660,18 @@ Player_State Player::make_state() const
         std::memcpy(ps.audio_levels, current_levels_, 10 * sizeof(float));
     }
 
-    Synth_Fx &fx = *fx_;
-    for (size_t p = 0; p < Synth_Fx::Parameter_Count; ++p)
-        ps.fx_parameters[p] = fx.get_parameter(p);
+    const Synth_Fx &sfx = *sfx_;
+    const Midi_Fx &mfx = *mfx_;
+    for (size_t p = 0; p < Fx::Parameter_Count; ++p) {
+        switch (Fx::parameter(p).category) {
+        case Fx::Synth:
+            ps.fx_parameters[p] = sfx.get_parameter(p);
+            break;
+        case Fx::Midi:
+            ps.fx_parameters[p] = mfx.get_parameter(p);
+            break;
+        }
+    }
 
     return ps;
 }
@@ -711,20 +749,20 @@ void Player::audio_callback(float *output, unsigned nframes, void *user_data)
     self->synth_ins_->generate_audio(output, nframes);
 
     ///
-    Synth_Fx &fx = *self->fx_;
+    Synth_Fx &sfx = *self->sfx_;
     bool fx_enabled;
-    switch (self->fx_enable_request_.exchange(-1)) {
+    switch (self->sfx_enable_request_.exchange(-1)) {
     case 0: fx_enabled = false; break;
     case 1: fx_enabled = true; break;
-    default: fx_enabled = self->fx_enabled_; break;
+    default: fx_enabled = self->sfx_enabled_; break;
     }
-    if (self->fx_enabled_ != fx_enabled) {
+    if (self->sfx_enabled_ != fx_enabled) {
         if (fx_enabled)
-            fx.clear();
-        self->fx_enabled_ = fx_enabled;
+            sfx.clear();
+        self->sfx_enabled_ = fx_enabled;
     }
     if (fx_enabled)
-        fx.compute(output, nframes);
+        sfx.compute(output, nframes);
 
     ///
     const float *levels = self->level_analyzer_.compute_stereo(output, nframes);

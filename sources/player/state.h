@@ -5,7 +5,7 @@
 
 #pragma once
 #include "keystate.h"
-#include "instruments/synth_fx.h"
+#include "fx.h"
 #include <gsl/gsl>
 #include <string>
 #include <vector>
@@ -30,5 +30,5 @@ struct Player_State {
     Player_Song_Metadata song_metadata;
     std::bitset<16> channel_enabled;
     float audio_levels[10] {};
-    int fx_parameters[Synth_Fx::Parameter_Count] {};
+    int fx_parameters[Fx::Parameter_Count] {};
 };

@@ -24,6 +24,7 @@ class Midi_Synth_Instrument;
 enum Repeat_Mode : unsigned;
 class Synth_Host;
 class Synth_Fx;
+class Midi_Fx;
 class Audio_Device;
 typedef struct uv_async_s uv_async_t;
 
@@ -56,6 +57,7 @@ private:
     void on_sequence_event(const fmidi_event_t &event);
     void play_message(const uint8_t *msg, uint32_t len);
     void play_meta(uint8_t type, const uint8_t *msg, uint32_t len);
+    void send_message(const uint8_t *msg, uint32_t len, double ts, int flags);
     void seeker_play_message(const uint8_t *msg, uint32_t len);
     void file_finished();
 
@@ -108,10 +110,14 @@ private:
     analyzer_10band level_analyzer_;
     float current_levels_[10] {};
     std::mutex current_levels_mutex_;
-    bool fx_enabled_ = false;
-    std::atomic<int> fx_enable_request_ {};
-    std::unique_ptr<Synth_Fx> fx_;
+    bool sfx_enabled_ = false;
+    std::atomic<int> sfx_enable_request_ {};
+    std::unique_ptr<Synth_Fx> sfx_;
     std::unique_ptr<Audio_Device> adev_;
+
+    // midi
+    bool mfx_enabled_ = false;
+    std::unique_ptr<Midi_Fx> mfx_;
 
     // startup and shutdown synchronization
     std::condition_variable ready_cv_;

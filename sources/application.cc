@@ -8,7 +8,7 @@
 #include "player/playlist.h"
 #include "player/command.h"
 #include "player/instrument.h"
-#include "player/instruments/synth_fx.h"
+#include "player/fx.h"
 #include "synth/synth_host.h"
 #include "data/ins_names.h"
 #include "ui/main_layout.h"
@@ -101,7 +101,7 @@ Application::Application()
             scale_factor_ = (unsigned)std::min(value, (long)max_scale_factor);
     }
 
-    std::array<int, Synth_Fx::Parameter_Count> fx_parameters;
+    std::array<int, Fx::Parameter_Count> fx_parameters;
     get_fx_parameters(*ini, fx_parameters.data());
 
     Rect bounds(0, 0, size_.x, size_.y);
@@ -148,7 +148,7 @@ Application::Application()
     choose_midi_output(false, last_midi_output_choice_);
     choose_synth(false, last_synth_choice_);
 
-    for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+    for (size_t i = 0; i < Fx::Parameter_Count; ++i) {
         std::unique_ptr<Pcmd_Set_Fx_Parameter> cmd(new Pcmd_Set_Fx_Parameter);
         cmd->index = i;
         cmd->value = fx_parameters[i];
@@ -1097,14 +1097,14 @@ void Application::open_help_dialog()
 
 void Application::open_fx_dialog()
 {
-    const Rect bounds = Rect(0, 0, size_.x, size_.y).reduced(Point(100, 100));
+    const Rect bounds = Rect(0, 0, size_.x, size_.y).reduced(Point(100, 80));
 
     class Fx_Box : public Modal_Box {
     public:
         Fx_Box(Player_State &ps, const Rect &bounds, std::string title)
             : Modal_Box(bounds, std::move(title))
         {
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            gsl::span<const Fx::Parameter> items = Fx::parameters();
             if (items.size() > 0)
                 sel_ = 0;
 
@@ -1124,14 +1124,14 @@ void Application::open_fx_dialog()
             int fw = tp.font->width();
             int fh = tp.font->height();
 
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            gsl::span<const Fx::Parameter> items = Fx::parameters();
             const size_t sel = sel_;
             const int *values = values_;
 
             for (size_t nth = 0; nth < items.size(); ++nth) {
                 Rect row = r.take_from_top(fh);
 
-                if (items[nth].flags & Fx_Parameter::HasSeparator)
+                if (items[nth].flags & Fx::HasSeparator)
                     row = r.take_from_top(fh);
 
                 Rect cols[2];
@@ -1150,7 +1150,7 @@ void Application::open_fx_dialog()
 
                 switch (items[nth].type) {
                 default:
-                case Fx_Parameter::Integer:
+                case Fx::Integer:
                     for (int i = 0, j = values[nth]; i < 100; ++i) {
                         if (i < j)
                             SDLpp_SetRenderDrawColor(rr, pal[Colors::box_foreground]);
@@ -1159,7 +1159,7 @@ void Application::open_fx_dialog()
                         SDLpp_RenderDrawVLine(rr, cols[1].x + 2 * i, cols[1].y + 1, cols[1].bottom() - 1);
                     }
                     break;
-                case Fx_Parameter::Boolean:
+                case Fx::Boolean:
                     tp.pos = cols[1].origin();
                     tp.fg = pal[Colors::box_foreground];
                     tp.draw_utf8("\u3010");
@@ -1179,7 +1179,7 @@ void Application::open_fx_dialog()
 
         bool handle_key_pressed(const SDL_KeyboardEvent &event) override
         {
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            gsl::span<const Fx::Parameter> items = Fx::parameters();
             int *values = values_;
 
             int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
@@ -1231,8 +1231,8 @@ void Application::open_fx_dialog()
                 size_t sel = sel_;
                 int amount = (keymod & KMOD_SHIFT) ? 5 : 1;
                 if (sel != ~size_t(0)) {
-                    const Fx_Parameter &fxp = items[sel];
-                    if (fxp.type == Fx_Parameter::Boolean)
+                    const Fx::Parameter &fxp = items[sel];
+                    if (fxp.type == Fx::Boolean)
                         change_value(sel, 0);
                     else
                         change_value(sel, std::max(0, values[sel] - amount));
@@ -1243,8 +1243,8 @@ void Application::open_fx_dialog()
                 size_t sel = sel_;
                 int amount = (keymod & KMOD_SHIFT) ? 5 : 1;
                 if (sel != ~size_t(0)) {
-                    const Fx_Parameter &fxp = items[sel];
-                    if (fxp.type == Fx_Parameter::Boolean)
+                    const Fx::Parameter &fxp = items[sel];
+                    if (fxp.type == Fx::Boolean)
                         change_value(sel, 100);
                     else
                         change_value(sel, std::min(100, values[sel] + amount));
@@ -1280,7 +1280,7 @@ void Application::open_fx_dialog()
 
     private:
         size_t sel_ = ~size_t(0);
-        int values_[Synth_Fx::Parameter_Count] {};
+        int values_[Fx::Parameter_Count] {};
     };
 
     Fx_Box *modal = new Fx_Box(*ps_, bounds, "Global effects");
@@ -1298,9 +1298,9 @@ void Application::open_fx_dialog()
         if (!ini) ini = create_configuration();
 
         bool ini_update = false;
-        gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+        gsl::span<const Fx::Parameter> params = Fx::parameters();
 
-        for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+        for (size_t i = 0; i < Fx::Parameter_Count; ++i) {
             long old_value = ini->GetLongValue("effects", params[i].name, -1);
             long value = modal->get_value(i);
             if (old_value != value) {
@@ -1562,9 +1562,9 @@ void Application::load_theme_configuration(const CSimpleIniA &ini)
 
 void Application::get_fx_parameters(const CSimpleIniA &ini, int *values) const
 {
-    gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+    gsl::span<const Fx::Parameter> params = Fx::parameters();
 
-    for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
+    for (size_t i = 0; i < Fx::Parameter_Count; ++i) {
         long value = ini.GetLongValue("effects", params[i].name, -1);
         values[i] = (value >= 0 && value <= 100) ?
             (int)value : params[i].default_value;
@@ -1669,7 +1669,7 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
         ini_update = true;
     }
 
-    for (const Fx_Parameter &param : Synth_Fx::parameters()) {
+    for (const Fx::Parameter &param : Fx::parameters()) {
         if (!ini->GetValue("effects", param.name)) {
             ini->SetLongValue("effects", param.name, param.default_value);
             ini_update = true;
