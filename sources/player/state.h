@@ -30,5 +30,5 @@ struct Player_State {
     Player_Song_Metadata song_metadata;
     std::bitset<16> channel_enabled;
     float audio_levels[10] {};
-    float fx_parameters[Synth_Fx::Parameter_Count] {};
+    int fx_parameters[Synth_Fx::Parameter_Count] {};
 };
