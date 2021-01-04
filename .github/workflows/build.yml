@@ -1,0 +1,123 @@
+name: build
+
+on: push
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build_for_linux:
+    runs-on: ubuntu-16.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Set up dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libuv1-dev \
+          libjack-jackd2-dev \
+          libpulse-dev \
+          libasound2-dev \
+          libfluidsynth-dev
+    - name: Set up AppImage tools
+      run: |
+        mkdir -p download/
+        getfile() {
+          local url="$1"
+          local base="$2"
+          test -z "$base" && base="$(basename "$1")"
+          test -f download/"$base" || wget -O download/"$base" "$url"
+        }
+        getfile https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-x86_64.AppImage
+        getfile https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        sudo install -m 755 download/appimagetool-x86_64.AppImage /usr/bin/appimagetool
+        sudo install -m 755 download/linuxdeploy-x86_64.AppImage /usr/bin/linuxdeploy
+    - name: Create Build Environment
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: cmake -E make_directory build
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX=/usr
+    - name: Build
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake --build . --config "$BUILD_TYPE" -j 2
+    - name: Install
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: DESTDIR="$(pwd)/target" cmake --build . --target install -j 2
+    - name: Create AppImage
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: |
+        linuxdeploy --appdir="$(pwd)/target"
+        appimagetool "$(pwd)/target"
+        mkdir -p release/
+        mv -f *.AppImage release/
+    - uses: actions/upload-artifact@v2
+      with:
+        name: SMF-DSP 64-bit for GNU/Linux
+        path: ${{runner.workspace}}/build/release/*.AppImage
+  build_for_mingw32:
+    runs-on: ubuntu-18.04
+    container:
+      image: archlinux
+    steps:
+    - name: Set build name
+      run: |
+        echo "build_name=smf-dsp-win32" >> "$GITHUB_ENV"
+    - name: Configure pacman repositories
+      shell: bash
+      run: |
+        cat >>/etc/pacman.conf <<EOF
+        [multilib]
+        Include = /etc/pacman.d/mirrorlist
+        [mingw-w64]
+        SigLevel = Optional TrustAll
+        Server = https://github.com/jpcima/arch-mingw-w64/releases/download/repo.\$arch/
+        EOF
+    - name: Set up dependencies
+      shell: bash
+      run: |
+        pacman -Sqy --noconfirm
+        pacman -Squ --noconfirm --needed
+        pacman -Sq --noconfirm --needed archlinux-keyring
+        pacman -Sq --noconfirm base-devel git zip mingw-w64-cmake mingw-w64-gcc mingw-w64-winpthreads mingw-w64-pkg-config mingw-w64-win-iconv mingw-w64-icu mingw-w64-libuv mingw-w64-sdl2 dll-bundler-git
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Create Build Environment
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: cmake -E make_directory build
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: i686-w64-mingw32-cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+    - name: Build
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: i686-w64-mingw32-cmake --build . --config "$BUILD_TYPE" -j 2
+    - name: Bundle DLL
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: |
+        for f in *.exe *.dll; do
+          dll-bundler -L /usr/i686-w64-mingw32/bin "$f"
+        done
+    - name: Install
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: |
+        mkdir -p release/"${build_name}"/
+        for f in *.{exe,dll}; do cp -f "$f" release/"${build_name}"/; done
+    - uses: actions/upload-artifact@v2
+      with:
+        name: SMF-DSP 32-bit for Windows
+        path: ${{runner.workspace}}/build/release/
