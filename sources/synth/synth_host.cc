@@ -151,6 +151,33 @@ void Synth_Host::send_midi(const uint8_t *data, unsigned len)
     intf->synth_write(synth, data, len);
 }
 
+bool Synth_Host::can_preload() const
+{
+    synth_object *synth = synth_;
+    const synth_interface *intf = intf_;
+
+    if (!synth)
+        return false;
+
+    assert(intf);
+    return intf->abi_version >= 2 && intf->synth_preload;
+}
+
+void Synth_Host::preload(gsl::span<const synth_midi_ins> instruments)
+{
+    synth_object *synth = synth_;
+    const synth_interface *intf = intf_;
+
+    if (!synth)
+        return;
+
+    assert(intf);
+    if (intf->abi_version < 2 || !intf->synth_preload)
+        return;
+
+    intf->synth_preload(synth, instruments.data(), instruments.size());
+}
+
 std::string Synth_Host::find_plugin_dir()
 {
     std::string dir = get_executable_path();

@@ -280,6 +280,7 @@ static const synth_interface the_synth_interface = {
     &adlmidi_synth_write,
     &adlmidi_synth_generate,
     &adlmidi_synth_set_option,
+    nullptr,
 };
 
 extern "C" SYNTH_EXPORT const synth_interface *synth_plugin_entry()

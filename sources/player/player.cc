@@ -400,6 +400,11 @@ void Player::resume_play_list()
     }
 
     if (smf) {
+        if (Midi_Synth_Instrument *synth_ins = synth_ins_.get()) {
+            synth_ins->flush_events();
+            synth_ins->preload(*smf);
+        }
+
         fmidi_player_t *pl = fmidi_player_new(smf.get());
         pl_.reset(pl);
 

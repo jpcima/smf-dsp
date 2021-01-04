@@ -5,6 +5,9 @@
 
 #pragma once
 #include "player/instrument.h"
+#include "synth/synth.h"
+#include <fmidi/fmidi.h>
+#include <gsl/gsl>
 #include <memory>
 
 class Midi_Synth_Instrument : public Midi_Instrument {
@@ -21,6 +24,8 @@ public:
 
     void configure_audio(double audio_rate, double audio_latency);
     void generate_audio(float *output, unsigned nframes);
+
+    void preload(const fmidi_smf_t &smf);
 
 protected:
     void handle_send_message(const uint8_t *data, unsigned len, double ts, uint8_t flags) override;

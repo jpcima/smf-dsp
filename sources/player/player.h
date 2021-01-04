@@ -6,6 +6,7 @@
 #pragma once
 #include "state.h"
 #include "audio/analyzer_10band.h"
+#include "synth/synth.h"
 #include <fmidi/fmidi.h>
 #include <thread>
 #include <mutex>

@@ -36,6 +36,8 @@ public:
     void unload();
     void generate(float *buffer, size_t nframes);
     void send_midi(const uint8_t *data, unsigned len);
+    bool can_preload() const;
+    void preload(gsl::span<const synth_midi_ins> instruments);
 
 private:
     Dl_Handle module_;

@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "player/instruments/synth.h"
+#include "player/smfutil.h"
 #include "synth/synth_host.h"
 #include "utility/logs.h"
 #include <ring_buffer.h>
@@ -176,6 +177,15 @@ void Midi_Synth_Instrument::generate_audio(float *output, unsigned nframes)
     }
 
     impl.cycle_counter_ += 1;
+}
+
+void Midi_Synth_Instrument::preload(const fmidi_smf_t &smf)
+{
+    Impl &impl = *impl_;
+    Synth_Host &host = *impl.host_;
+    std::lock_guard<std::mutex> lock(impl.host_mutex_);
+    if (host.can_preload())
+        host.preload(collect_file_instruments(smf));
 }
 
 void Midi_Synth_Instrument::Impl::process_midi(double time_incr)

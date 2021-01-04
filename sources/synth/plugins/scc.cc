@@ -180,6 +180,7 @@ static const synth_interface the_synth_interface = {
     &scc_synth_write,
     &scc_synth_generate,
     &scc_synth_set_option,
+    nullptr,
 };
 
 extern "C" SYNTH_EXPORT const synth_interface *synth_plugin_entry()

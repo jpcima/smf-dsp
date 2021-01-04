@@ -454,6 +454,7 @@ static const synth_interface the_synth_interface = {
     &mt32emu_synth_write,
     &mt32emu_synth_generate,
     &mt32emu_synth_set_option,
+    nullptr,
 };
 
 extern "C" SYNTH_EXPORT const synth_interface *synth_plugin_entry()

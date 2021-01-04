@@ -70,6 +70,7 @@ add_executable(smf-dsp WIN32
   "sources/player/keystate.cc"
   "sources/player/clock.cc"
   "sources/player/smftext.cc"
+  "sources/player/smfutil.cc"
   "sources/player/adev/adev.cc"
   "sources/player/adev/adev_sdl.cc"
   "sources/player/adev/adev_haiku.cc"

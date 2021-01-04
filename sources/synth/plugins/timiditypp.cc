@@ -13,6 +13,7 @@
 #include <timiditypp/playmidi.h>
 #include <memory>
 #include <cstdlib>
+#include <cstdarg>
 #include <cstring>
 
 void ZMusic_Print(int type, const char *msg, va_list args)
@@ -23,6 +24,30 @@ void ZMusic_Print(int type, const char *msg, va_list args)
         Log::vw(msg, args);
     else if (type >= 10)
         Log::vi(msg, args);
+}
+
+static void timiditypp_print_message(int type, int verbosity_level, const char* fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    if (verbosity_level >= TimidityPlus::VERB_NOISY)
+        return;
+
+    switch (type) {
+    default:
+    case TimidityPlus::CMSG_INFO:
+        Log::vi(fmt, ap);
+        break;
+    case TimidityPlus::CMSG_WARNING:
+        Log::vw(fmt, ap);
+        break;
+    case TimidityPlus::CMSG_ERROR:
+        Log::ve(fmt, ap);
+        break;
+    }
+
+    va_end(ap);
 }
 
 ///
@@ -38,6 +63,7 @@ static std::string timiditypp_synth_base_dir;
 static void timiditypp_plugin_init(const char *base_dir)
 {
     timiditypp_synth_base_dir.assign(base_dir);
+    TimidityPlus::printMessage = timiditypp_print_message;
 }
 
 static void timiditypp_plugin_shutdown()
@@ -188,6 +214,26 @@ static void timiditypp_synth_set_option(synth_object *obj, const char *name, syn
         sy->soundfonts = string_list_dup(value.m);
 }
 
+static void timiditypp_synth_preload(synth_object *obj, const synth_midi_ins *ins, size_t count)
+{
+    timiditypp_synth_object *sy = (timiditypp_synth_object *)obj;
+    TimidityPlus::Instruments *instruments = sy->instruments.get();
+
+    if (!instruments)
+        return;
+
+    std::unique_ptr<uint16_t[]> ids(new uint16_t[count]);
+    size_t ids_count = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        synth_midi_ins in = ins[i];
+        uint16_t id = (bool(in.percussive) << 14) | ((in.bank_msb & 127) << 7) | (in.program & 127);
+        ids[ids_count++] = id;
+    }
+
+    instruments->PrecacheInstruments(ids.get(), ids_count);
+}
+
 static const synth_interface the_synth_interface = {
     SYNTH_ABI_VERSION,
     "TiMidity++",
@@ -201,6 +247,7 @@ static const synth_interface the_synth_interface = {
     &timiditypp_synth_write,
     &timiditypp_synth_generate,
     &timiditypp_synth_set_option,
+    &timiditypp_synth_preload,
 };
 
 extern "C" SYNTH_EXPORT const synth_interface *synth_plugin_entry()

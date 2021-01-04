@@ -285,6 +285,7 @@ static const synth_interface the_synth_interface = {
     &fluid_synth_write,
     &fluid_synth_generate,
     &fluid_synth_set_option,
+    nullptr,
 };
 
 extern "C" SYNTH_EXPORT const synth_interface *synth_plugin_entry()

@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 enum {
-    SYNTH_ABI_VERSION = 1
+    SYNTH_ABI_VERSION = 2
 };
 
 typedef struct _synth_object synth_object;
@@ -38,9 +38,17 @@ typedef struct _synth_option {
     synth_value initial;
 } synth_option;
 
+typedef struct _synth_midi_ins {
+    unsigned char percussive : 1;
+    unsigned char program : 7;
+    unsigned char bank_msb : 7;
+    unsigned char bank_lsb : 7;
+} synth_midi_ins;
+
 typedef struct _synth_interface {
     unsigned abi_version;
     const char *name;
+    // ABI level 1
     void (*plugin_init)(const char *);
     void (*plugin_shutdown)();
     const synth_option *(*plugin_option)(size_t);
@@ -51,6 +59,8 @@ typedef struct _synth_interface {
     void (*synth_write)(synth_object *, const unsigned char *, size_t);
     void (*synth_generate)(synth_object *, float *, size_t);
     void (*synth_set_option)(synth_object *, const char *, synth_value);
+    // ABI level 2
+    void (*synth_preload)(synth_object *, const synth_midi_ins *, size_t);
 } synth_interface;
 
 typedef const synth_interface *(synth_plugin_entry_fn)();
