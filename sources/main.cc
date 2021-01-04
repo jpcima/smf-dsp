@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "application.h"
+#include "tray.h"
 #include "ui/paint.h"
 #include "utility/paths.h"
 #include "utility/module.h"
@@ -33,6 +34,10 @@ int main(int argc, char *argv[])
 int real_main(int argc, char *argv[])
 #endif
 {
+#if !defined(_WIN32) && !defined(APPLE)
+    Tray_Icon::run_gtk_tray(argc, argv);
+#endif
+
     // Initialize command line
     for (int c; (c = getopt(argc, argv, "")) != -1;) {
         switch (c) {
@@ -62,6 +67,9 @@ int real_main(int argc, char *argv[])
     // Disable ALSA messages
     snd_lib_error_set_handler(&alsa_log_callback);
 #endif
+
+    // Initialize the tray icon
+    Tray_Icon icon;
 
     // Initialize SDL
     uint32_t subsys = SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER;

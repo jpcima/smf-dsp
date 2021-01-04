@@ -69,6 +69,11 @@ static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
     {"`", "Switch between repeat modes: On/Off, and Single/Multi"},
 };
 
+static const uint8_t app_icon_png_data[] = {
+    #include "icon.dat"
+};
+static const size_t app_icon_png_size = sizeof(app_icon_png_data);
+
 template <int EventType>
 uint32_t timer_push_event(uint32_t interval, void *user_data)
 {
@@ -178,12 +183,7 @@ SDL_Window *Application::init_window()
     if (!win)
         return nullptr;
 
-    static const uint8_t png_data[] = {
-        #include "icon.dat"
-    };
-    size_t png_size = sizeof(png_data);
-
-    SDLpp_Surface_u icon(IMG_Load_RW(SDL_RWFromConstMem(png_data, png_size), true));
+    SDLpp_Surface_u icon(IMG_Load_RW(SDL_RWFromConstMem(app_icon_png_data, app_icon_png_size), true));
     if (icon)
         SDL_SetWindowIcon(win, icon.get());
 

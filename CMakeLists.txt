@@ -57,6 +57,7 @@ include("CMakeLists.deps.txt")
 add_executable(smf-dsp WIN32
   "sources/configuration.cc"
   "sources/application.cc"
+  "sources/tray.cc"
   "sources/main.cc"
   "sources/version_info.rc"
   "sources/audio/analyzer_10band.cc"
@@ -161,10 +162,16 @@ else()
   target_sources(smf-dsp PRIVATE "sources/utility/SDL_stb_image.c")
 endif()
 
+target_link_libraries(smf-dsp PRIVATE vendor::whereami)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_link_libraries(smf-dsp PRIVATE vendor::filesystem)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(smf-dsp PRIVATE sys::jack sys::alsa)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(smf-dsp PRIVATE sys::gtk sys::glib)
 endif()
 
 link_what_you_use(smf-dsp)

@@ -16,3 +16,6 @@
 [submodule "thirdparty/timidityplus"]
 	path = thirdparty/timidityplus
 	url = https://github.com/jpcima/timidityplus.git
+[submodule "thirdparty/whereami"]
+	path = thirdparty/whereami
+	url = https://github.com/gpakosz/whereami.git

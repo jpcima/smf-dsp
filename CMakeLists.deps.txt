@@ -58,6 +58,11 @@ target_include_directories(stb INTERFACE "thirdparty/stb")
 add_library(vendor::stb ALIAS stb)
 
 ###
+add_library(whereami STATIC "thirdparty/whereami/src/whereami.c")
+target_include_directories(whereami PUBLIC "thirdparty/whereami/src")
+add_library(vendor::whereami ALIAS whereami)
+
+###
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   pkg_check_modules(alsa "alsa" REQUIRED IMPORTED_TARGET)
   add_library(alsa INTERFACE)
@@ -161,6 +166,22 @@ else()
   add_library(SDL2_image INTERFACE)
   target_link_libraries(SDL2_image INTERFACE "${SDL2_IMAGE_LIBRARY}" SDL2)
   add_library(sys::SDL2_image ALIAS SDL2_image)
+endif()
+
+###
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  pkg_check_modules(gtk "gtk+-3.0" REQUIRED IMPORTED_TARGET)
+  add_library(gtk INTERFACE)
+  target_link_libraries(gtk INTERFACE PkgConfig::gtk)
+  add_library(sys::gtk ALIAS gtk)
+endif()
+
+###
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  pkg_check_modules(glib "glib-2.0" REQUIRED IMPORTED_TARGET)
+  add_library(glib INTERFACE)
+  target_link_libraries(glib INTERFACE PkgConfig::glib)
+  add_library(sys::glib ALIAS glib)
 endif()
 
 ###
