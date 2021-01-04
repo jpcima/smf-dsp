@@ -124,7 +124,7 @@ static int timiditypp_synth_activate(synth_object *obj)
                     sf = (char *)sf_absolute.c_str();
                 }
                 config.append("soundfont \"");
-                config.append(sf_absolute);
+                config.append(sf);
                 config.append("\"\n");
             }
         }
