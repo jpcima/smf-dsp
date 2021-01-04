@@ -62,7 +62,7 @@ jobs:
         mv -f *.AppImage release/
     - uses: actions/upload-artifact@v2
       with:
-        name: SMF-DSP 64-bit for GNU/Linux
+        name: SMF-DSP 64-bit for GNU Linux
         path: ${{runner.workspace}}/build/release/*.AppImage
   build_for_mingw32:
     runs-on: ubuntu-18.04
