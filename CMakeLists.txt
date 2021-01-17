@@ -182,8 +182,11 @@ install(TARGETS smf-dsp
 install(FILES "resources/desktop/smf-dsp.desktop"
   DESTINATION "share/applications"
   COMPONENT "desktop-entry")
-install(FILES "resources/desktop/smf-dsp.png"
+install(FILES "resources/desktop/64x64/smf-dsp.png"
   DESTINATION "share/icons/hicolor/64x64/apps"
+  COMPONENT "desktop-entry")
+install(FILES "resources/desktop/16x16/smf-dsp.png"
+  DESTINATION "share/icons/hicolor/16x16/apps"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/io.github.jpcima.smf_dsp.metainfo.xml"
   DESTINATION "share/metainfo"
