@@ -183,7 +183,7 @@ install(FILES "resources/desktop/smf-dsp.desktop"
   DESTINATION "share/applications"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/smf-dsp.png"
-  DESTINATION "share/pixmaps"
+  DESTINATION "share/icons/hicolor/64x64/apps"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/io.github.jpcima.smf_dsp.metainfo.xml"
   DESTINATION "share/metainfo"
