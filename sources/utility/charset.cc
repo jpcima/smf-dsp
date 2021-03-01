@@ -143,7 +143,7 @@ struct UCollator_delete {
 typedef std::unique_ptr<UCollator, UCollator_delete> UCollator_u;
 
 ///
-int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b)
+static UCollator *default_collator()
 {
     static UCollator_u coll(
         []() -> UCollator * {
@@ -153,10 +153,33 @@ int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b)
                 throw std::runtime_error(u_errorName(status));
             return coll;
         }());
+    return coll.get();
+}
 
+int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b)
+{
+    UCollator *coll = default_collator();
     UErrorCode status = U_ZERO_ERROR;
     return ucol_strcollUTF8(
-        coll.get(), a.data(), a.size(), b.data(), b.size(), &status);
+        coll, a.data(), a.size(), b.data(), b.size(), &status);
+}
+
+std::string utf8_collation_key(gsl::cstring_span src)
+{
+    std::basic_string<UChar> usrc;
+    convert_utf(src, usrc, true);
+
+    UCollator *coll = default_collator();
+
+    uint32_t usize = ucol_getSortKey(
+        coll, usrc.data(), usrc.size(), nullptr, 0);
+
+    std::string dst(usize, '\0');
+    usize = ucol_getSortKey(
+        coll, usrc.data(), usrc.size(),
+        reinterpret_cast<uint8_t *>(&dst[0]), usize);
+
+    return dst;
 }
 
 //

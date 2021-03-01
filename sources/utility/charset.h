@@ -19,6 +19,7 @@ uint32_t unicode_nfd_base(uint32_t ch);
 
 // comparison
 int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b);
+std::string utf8_collation_key(gsl::cstring_span src);
 
 // file I/O
 FILE *fopen_utf8(const char *path, const char *mode);

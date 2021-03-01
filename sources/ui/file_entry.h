@@ -14,9 +14,13 @@ public:
     char type() const noexcept { return type_; }
     const std::string &name() const noexcept { return name_; }
 
+    const std::string &sort_key() const;
+
 private:
     char type_;
     std::string name_;
+    mutable bool have_sort_key_ = false;
+    mutable std::string sort_key_;
 };
 
 bool operator==(const File_Entry &a, const File_Entry &b);

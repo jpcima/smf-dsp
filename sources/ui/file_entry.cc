@@ -6,6 +6,16 @@
 #include "file_entry.h"
 #include "utility/charset.h"
 
+const std::string &File_Entry::sort_key() const
+{
+    std::string &key = sort_key_;
+    if (!have_sort_key_) {
+        key = utf8_collation_key(name_);
+        have_sort_key_ = true;
+    }
+    return key;
+}
+
 bool operator==(const File_Entry &a, const File_Entry &b)
 {
     return a.type() == b.type() && a.name() == b.name();
@@ -25,5 +35,5 @@ bool operator<(const File_Entry &a, const File_Entry &b)
     if (b.type() == 'D' && b.name() == "..")
         return false;
 
-    return utf8_strcoll(a.name(), b.name()) < 0;
+    return a.sort_key() < b.sort_key();
 }
