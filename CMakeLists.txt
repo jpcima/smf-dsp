@@ -139,6 +139,10 @@ else()
   target_compile_definitions(smf-dsp PRIVATE "UNICODE_GLIB")
 endif()
 
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+  target_link_libraries(smf-dsp PRIVATE PkgConfig::gio)
+endif()
+
 if(TARGET sys::jack)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")
   target_link_libraries(smf-dsp PRIVATE sys::jack)
@@ -197,12 +201,5 @@ install(FILES "resources/desktop/16x16/smf-dsp.png"
 install(FILES "resources/desktop/io.github.jpcima.smf_dsp.metainfo.xml"
   DESTINATION "share/metainfo"
   COMPONENT "desktop-entry")
-
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$" AND NOT CMAKE_CROSSCOMPILING)
-  find_program(XDG_OPEN_PROGRAM "xdg-open")
-  if(NOT XDG_OPEN_PROGRAM)
-    message(WARNING "Cannot find the runtime dependency xdg-open")
-  endif()
-endif()
 
 include("CMakeLists.plugins.txt")

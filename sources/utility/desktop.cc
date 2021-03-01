@@ -5,16 +5,14 @@
 
 #include "utility/desktop.h"
 #include "utility/logs.h"
+#include <gsl/gsl>
 #if defined(_WIN32)
 #include "utility/charset.h"
 #include <windows.h>
+#elif defined(__APPLE__)
 #else
-#include <spawn.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <system_error>
-#include <cerrno>
-extern "C" { extern char **environ; }
+#include <glib.h>
+#include <gio/gio.h>
 #endif
 
 #if defined(_WIN32)
@@ -27,58 +25,18 @@ bool open_file_externally(const std::string &path)
 
     return true;
 }
+#elif defined(__APPLE__)
+bool open_file_externally(const std::string &path)
+{
+    #pragma message("TODO: implement open_file_externally")
+}
 #else
 bool open_file_externally(const std::string &path)
 {
-    #if defined(__APPLE__)
-    static const char argv0[] = "open";
-    #else
-    static const char argv0[] = "xdg-open";
-    #endif
-    const char *const argv[] = {argv0, path.c_str(), nullptr};
-
-    struct SpawnData {
-        SpawnData() = default;
-        ~SpawnData()
-        {
-            if (attr)
-                posix_spawnattr_destroy(attr);
-            if (file)
-                posix_spawn_file_actions_destroy(file);
-        }
-
-        SpawnData(const SpawnData &) = delete;
-        SpawnData &operator=(const SpawnData &) = delete;
-
-        posix_spawn_file_actions_t *file = nullptr;
-        posix_spawnattr_t *attr = nullptr;
-    };
-
-    SpawnData s;
-    int err;
-
-    posix_spawn_file_actions_t file;
-    err = posix_spawn_file_actions_init(&file);
-    if (err != 0)
-        throw std::system_error(err, std::generic_category());
-    s.file = &file;
-
-    posix_spawnattr_t attr;
-    err = posix_spawnattr_init(&attr);
-    if (err != 0)
-        throw std::system_error(err, std::generic_category());
-    s.attr = &attr;
-
-    pid_t pid;
-    err = posix_spawnp(&pid, argv0, &file, &attr, const_cast<char **>(argv), environ);
-    if (err != 0) {
-        std::error_code ec(err, std::generic_category());
-        Log::e("Cannot run \"%s\": %s", argv0, ec.message().c_str());
+    char *uri = g_filename_to_uri(path.c_str(), nullptr, nullptr);
+    if (!uri)
         return false;
-    }
-
-    while (waitpid(pid, nullptr, 0) == -1 && errno == EINTR);
-
-    return true;
+    auto cleanup = gsl::finally([uri]() { g_free(uri); });
+    return g_app_info_launch_default_for_uri(uri, nullptr, nullptr);
 }
 #endif

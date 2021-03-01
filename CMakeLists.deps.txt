@@ -166,9 +166,14 @@ endif()
 ###
 if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   find_package(ICU COMPONENTS "uc" "i18n" REQUIRED)
-else()
+endif()
+
+###
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   pkg_check_modules(glib "glib-2.0" REQUIRED IMPORTED_TARGET)
+  pkg_check_modules(gio "gio-2.0" REQUIRED IMPORTED_TARGET)
   add_library(sys::glib ALIAS PkgConfig::glib)
+  add_library(sys::gio ALIAS PkgConfig::gio)
 endif()
 
 ###
