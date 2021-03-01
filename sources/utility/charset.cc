@@ -5,10 +5,14 @@
 
 #include "charset.h"
 #include <iconv.h>
+#if defined(UNICODE_ICU)
 #include <unicode/uchar.h>
 #include <unicode/ucol.h>
 #include <unicode/uiter.h>
 #include <unicode/unorm2.h>
+#elif defined(UNICODE_GLIB)
+#include <glib.h>
+#endif
 #include <utf/utf.hpp>
 #include <array>
 #include <type_traits>
@@ -100,6 +104,7 @@ template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<
 template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char16_t> &, bool);
 template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char32_t> &, bool);
 
+#if defined(UNICODE_ICU)
 uint32_t unicode_tolower(uint32_t ch)
 {
     return u_tolower(ch);
@@ -156,14 +161,6 @@ static UCollator *default_collator()
     return coll.get();
 }
 
-int utf8_strcoll(gsl::cstring_span a, gsl::cstring_span b)
-{
-    UCollator *coll = default_collator();
-    UErrorCode status = U_ZERO_ERROR;
-    return ucol_strcollUTF8(
-        coll, a.data(), a.size(), b.data(), b.size(), &status);
-}
-
 std::string utf8_collation_key(gsl::cstring_span src)
 {
     std::basic_string<UChar> usrc;
@@ -181,6 +178,34 @@ std::string utf8_collation_key(gsl::cstring_span src)
 
     return dst;
 }
+#elif defined(UNICODE_GLIB)
+uint32_t unicode_tolower(uint32_t ch)
+{
+    return g_unichar_tolower(ch);
+}
+
+uint32_t unicode_toupper(uint32_t ch)
+{
+    return g_unichar_toupper(ch);
+}
+
+uint32_t unicode_nfd_base(uint32_t ch)
+{
+    uint32_t a, b;
+    if (!g_unichar_decompose(ch, &a, &b))
+        a = ch;
+    return a;
+}
+
+std::string utf8_collation_key(gsl::cstring_span src)
+{
+    char *key = g_utf8_collate_key(src.data(), src.size());
+    if (!key)
+        return std::string();
+    auto cleanup = gsl::finally([key]() { g_free(key); });
+    return key;
+}
+#endif
 
 //
 FILE *fopen_utf8(const char *path, const char *mode)

@@ -164,7 +164,12 @@ else()
 endif()
 
 ###
-find_package(ICU COMPONENTS "uc" "i18n" REQUIRED)
+if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+  find_package(ICU COMPONENTS "uc" "i18n" REQUIRED)
+else()
+  pkg_check_modules(glib "glib-2.0" REQUIRED IMPORTED_TARGET)
+  add_library(sys::glib ALIAS PkgConfig::glib)
+endif()
 
 ###
 add_library(uv INTERFACE)

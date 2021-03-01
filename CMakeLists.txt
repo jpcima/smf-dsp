@@ -129,9 +129,15 @@ target_link_libraries(smf-dsp PRIVATE
   sys::SDL2
   sys::uv
   sys::iconv
-  ICU::uc
-  ICU::i18n
   Threads::Threads)
+
+if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+  target_link_libraries(smf-dsp PRIVATE ICU::uc ICU::i18n)
+  target_compile_definitions(smf-dsp PRIVATE "UNICODE_ICU")
+else()
+  target_link_libraries(smf-dsp PRIVATE PkgConfig::glib)
+  target_compile_definitions(smf-dsp PRIVATE "UNICODE_GLIB")
+endif()
 
 if(TARGET sys::jack)
   target_compile_definitions(smf-dsp PRIVATE "ADEV_JACK")

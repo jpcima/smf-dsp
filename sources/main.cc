@@ -12,6 +12,7 @@
 #include <gsl/gsl>
 #include <getopt.h>
 #include <memory>
+#include <clocale>
 #if defined(__linux__)
 #include <jack/jack.h>
 #include <alsa/asoundlib.h>
@@ -33,6 +34,9 @@ int main(int argc, char *argv[])
 int real_main(int argc, char *argv[])
 #endif
 {
+    // Initialize the locale
+    setlocale(LC_ALL, "");
+
     // Initialize command line
     for (int c; (c = getopt(argc, argv, "")) != -1;) {
         switch (c) {
