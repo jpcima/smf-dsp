@@ -255,7 +255,7 @@ bool Modal_File_Selection_Box::handle_key_pressed(const SDL_KeyboardEvent &event
     case SDL_SCANCODE_KP_ENTER:
         if (keymod == KMOD_NONE) {
             if (const File_Entry *ent = model.current_entry()) {
-                if (ent->type == 'D') {
+                if (ent->type() == 'D') {
                     model.trigger_entry(model.selection());
                     update_file_entries();
                 }

@@ -43,7 +43,7 @@ void File_Browser_Model::set_current_filename(gsl::cstring_span file)
     size_t index = ~size_t{0};
 
     for (size_t i = 0, n = entries.size(); i < n && index == ~size_t{0}; ++i) {
-        if (entries[i].name == file)
+        if (entries[i].name() == file)
             index = i;
     }
 
@@ -58,7 +58,7 @@ std::string File_Browser_Model::filename(size_t index) const
         return std::string{};
 
     const File_Entry &ent = entries_[index];
-    return (ent.type != 'D') ? ent.name : (ent.name + '/');
+    return (ent.type() != 'D') ? ent.name() : (ent.name() + '/');
 }
 
 std::string File_Browser_Model::current_path() const
@@ -82,7 +82,7 @@ void File_Browser_Model::set_current_path(gsl::cstring_span path)
     size_t sel = ~size_t{0};
     for (size_t i = 0, n = entries_.size(); i < n && sel == ~size_t{0}; ++i) {
         const File_Entry &cur = entries_[i];
-        if (cur.name == filename)
+        if (cur.name() == filename)
             sel = i;
     }
 
@@ -111,7 +111,7 @@ size_t File_Browser_Model::find_entry(gsl::cstring_span name) const
 {
     const std::vector<File_Entry> &entries = entries_;
     for (size_t i = 0, n = entries.size(); i < n; ++i) {
-        if (name == entries[i].name)
+        if (name == entries[i].name())
             return i;
     }
     return ~size_t{0};
@@ -208,7 +208,7 @@ void File_Browser_Model::trigger_entry(size_t index)
     }
     else
 #endif
-    if (ent.name == "..") {
+    if (ent.name() == "..") {
         path.pop_back(); // remove last '/'
 
         size_t pos = path.rfind('/');
@@ -219,15 +219,15 @@ void File_Browser_Model::trigger_entry(size_t index)
             path = path.substr(0, pos + 1);
         }
     }
-    else if (ent.type == 'D') {
-        path.append(ent.name);
+    else if (ent.type() == 'D') {
+        path.append(ent.name());
         path.push_back('/');
     }
     else if (FileOpenCallback) {
         FileOpenCallback(path, &entries_[0], &ent - &entries_[0], entries_.size());
     }
 
-    if (!path.empty() && ent.type == 'D') {
+    if (!path.empty() && ent.type() == 'D') {
         cwd_ = path;
         sel_ = 0;
         refresh();
@@ -235,7 +235,7 @@ void File_Browser_Model::trigger_entry(size_t index)
             std::vector<File_Entry> &entries = entries_;
             auto it = std::find_if(
                 entries.begin(), entries.end(),
-                [&curfile](const File_Entry &x) -> bool { return x.type == 'D' && x.name == curfile; });
+                [&curfile](const File_Entry &x) -> bool { return x.type() == 'D' && x.name() == curfile; });
             if (it != entries.end())
                 sel_ = std::distance(entries.begin(), it);
         }

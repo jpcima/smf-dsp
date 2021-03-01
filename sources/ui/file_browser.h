@@ -10,7 +10,7 @@
 #include <vector>
 #include <string>
 struct Font;
-struct File_Entry;
+class File_Entry;
 
 class File_Browser
 {

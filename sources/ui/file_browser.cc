@@ -110,10 +110,10 @@ void File_Browser::paint(SDL_Renderer *rr)
         ib.h = ih;
 
         const File_Entry &entry = model_.entry(entno);
-        const std::string &file_name = entry.name;
+        const std::string &file_name = entry.name();
 
         std::string name_drawn;
-        if (entry.type == 'D')
+        if (entry.type() == 'D')
             name_drawn = '/' + file_name;
         else
             name_drawn = file_name;
@@ -207,7 +207,7 @@ void File_Browser::move_to_character(uint32_t character)
     size_t newsel = sel;
     for (size_t i = sel; (i = (i + 1) % count) != sel && newsel == sel;) {
         const File_Entry &entry = model.entry(i);
-        gsl::cstring_span name = entry.name;
+        gsl::cstring_span name = entry.name();
 
         gsl::cstring_span::iterator it = name.begin();
         uint32_t leadchar = utf::utf_traits<char>::decode(it, name.end());

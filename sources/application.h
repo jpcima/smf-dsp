@@ -13,7 +13,7 @@
 #include <vector>
 #include <memory>
 class File_Browser;
-struct File_Entry;
+class File_Entry;
 class Metadata_Display;
 class Level_Meter;
 class Modal_Box;

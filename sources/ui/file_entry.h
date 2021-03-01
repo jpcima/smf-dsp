@@ -6,7 +6,18 @@
 #pragma once
 #include <string>
 
-struct File_Entry { char type; std::string name; };
+class File_Entry {
+public:
+    File_Entry() noexcept {}
+    File_Entry(char type, std::string name) noexcept : type_(type), name_(std::move(name)) {}
+
+    char type() const noexcept { return type_; }
+    const std::string &name() const noexcept { return name_; }
+
+private:
+    char type_;
+    std::string name_;
+};
 
 bool operator==(const File_Entry &a, const File_Entry &b);
 bool operator<(const File_Entry &a, const File_Entry &b);

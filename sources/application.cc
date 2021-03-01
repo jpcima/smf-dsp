@@ -955,10 +955,10 @@ void Application::play_file(const std::string &dir, const File_Entry *entries, s
     size_t play_size = 0;
 
     for (size_t i = 0; i < count; ++i) {
-        if (entries[i].type == 'F') {
+        if (entries[i].type() == 'F') {
             if (i == index)
                 play_index = play_size;
-            pll->add_file(dir + entries[i].name);
+            pll->add_file(dir + entries[i].name());
             ++play_size;
         }
     }
@@ -975,7 +975,7 @@ void Application::play_random(const std::string &dir, const File_Entry &entry)
     if (true) // in current browsed dir
         path = dir;
     else // in current highlighted entry
-        path = (entry.type == 'D' && entry.name != "..") ? (dir + entry.name) : dir;
+        path = (entry.type() == 'D' && entry.name() != "..") ? (dir + entry.name()) : dir;
 
     Random_Play_List *pll = new Random_Play_List(path, &filter_file_name);
     cmd->play_list.reset(pll);
@@ -1007,7 +1007,7 @@ bool Application::filter_file_name(const std::string &name)
 
 bool Application::filter_file_entry(const File_Entry &ent)
 {
-    return ent.type != 'F' || filter_file_name(ent.name);
+    return ent.type() != 'F' || filter_file_name(ent.name());
 }
 
 void Application::request_update()
