@@ -193,16 +193,16 @@ void File_Browser_Model::trigger_entry(size_t index)
     std::string curfile;
 
 #ifdef _WIN32
-    if (ent.name == ".." && path.size() == 3 && path[1] == ':' && path[2] == '/') {
+    if (ent.name() == ".." && path.size() == 3 && path[1] == ':' && path[2] == '/') {
         char name[] = {path[0], path[1]};
         curfile.assign(name, sizeof(name));
         path = "/";
     }
     else if (path == "/") {
-        if (ent.name == "..")
+        if (ent.name() == "..")
             path.clear();
         else {
-            char name[] = {ent.name[0], ':', '/'};
+            char name[] = {ent.name()[0], ':', '/'};
             path.assign(name, sizeof(name));
         }
     }
