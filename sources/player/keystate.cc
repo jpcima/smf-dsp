@@ -77,6 +77,7 @@ void Keyboard_State::handle_message(const uint8_t *data, unsigned len)
     static constexpr uint8_t sys_gm_reset[] = {0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7};
     static constexpr uint8_t sys_gm2_reset[] = {0xf0, 0x7e, 0x7f, 0x09, 0x03, 0xf7};
     static constexpr uint8_t sys_gs_reset[] = {0xf0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7f, 0x00, 0x41, 0xf7};
+    static constexpr uint8_t sys_gs2_reset[] /* SC-88 ? */ = {0xf0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7f, 0x00, 0x01, 0xf7};
     static constexpr uint8_t sys_xg_reset[] = {0xf0, 0x43, 0x10, 0x4c, 0x00, 0x00, 0x7e, 0x00, 0xf7};
 
     if (len >= 2 && len <= 3 && (data[0] >> 4) != 15)
@@ -91,7 +92,8 @@ void Keyboard_State::handle_message(const uint8_t *data, unsigned len)
         clear();
         midispec = KMS_GeneralMidi2;
     }
-    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gs_reset)) {
+    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gs_reset) ||
+             gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gs2_reset)) {
         clear();
         midispec = KMS_RolandGS;
     }
