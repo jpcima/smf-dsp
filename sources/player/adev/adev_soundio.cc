@@ -80,7 +80,7 @@ bool Audio_Device_Soundio::init(double desired_sample_rate, double desired_laten
     audio_latency_ = outstream->software_latency;
 
     bool uses_buffering = soundio_outstream_clear_buffer(outstream.get()) != SoundIoErrorIncompatibleBackend;
-    Log::i("Uses buffering: %s\n", uses_buffering ? "yes" : "no");
+    Log::i("Uses buffering: %s", uses_buffering ? "yes" : "no");
     if (uses_buffering)
         audio_latency_ = std::min(audio_latency_, desired_latency);
 
