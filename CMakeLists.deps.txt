@@ -282,7 +282,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libOPNMIDI")
     "thirdparty/libOPNMIDI/src/chips/mame_opna.cpp"
     "thirdparty/libOPNMIDI/src/chips/nuked_opn2.cpp"
     "thirdparty/libOPNMIDI/src/chips/pmdwin_opna.cpp"
-    "thirdparty/libOPNMIDI/src/chips/gens/Ym2612_Emu.cpp"
+    "thirdparty/libOPNMIDI/src/chips/gens/Ym2612.cpp"
     "thirdparty/libOPNMIDI/src/chips/gx/gx_ym2612.c"
     "thirdparty/libOPNMIDI/src/chips/mame/mame_ym2612fm.c"
     "thirdparty/libOPNMIDI/src/chips/mamefm/emu2149.c"

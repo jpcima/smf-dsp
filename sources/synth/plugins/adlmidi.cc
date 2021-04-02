@@ -25,6 +25,7 @@ struct adlmidi_synth_object {
     std::string instrument_bank;
     std::string emulator;
     std::string volume_model;
+    bool automatic_arpeggio = true;
 };
 
 static std::string adlmidi_synth_base_dir;
@@ -43,6 +44,7 @@ static const synth_option the_synth_options[] = {
     {"instrument-bank", "Bank number, or WOPL file path", 's', {.s = "0"}},
     {"emulator", "Name of the chip emulator", 's', {.s = "dosbox"}},
     {"volume-model", "Name of the volume model", 's', {.s = "auto"}},
+    {"automatic-arpeggio", "Enable the automatic arpeggio system", 'b', {.b = true}},
 };
 
 struct named_emulator {
@@ -172,6 +174,8 @@ static int adlmidi_synth_activate(synth_object *obj)
             Log::e("adlmidi: cannot set bank file \"%s\"", path.c_str());
     }
 
+    adl_setAutoArpeggio(player, sy->automatic_arpeggio);
+
     return 0;
 }
 
@@ -265,6 +269,8 @@ static void adlmidi_synth_set_option(synth_object *obj, const char *name, synth_
         sy->emulator.assign(value.s);
     else if (!strcmp(name, "volume-model"))
         sy->volume_model.assign(value.s);
+    else if (!strcmp(name, "automatic-arpeggio"))
+        sy->automatic_arpeggio = value.b;
 }
 
 static const synth_interface the_synth_interface = {
