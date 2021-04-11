@@ -20,12 +20,15 @@ public:
     unsigned current_index() const;
     unsigned current_count() const;
     const File_Entry *current_entry() const noexcept;
+    gsl::span<const File_Entry> all_current_entries() const noexcept { return model_.all_entries(); }
 
     std::string current_path() const;
     void set_current_path(const std::string &path);
 
     const std::string &cwd() const;
     void set_cwd(const std::string &dir);
+
+    void trigger_selected_entry() { model_.trigger_selected_entry(); };
 
     void set_font(Font *font);
 

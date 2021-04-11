@@ -33,6 +33,7 @@ public:
     const File_Entry &entry(size_t index) const noexcept { return entries_[index]; }
     const File_Entry *current_entry() const noexcept;
     size_t find_entry(gsl::cstring_span name) const;
+    gsl::span<const File_Entry> all_entries() const noexcept { return entries_; }
 
     void refresh();
 

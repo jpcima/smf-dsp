@@ -253,6 +253,11 @@ void Application::exec()
             }
             advance_shutdown();
             break;
+        case SDL_DROPFILE:
+            Log::i("Received file drop: %s", event.drop.file);
+            set_current_path(event.drop.file);
+            file_browser_->trigger_selected_entry();
+            break;
         case SDL_USEREVENT + 1:
             engage_shutdown_if_esc_key();
             break;
