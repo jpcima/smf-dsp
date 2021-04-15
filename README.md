@@ -72,3 +72,10 @@ The optional synthesizers have additional requirements, and they are built only 
 - **FM-OPN2 (OPNMIDI)**: check out the `thirdparty/libOPNMIDI` submodule.
 - **SCC (emidi)**: check out the `thirdparty/scc` submodule.
 - **MT32EMU**: check out the `thirdparty/munt` submodule.
+
+## Copyright
+
+The bitmap fonts use glyphs which originate from the following sources.
+- Ths public domain Shinonome font by Yasuyuki Furukawa
+- `xorg-fonts-cyrillic` and `xorg-fonts-misc`, for the Cyrillic subset
+- `fmplayer` by Takamichi Horikawa, for the small font, the digit font, and the logo characters
