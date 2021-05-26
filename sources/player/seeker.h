@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
+#include <cstddef>
 
 class Seek_State {
 public:
