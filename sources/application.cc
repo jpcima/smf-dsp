@@ -532,6 +532,7 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
                 if (cs.percussion) {
                     Midi_Program_Id bank_id(true, 0, cs.pgm, 0);
                     const Midi_Program *bnk = Midi_Data::get_bank(bank_id, desired_spec, &patch_spec);
+                    bnk = bnk ? bnk : Midi_Data::get_bank(Midi_Program_Id{}, desired_spec, &patch_spec);
                     patch_name = bnk ? bnk->bank_name : nullptr;
                 }
                 else {
