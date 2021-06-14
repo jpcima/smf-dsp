@@ -510,11 +510,15 @@ static bool is_midi_reset_message(const uint8_t *msg, uint32_t len)
                 return true;
             break;
         }
-        case 0x41: { // Roland GS / Roland MT-32
-            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f};
+        case 0x41: { // Roland GS / Roland Sound Canvas / Roland MT-32
+            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f, 0x00};
+            const uint8_t sc_mode1_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x00};
+            const uint8_t sc_mode2_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x01};
             const uint8_t mt32_reset[] = {0x16, 0x12, 0x7f};
             if ((device_id & 0xf0) == 0x10 &&
-                ((paysize >= 5 && !memcmp(gs_on, payload, 5)) ||
+                ((paysize >= 6 && !memcmp(gs_on, payload, 6)) ||
+                 (paysize >= 6 && !memcmp(sc_mode1_set, payload, 6)) ||
+                 (paysize >= 6 && !memcmp(sc_mode2_set, payload, 6)) ||
                  (paysize >= 3 && !memcmp(mt32_reset, payload, 3))))
                 return true;
             break;
