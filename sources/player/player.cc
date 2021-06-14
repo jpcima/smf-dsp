@@ -484,58 +484,12 @@ void Player::play_meta(uint8_t type, const uint8_t *msg, uint32_t len)
 }
 
 ///
-static bool is_midi_reset_message(const uint8_t *msg, uint32_t len)
-{
-    if (len >= 1 && msg[0] == 0xff) // GM system reset
-        return true;
-
-    if (len >= 4 && msg[0] == 0xf0 && msg[len - 1] == 0xf7) { // sysex resets
-        uint8_t manufacturer = msg[1];
-        uint8_t device_id = msg[2];
-        const uint8_t *payload = msg + 3;
-        uint8_t paysize = len - 4;
-
-        switch (manufacturer) {
-        case 0x7e: { // GM system messages
-            const uint8_t gm_on[] = {0x09, 0x01};
-            if (paysize >= 2 && !memcmp(gm_on, payload, 2))
-                return true;
-            break;
-        }
-        case 0x43: { // Yamaha XG
-            const uint8_t xg_on[] = {0x4c, 0x00, 0x00, 0x7e};
-            const uint8_t all_reset[] = {0x4c, 0x00, 0x00, 0x7f};
-            if ((device_id & 0xf0) == 0x10 && paysize >= 4 &&
-                (!memcmp(xg_on, payload, 4) || !memcmp(all_reset, payload, 4)))
-                return true;
-            break;
-        }
-        case 0x41: { // Roland GS / Roland Sound Canvas / Roland MT-32
-            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f, 0x00};
-            const uint8_t sc_mode1_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x00};
-            const uint8_t sc_mode2_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x01};
-            const uint8_t mt32_reset[] = {0x16, 0x12, 0x7f};
-            if ((device_id & 0xf0) == 0x10 &&
-                ((paysize >= 6 && !memcmp(gs_on, payload, 6)) ||
-                 (paysize >= 6 && !memcmp(sc_mode1_set, payload, 6)) ||
-                 (paysize >= 6 && !memcmp(sc_mode2_set, payload, 6)) ||
-                 (paysize >= 3 && !memcmp(mt32_reset, payload, 3))))
-                return true;
-            break;
-        }
-        }
-    }
-
-    return false;
-}
-
-///
 void Player::seeker_play_message(const uint8_t *msg, uint32_t len)
 {
     play_message(msg, len);
 
     // add a delay if the message may reset the device
-    if (is_midi_reset_message(msg, len))
+    if (identify_reset_message(msg, len))
         uv_sleep(50);
 }
 

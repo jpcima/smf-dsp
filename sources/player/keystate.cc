@@ -74,39 +74,79 @@ void Keyboard_State::clear()
 
 void Keyboard_State::handle_message(const uint8_t *data, unsigned len)
 {
-    static constexpr uint8_t sys_gm_reset[] =
-        {0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7};
-    static constexpr uint8_t sys_gm2_reset[] =
-        {0xf0, 0x7e, 0x7f, 0x09, 0x03, 0xf7};
-    static constexpr uint8_t sys_gs_reset[] =
-        {0xf0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7f, 0x00, 0x41, 0xf7};
-    static constexpr uint8_t sys_sc_mode1_set[] =
-        {0xf0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7f, 0x00, 0x01, 0xf7};
-    static constexpr uint8_t sys_sc_mode2_set[] =
-        {0xf0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7f, 0x01, 0x00, 0xf7};
-    static constexpr uint8_t sys_xg_reset[] =
-        {0xf0, 0x43, 0x10, 0x4c, 0x00, 0x00, 0x7e, 0x00, 0xf7};
+    Keyboard_Midi_Spec resetspec;
 
-    if (len >= 2 && len <= 3 && (data[0] >> 4) != 15)
+    if (len >= 2 && (data[0] >> 4) != 15)
         this->channel[data[0] & 15].handle_message(data, len);
-    else if (len == 1 && data[0] == 0xff)
+    else if (len >= 1 && data[0] == 0xff)
         clear();
-    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gm_reset)) {
+    else if (identify_reset_message(data, len, &resetspec)) {
         clear();
-        midispec = KMS_GeneralMidi;
+        midispec = resetspec;
     }
-    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gm2_reset)) {
-        clear();
-        midispec = KMS_GeneralMidi2;
+}
+
+bool identify_reset_message(const uint8_t *msg, unsigned len, Keyboard_Midi_Spec *spec)
+{
+    if (len >= 1 && msg[0] == 0xff) { // GM system reset
+        if (spec)
+            *spec = KMS_GeneralMidi;
+        return true;
     }
-    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_gs_reset) ||
-             gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_sc_mode1_set) ||
-             gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_sc_mode2_set)) {
-        clear();
-        midispec = KMS_RolandGS;
+
+    if (len >= 4 && msg[0] == 0xf0 && msg[len - 1] == 0xf7) { // sysex resets
+        uint8_t manufacturer = msg[1];
+        uint8_t device_id = msg[2];
+        const uint8_t *payload = msg + 3;
+        uint8_t paysize = len - 4;
+
+        switch (manufacturer) {
+        case 0x7e: { // GM system messages
+            const uint8_t gm1_on[] = {0x09, 0x01};
+            const uint8_t gm2_on[] = {0x09, 0x03};
+            if (paysize >= 2 && !memcmp(gm1_on, payload, 2)) {
+                if (spec)
+                    *spec = KMS_GeneralMidi;
+                return true;
+            }
+            if (paysize >= 2 && !memcmp(gm2_on, payload, 2)) {
+                if (spec)
+                    *spec = KMS_GeneralMidi2;
+                return true;
+            }
+            break;
+        }
+        case 0x43: { // Yamaha XG
+            const uint8_t xg_on[] = {0x4c, 0x00, 0x00, 0x7e};
+            const uint8_t all_reset[] = {0x4c, 0x00, 0x00, 0x7f};
+            if ((device_id & 0xf0) == 0x10 && paysize >= 4 &&
+                (!memcmp(xg_on, payload, 4) || !memcmp(all_reset, payload, 4)))
+            {
+                if (spec)
+                    *spec = KMS_YamahaXG;
+                return true;
+            }
+            break;
+        }
+        case 0x41: { // Roland GS / Roland Sound Canvas / Roland MT-32
+            const uint8_t gs_on[] = {0x42, 0x12, 0x40, 0x00, 0x7f, 0x00};
+            const uint8_t sc_mode1_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x00};
+            const uint8_t sc_mode2_set[] = {0x42, 0x12, 0x00, 0x00, 0x7f, 0x01};
+            const uint8_t mt32_reset[] = {0x16, 0x12, 0x7f};
+            if ((device_id & 0xf0) == 0x10 &&
+                ((paysize >= 6 && !memcmp(gs_on, payload, 6)) ||
+                 (paysize >= 6 && !memcmp(sc_mode1_set, payload, 6)) ||
+                 (paysize >= 6 && !memcmp(sc_mode2_set, payload, 6)) ||
+                 (paysize >= 3 && !memcmp(mt32_reset, payload, 3))))
+            {
+                if (spec)
+                    *spec = KMS_RolandGS;
+                return true;
+            }
+            break;
+        }
+        }
     }
-    else if (gsl::span<const uint8_t>(data, len) == gsl::make_span(sys_xg_reset)) {
-        clear();
-        midispec = KMS_YamahaXG;
-    }
+
+    return false;
 }

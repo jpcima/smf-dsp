@@ -36,3 +36,5 @@ struct Keyboard_State {
     void clear();
     void handle_message(const uint8_t *data, unsigned len);
 };
+
+bool identify_reset_message(const uint8_t *msg, unsigned len, Keyboard_Midi_Spec *spec = nullptr);
