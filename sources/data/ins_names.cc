@@ -88,7 +88,7 @@ const Midi_Program *get_program(Midi_Program_Id id, unsigned spec, unsigned *spe
 const Midi_Program *get_fallback_program(Midi_Program_Id id, unsigned spec, unsigned *specObtained)
 {
     const Midi_Program *pgm = nullptr;
-    if (id.percussive && (id.bank_msb != 0 || id.bank_lsb != 0)) {
+    if (id.bank_msb != 0 || id.bank_lsb != 0) {
         Midi_Program_Id fallbackId(id.identifier);
         fallbackId.bank_msb = 0;
         fallbackId.bank_lsb = 0;

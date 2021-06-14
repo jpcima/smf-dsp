@@ -61,6 +61,7 @@ private:
     void file_finished();
 
     void extract_smf_metadata();
+    void send_reset_if_smf_needs();
 
     Player_State make_state() const;
 

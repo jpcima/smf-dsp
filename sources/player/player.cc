@@ -16,10 +16,13 @@
 #include "instruments/synth.h"
 #include "instruments/synth_fx.h"
 #include "synth/synth_host.h"
+#include "player/smfutil.h"
+#include "data/ins_names.h"
 #include "utility/charset.h"
 #include "utility/uv++.h"
 #include "utility/logs.h"
 #include <gsl/gsl>
+#include <array>
 #include <stdexcept>
 #include <cstdio>
 #include <cstring>
@@ -414,6 +417,8 @@ void Player::resume_play_list()
 
         smf_ = std::move(smf);
         extract_smf_metadata();
+        send_reset_if_smf_needs();
+
         start_ticking();
     }
 }
@@ -564,6 +569,117 @@ void Player::extract_smf_metadata()
 
         if (dst)
             *dst = det.decode_to_utf8(text);
+    }
+}
+
+void Player::send_reset_if_smf_needs()
+{
+    const fmidi_smf_t &smf = *smf_;
+    fmidi_seq_u seq{fmidi_seq_new(&smf)};
+
+    bool have_reset = false;
+
+    // search for a reset in the starting sysex sequence
+    fmidi_seq_event_t evt;
+    while (!have_reset && fmidi_seq_next_event(seq.get(), &evt)) {
+        if (evt.event->type != fmidi_event_message)
+            continue;
+
+        const uint8_t *msg = evt.event->data;
+        uint32_t len = evt.event->datalen;
+
+        bool is_sysex = len >= 2 && msg[0] == 0xf0 && msg[len - 1] == 0xf7;
+        if (!is_sysex)
+            break;
+
+        have_reset = identify_reset_message(msg, len);
+    }
+
+    if (have_reset)
+        return;
+
+    // the prologue did not contain a reset sequence
+    // search for a matching MIDI spec according to the programs used
+
+    std::vector<synth_midi_ins> instruments = collect_file_instruments(smf);
+
+    struct Contestant {
+        uint32_t spec;
+        uint32_t flags;
+        uint32_t score;
+    };
+
+    Contestant gm1{KMS_GeneralMidi, Midi_Spec_GM1, 0};
+    Contestant gm2{KMS_GeneralMidi2, Midi_Spec_GM2|Midi_Spec_GM1, 0};
+    Contestant xg{KMS_YamahaXG, Midi_Spec_XG|Midi_Spec_GM1, 0};
+    Contestant gs{KMS_RolandGS, Midi_Spec_GS|Midi_Spec_SC|Midi_Spec_GM1, 0};
+
+    std::array<Contestant *, 4> contestants {{&gm1, &gm2, &xg, &gs}};
+
+    for (synth_midi_ins ins : instruments) {
+        Midi_Program_Id id {ins.percussive != 0, ins.bank_msb, ins.bank_lsb, ins.program};
+
+        for (Contestant *con : contestants) {
+            if (Midi_Data::get_program(id, con->flags))
+                con->score += 2;
+            else if (Midi_Data::get_fallback_program(id, con->flags))
+                con->score += 1;
+        }
+    }
+
+    //Log::d("Score GM1=%u GM2=%u XG=%u GS=%u", gm1.score, gm2.score, xg.score, gs.score);
+
+    uint32_t winnerIndex = 0;
+    for (uint32_t i = 1; i < contestants.size(); ++i) {
+        if (contestants[i]->score > contestants[winnerIndex]->score)
+            winnerIndex = i;
+    }
+
+    Contestant &winner = *contestants[winnerIndex];
+
+    // send a reset which matches the deduced specification
+
+    const uint8_t *msg = nullptr;
+    uint32_t len = 0;
+
+    switch (winner.spec) {
+    case KMS_GeneralMidi: {
+        static constexpr uint8_t sys_gm_reset[] =
+            {0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7};
+        msg = sys_gm_reset;
+        len = sizeof(sys_gm_reset);
+        Log::i("Sending the GM reset");
+        break;
+    }
+    case KMS_GeneralMidi2: {
+        static constexpr uint8_t sys_gm2_reset[] =
+            {0xf0, 0x7e, 0x7f, 0x09, 0x03, 0xf7};
+        msg = sys_gm2_reset;
+        len = sizeof(sys_gm2_reset);
+        Log::i("Sending the GM2 reset");
+        break;
+    }
+    case KMS_YamahaXG: {
+        static constexpr uint8_t sys_xg_reset[] =
+            {0xf0, 0x43, 0x10, 0x4c, 0x00, 0x00, 0x7e, 0x00, 0xf7};
+        msg = sys_xg_reset;
+        len = sizeof(sys_xg_reset);
+        Log::i("Sending the XG reset");
+        break;
+    }
+    case KMS_RolandGS: {
+        static constexpr uint8_t sys_gs_reset[] =
+            {0xf0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7f, 0x00, 0x41, 0xf7};
+        msg = sys_gs_reset;
+        len = sizeof(sys_gs_reset);
+        Log::i("Sending the GS reset");
+        break;
+    }
+    }
+
+    if (len > 0) {
+        play_message(msg, len);
+        uv_sleep(50);
     }
 }
 
