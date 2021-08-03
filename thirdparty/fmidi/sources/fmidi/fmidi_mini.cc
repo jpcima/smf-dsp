@@ -1,7 +1,7 @@
 // =============================================================================
 //
 // The Fmidi library - a free software toolkit for MIDI file processing
-// Single-file implementation, based on software revision: 4b716b9
+// Single-file implementation, based on software revision: 3e6d5b5
 //
 // =============================================================================
 //          Copyright Jean Pierre Cimalando 2018-2020.
@@ -2358,8 +2358,12 @@ fmidi_smf_t *fmidi_smf_stream_read(FILE *stream)
 fmidi_fileformat_t fmidi_mem_identify(const uint8_t *data, size_t length)
 {
     const uint8_t smf_magic[4] = {'M', 'T', 'h', 'd'};
-    if (length >= 4 && memcmp(data, smf_magic, 4) == 0)
-        return fmidi_fileformat_smf;
+
+    for (size_t offset : {0x00, 0x80}) {
+        // a few unidentified files start at 0x80 (Sound Canvas MIDI collection)
+        if (length + offset >= 4 && memcmp(data + offset, smf_magic, 4) == 0)
+            return fmidi_fileformat_smf;
+    }
 
     const uint8_t rmi_magic1[4] = {'R', 'I', 'F', 'F'};
     const uint8_t rmi_magic2[8] = {'R', 'M', 'I', 'D', 'd', 'a', 't', 'a'};
@@ -2384,7 +2388,7 @@ fmidi_fileformat_t fmidi_stream_identify(FILE *stream)
 {
     rewind(stream);
 
-    uint8_t magic[32];
+    uint8_t magic[0x100];
     size_t size = fread(magic, 1, sizeof(magic), stream);
     if (ferror(stream))
         RET_FAIL((fmidi_fileformat_t)-1, fmidi_err_input);
