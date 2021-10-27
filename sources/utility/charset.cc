@@ -14,6 +14,7 @@
 #include <glib.h>
 #endif
 #include <utf/utf.hpp>
+#include <nonstd/scope.hpp>
 #include <array>
 #include <type_traits>
 #include <stdexcept>
@@ -22,12 +23,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-static bool to_utf8_impl(gsl::cstring_span src, std::string *dst, const char *src_encoding, bool permissive)
+static bool to_utf8_impl(nonstd::string_view src, std::string *dst, const char *src_encoding, bool permissive)
 {
     iconv_t cd = iconv_open("UTF-8", src_encoding);
     if (!cd)
         return false;
-    auto cd_cleanup = gsl::finally([cd] { iconv_close(cd); });
+    auto cd_cleanup = nonstd::make_scope_exit([cd] { iconv_close(cd); });
 
     size_t src_index = 0;
     size_t src_size = src.size();
@@ -64,17 +65,17 @@ static bool to_utf8_impl(gsl::cstring_span src, std::string *dst, const char *sr
     return true;
 }
 
-bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive)
+bool to_utf8(nonstd::string_view src, std::string &dst, const char *src_encoding, bool permissive)
 {
     return to_utf8_impl(src, &dst, src_encoding, permissive);
 }
 
-bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding)
+bool has_valid_encoding(nonstd::string_view src, const char *src_encoding)
 {
     return to_utf8_impl(src, nullptr, src_encoding, false);
 }
 
-template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive)
+template <class CharSrc, class CharDst> bool convert_utf(nonstd::basic_string_view<CharSrc> src, std::basic_string<CharDst> &dst, bool permissive)
 {
     typedef utf::utf_traits<CharSrc> Src;
     typedef utf::utf_traits<CharDst> Dst;
@@ -97,12 +98,12 @@ template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<
     return true;
 }
 
-template bool convert_utf(gsl::basic_string_span<const wchar_t>, std::basic_string<char> &, bool);
-template bool convert_utf(gsl::basic_string_span<const char16_t>, std::basic_string<char> &, bool);
-template bool convert_utf(gsl::basic_string_span<const char32_t>, std::basic_string<char> &, bool);
-template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<wchar_t> &, bool);
-template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char16_t> &, bool);
-template bool convert_utf(gsl::basic_string_span<const char>, std::basic_string<char32_t> &, bool);
+template bool convert_utf(nonstd::wstring_view, std::string &, bool);
+template bool convert_utf(nonstd::u16string_view, std::string &, bool);
+template bool convert_utf(nonstd::u32string_view, std::string &, bool);
+template bool convert_utf(nonstd::string_view, std::wstring &, bool);
+template bool convert_utf(nonstd::string_view, std::u16string &, bool);
+template bool convert_utf(nonstd::string_view, std::u32string &, bool);
 
 #if defined(UNICODE_ICU)
 uint32_t unicode_tolower(uint32_t ch)
@@ -161,7 +162,7 @@ static UCollator *default_collator()
     return coll.get();
 }
 
-std::string utf8_collation_key(gsl::cstring_span src)
+std::string utf8_collation_key(nonstd::string_view src)
 {
     std::basic_string<UChar> usrc;
     convert_utf(src, usrc, true);
@@ -197,12 +198,12 @@ uint32_t unicode_nfd_base(uint32_t ch)
     return a;
 }
 
-std::string utf8_collation_key(gsl::cstring_span src)
+std::string utf8_collation_key(nonstd::string_view src)
 {
     char *key = g_utf8_collate_key(src.data(), src.size());
     if (!key)
         return std::string();
-    auto cleanup = gsl::finally([key]() { g_free(key); });
+    auto cleanup = nonstd::make_scope_exit([key]() { g_free(key); });
     return key;
 }
 #endif
@@ -243,10 +244,10 @@ int filemode_utf8(const char *path)
     return st.st_mode;
 }
 
-bool make_directory(gsl::cstring_span path)
+bool make_directory(nonstd::string_view path)
 {
 #ifndef _WIN32
-    return mkdir(gsl::to_string(path).c_str(), 0755) == 0;
+    return mkdir(std::string(path).c_str(), 0755) == 0;
 #else
     std::wstring wpath;
     if (!convert_utf<char, wchar_t>(path, wpath, false)) {
@@ -258,7 +259,7 @@ bool make_directory(gsl::cstring_span path)
 }
 
 //
-Dir::Dir(const gsl::cstring_span path)
+Dir::Dir(const nonstd::string_view path)
 {
 #ifndef _WIN32
     std::string cpath(path.begin(), path.end());
@@ -338,7 +339,7 @@ void Encoding_Detector::finish()
     uchardet_data_end(P->ud_.get());
 }
 
-void Encoding_Detector::feed(gsl::cstring_span text)
+void Encoding_Detector::feed(nonstd::string_view text)
 {
     uchardet_handle_data(P->ud_.get(), text.data(), text.size());
 }
@@ -387,7 +388,7 @@ void Encoding_Detector::finish()
         throw std::runtime_error("ucsdet_setText");
 }
 
-void Encoding_Detector::feed(gsl::cstring_span text)
+void Encoding_Detector::feed(nonstd::string_view text)
 {
     P->text_.append(text.data(), text.size());
 }

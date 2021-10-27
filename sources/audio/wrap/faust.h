@@ -44,7 +44,7 @@ public:
 
         errno = 0;
         unsigned long id = std::strtoul(key, const_cast<char **>(&endptr), 10);
-        id = (errno == 0 && std::strlen(key) == endptr - key) ? id : ~0ul;
+        id = (errno == 0 && std::strlen(key) == (std::size_t)(endptr - key)) ? id : ~0ul;
 
         if (id != ~0ul)
             actives[id] = zone;

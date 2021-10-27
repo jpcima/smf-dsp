@@ -16,14 +16,24 @@ target_include_directories(uchardet PUBLIC
 add_library(vendor::uchardet ALIAS uchardet)
 
 ###
-add_library(gsl-lite INTERFACE)
-target_include_directories(gsl-lite INTERFACE "thirdparty/gsl-lite/include")
-add_library(vendor::gsl-lite ALIAS gsl-lite)
-
-###
 add_library(any-lite INTERFACE)
 target_include_directories(any-lite INTERFACE "thirdparty/any-lite/include")
 add_library(vendor::any-lite ALIAS any-lite)
+
+###
+add_library(span-lite INTERFACE)
+target_include_directories(span-lite INTERFACE "thirdparty/span-lite/include")
+add_library(vendor::span-lite ALIAS span-lite)
+
+###
+add_library(scope-lite INTERFACE)
+target_include_directories(scope-lite INTERFACE "thirdparty/scope-lite/include")
+add_library(vendor::scope-lite ALIAS scope-lite)
+
+###
+add_library(string-view-lite INTERFACE)
+target_include_directories(string-view-lite INTERFACE "thirdparty/string-view-lite/include")
+add_library(vendor::string-view-lite ALIAS string-view-lite)
 
 ###
 add_library(utf INTERFACE)

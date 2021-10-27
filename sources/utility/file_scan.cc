@@ -5,7 +5,7 @@
 
 #include "file_scan.h"
 #include "paths.h"
-#include <gsl/gsl>
+#include <nonstd/scope.hpp>
 
 File_Scan::File_Scan(
     std::string path,
@@ -91,7 +91,7 @@ void File_Scan::scan_in_thread()
     pFTS *fts = portfts_open(path_.c_str(), fts_flags);
     if (!fts)
         return;
-    auto fts_cleanup = gsl::finally([fts] { portfts_close(fts); });
+    auto fts_cleanup = nonstd::make_scope_exit([fts] { portfts_close(fts); });
 
     std::vector<Entry> &files = files_;
     std::vector<Entry> &dirs = dirs_;

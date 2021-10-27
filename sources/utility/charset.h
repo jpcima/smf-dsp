@@ -4,32 +4,32 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <string>
 #include <memory>
 #include <cstdio>
 
 // conversion
-bool to_utf8(gsl::cstring_span src, std::string &dst, const char *src_encoding, bool permissive);
-bool has_valid_encoding(gsl::cstring_span src, const char *src_encoding);
-template <class CharSrc, class CharDst> bool convert_utf(gsl::basic_string_span<const CharSrc> src, std::basic_string<CharDst> &dst, bool permissive);
+bool to_utf8(nonstd::string_view src, std::string &dst, const char *src_encoding, bool permissive);
+bool has_valid_encoding(nonstd::string_view src, const char *src_encoding);
+template <class CharSrc, class CharDst> bool convert_utf(nonstd::basic_string_view<CharSrc> src, std::basic_string<CharDst> &dst, bool permissive);
 uint32_t unicode_tolower(uint32_t ch);
 uint32_t unicode_toupper(uint32_t ch);
 uint32_t unicode_nfd_base(uint32_t ch);
 
 // comparison
-std::string utf8_collation_key(gsl::cstring_span src);
+std::string utf8_collation_key(nonstd::string_view src);
 
 // file I/O
 FILE *fopen_utf8(const char *path, const char *mode);
 int filemode_utf8(const char *path);
 
 // directories
-bool make_directory(gsl::cstring_span path);
+bool make_directory(nonstd::string_view path);
 
 class Dir {
 public:
-    explicit Dir(const gsl::cstring_span path);
+    explicit Dir(const nonstd::string_view path);
     ~Dir();
     explicit operator bool() const noexcept { return dh_ != nullptr; }
     bool read_next(std::string &name);
@@ -52,7 +52,7 @@ public:
     ~Encoding_Detector();
     void start();
     void finish();
-    void feed(gsl::cstring_span text);
+    void feed(nonstd::string_view text);
     const char *detected_encoding();
 
 private:

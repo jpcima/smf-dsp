@@ -10,19 +10,20 @@
 #include "utility/module.h"
 #include "utility/charset.h"
 #include "utility/logs.h"
+#include <nonstd/scope.hpp>
 #include <algorithm>
 #include <cassert>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-static const gsl::cstring_span plugin_prefix = "s_";
+static const nonstd::string_view plugin_prefix = "s_";
 #if defined(_WIN32)
-static const gsl::cstring_span plugin_suffix = ".dll";
+static const nonstd::string_view plugin_suffix = ".dll";
 #elif defined(__APPLE__)
-static const gsl::cstring_span plugin_suffix = ".dylib";
+static const nonstd::string_view plugin_suffix = ".dylib";
 #else
-static const gsl::cstring_span plugin_suffix = ".so";
+static const nonstd::string_view plugin_suffix = ".so";
 #endif
 
 Synth_Host::Synth_Host()
@@ -46,7 +47,7 @@ const std::vector<Synth_Host::Plugin_Info> &Synth_Host::plugins()
     return plugins;
 }
 
-bool Synth_Host::load(gsl::cstring_span id, double srate)
+bool Synth_Host::load(nonstd::string_view id, double srate)
 {
     const std::vector<Plugin_Info> &plugin_list = plugins();
     const Plugin_Info *info = nullptr;
@@ -61,7 +62,7 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
         return false;
 
     Dl_Handle handle = [this, &id]() -> Dl_Handle {
-        auto it = loaded_modules_.find(gsl::to_string(id));
+        auto it = loaded_modules_.find(std::string(id));
         return (it != loaded_modules_.end()) ? it->second.get() : nullptr;
     }();
 
@@ -70,7 +71,7 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
         if (!handle_u)
             return false;
         handle = handle_u.get();
-        loaded_modules_[gsl::to_string(id)] = std::move(handle_u);
+        loaded_modules_[std::string(id)] = std::move(handle_u);
     }
 
     synth_plugin_entry_fn *entry = reinterpret_cast<synth_plugin_entry_fn *>(
@@ -93,7 +94,7 @@ bool Synth_Host::load(gsl::cstring_span id, double srate)
         return false;
 
     bool synth_success = false;
-    auto synth_failure_cleanup = gsl::finally(
+    auto synth_failure_cleanup = nonstd::make_scope_exit(
         [&synth_success, intf, synth] { if (!synth_success) intf->synth_cleanup(synth); });
 
     initial_setup_synth(*info, intf, synth);
@@ -163,7 +164,7 @@ bool Synth_Host::can_preload() const
     return intf->abi_version >= 2 && intf->synth_preload;
 }
 
-void Synth_Host::preload(gsl::span<const synth_midi_ins> instruments)
+void Synth_Host::preload(nonstd::span<const synth_midi_ins> instruments)
 {
     synth_object *synth = synth_;
     const synth_interface *intf = intf_;
@@ -184,10 +185,10 @@ std::string Synth_Host::find_plugin_dir()
     while (!dir.empty() && dir.back() != '/')
         dir.pop_back();
 
-    gsl::cstring_span suffix = "/bin/";
+    nonstd::string_view suffix = "/bin/";
     size_t suffixlen = suffix.size();
 
-    if (dir.size() >= suffixlen && gsl::cstring_span(dir).subspan(dir.size() - suffixlen) == suffix) {
+    if (dir.size() >= suffixlen && nonstd::string_view(dir).substr(dir.size() - suffixlen) == suffix) {
         Log::i("Use FHS plugin search");
         dir.resize(dir.size() - suffixlen);
         dir.append("/lib/" PROGRAM_NAME "/");
@@ -220,10 +221,10 @@ std::vector<Synth_Host::Plugin_Info> Synth_Host::do_plugin_scan()
         size_t suffixlen = plugin_suffix.size();
 
         if (namelen > prefixlen + suffixlen &&
-            gsl::cstring_span(name).subspan(0, prefixlen) == plugin_prefix &&
-            gsl::cstring_span(name).subspan(namelen - suffixlen) == plugin_suffix)
+            nonstd::string_view(name).substr(0, prefixlen) == plugin_prefix &&
+            nonstd::string_view(name).substr(namelen - suffixlen) == plugin_suffix)
         {
-            gsl::cstring_span id = gsl::cstring_span(name).subspan(prefixlen, namelen - prefixlen - suffixlen);
+            nonstd::string_view id = nonstd::string_view(name).substr(prefixlen, namelen - prefixlen - suffixlen);
             Dl_Handle_U handle(Dl_open((dir + name.data()).c_str()));
             synth_plugin_entry_fn *entry = nullptr;
             const synth_interface *intf = nullptr;
@@ -265,7 +266,7 @@ std::string Synth_Host::plugin_path(const Plugin_Info &info)
 void Synth_Host::initial_setup_plugin(const Plugin_Info &info, const synth_interface &intf)
 {
     intf.plugin_init(get_configuration_dir().c_str());
-    auto plugin_cleanup = gsl::finally([&intf] { intf.plugin_shutdown(); });
+    auto plugin_cleanup = nonstd::make_scope_exit([&intf] { intf.plugin_shutdown(); });
 
     size_t option_index = 0;
     const synth_option *option = intf.plugin_option(option_index);

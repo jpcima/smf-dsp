@@ -5,7 +5,7 @@
 
 #pragma once
 #include "keystate.h"
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <string>
 #include <cstdint>
 
@@ -31,7 +31,7 @@ public:
 
     virtual void flush_events() {}
 
-    virtual void open_midi_output(gsl::cstring_span id) = 0;
+    virtual void open_midi_output(nonstd::string_view id) = 0;
     virtual void close_midi_output() = 0;
 
     virtual bool is_synth() const { return false; }

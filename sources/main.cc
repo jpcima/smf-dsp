@@ -9,8 +9,8 @@
 #include "utility/module.h"
 #include "utility/charset.h"
 #include "utility/logs.h"
-#include <gsl/gsl>
 #include <getopt.h>
+#include <nonstd/scope.hpp>
 #include <memory>
 #include <clocale>
 #if defined(__linux__)
@@ -73,7 +73,7 @@ int real_main(int argc, char *argv[])
         Log::e("Error initializing.");
         return 1;
     }
-    auto sdl_cleanup = gsl::finally([subsys] { SDL_QuitSubSystem(subsys); });
+    auto sdl_cleanup = nonstd::make_scope_exit([subsys] { SDL_QuitSubSystem(subsys); });
 
     // Initialize App and Window
     Application app;

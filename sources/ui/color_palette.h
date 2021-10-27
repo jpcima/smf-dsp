@@ -7,7 +7,7 @@
 #include "utility/misc.h"
 #include <SimpleIni.h>
 #include <SDL_pixels.h>
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <memory>
 #include <cassert>
 
@@ -58,7 +58,7 @@ namespace Colors {
         box_active_item_foreground,
     };
 
-    maybe_unused static const gsl::cstring_span Name[] = {
+    maybe_unused static const nonstd::string_view Name[] = {
         "background",
         "info-box-background",
         "text-browser-foreground",

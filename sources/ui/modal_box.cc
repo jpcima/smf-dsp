@@ -12,6 +12,7 @@
 #include "utility/charset.h"
 #include "utility/SDL++.h"
 #include <utf/utf.hpp>
+#include <nonstd/string_view.hpp>
 #include <algorithm>
 
 static constexpr int title_top_padding = 4;
@@ -390,7 +391,7 @@ bool Modal_Text_Input_Box::handle_text_input(const SDL_TextInputEvent &event)
     if (has_completed())
         return false;
 
-    gsl::cstring_span str = event.text;
+    nonstd::string_view str = event.text;
     uint32_t cursor = cursor_;
 
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
@@ -417,7 +418,7 @@ nonstd::any Modal_Text_Input_Box::get_completion_result(size_t index)
         return accepted_;
     case 1: {
         std::string utf8;
-        convert_utf<char32_t>(input_text_, utf8, true);
+        convert_utf(nonstd::u32string_view(input_text_), utf8, true);
         return std::move(utf8);
     }
     default:
@@ -481,7 +482,7 @@ void Modal_Text_Input_Box::paint_contents(SDL_Renderer *rr)
     tp.font = &font_fmdsp_medium;
     tp.pos = labelbounds.origin();
     tp.fg = pal[Colors::box_foreground];
-    gsl::cstring_span label = label_;
+    nonstd::string_view label = label_;
     if (label.empty())
         label = "Please enter a value:";
     tp.draw_utf8(label);

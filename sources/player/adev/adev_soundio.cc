@@ -5,9 +5,7 @@
 
 #if defined(ADEV_SOUNDIO)
 #include "adev_soundio.h"
-#include "utility/strings.h"
 #include "utility/logs.h"
-#include <gsl/gsl>
 #include <cmath>
 #include <cstring>
 

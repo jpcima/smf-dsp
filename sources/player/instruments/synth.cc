@@ -88,7 +88,7 @@ void Midi_Synth_Instrument::flush_events()
     }
 }
 
-void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
+void Midi_Synth_Instrument::open_midi_output(nonstd::string_view id)
 {
     Impl &impl = *impl_;
     Synth_Host &host = *impl.host_;
@@ -100,7 +100,7 @@ void Midi_Synth_Instrument::open_midi_output(gsl::cstring_span id)
 
     std::lock_guard<std::mutex> lock(impl.host_mutex_);
     if (!host.load(id, impl.config.rate))
-        Log::e("Could not open synth: %s", gsl::to_string(id).c_str());
+        Log::e("Could not open synth: %s", std::string(id).c_str());
 
     impl.messages_initialized_.store(false);
     flush_events();

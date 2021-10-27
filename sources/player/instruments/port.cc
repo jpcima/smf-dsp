@@ -80,7 +80,7 @@ std::vector<Midi_Output> Midi_Port_Instrument::get_midi_outputs()
     return ports;
 }
 
-void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
+void Midi_Port_Instrument::open_midi_output(nonstd::string_view id)
 {
     close_midi_output();
 
@@ -93,7 +93,7 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
     if (pos != id.end()) {
         std::string api_name(id.begin(), pos);
         api = RtMidi::getCompiledApiByName(api_name);
-        id = gsl::cstring_span(pos + 1, id.end());
+        id = id.substr(std::distance(id.begin(), pos) + 1);
     }
 
     // open client
@@ -121,7 +121,7 @@ void Midi_Port_Instrument::open_midi_output(gsl::cstring_span id)
 
     // export port
     if (id.size() > 7 && !memcmp(id.data(), "//port/", 7)) {
-        gsl::cstring_span port_id(id.begin() + 7, id.end());
+        nonstd::string_view port_id = id.substr(7);
         bool port_found = false;
         for (size_t i = 0, n = out->getPortCount(); i < n && !port_found; ++i) {
             if ((port_found = out->getPortName(i) == port_id))

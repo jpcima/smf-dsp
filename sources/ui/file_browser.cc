@@ -9,10 +9,9 @@
 #include "ui/text.h"
 #include "ui/paint.h"
 #include "utility/charset.h"
-#include "utility/strings.h"
 #include "utility/SDL++.h"
 #include <utf/utf.hpp>
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <algorithm>
 #include <cstdlib>
 #include <cassert>
@@ -175,7 +174,7 @@ bool File_Browser::handle_key_pressed(const SDL_KeyboardEvent &event)
 
 bool File_Browser::handle_text_input(const SDL_TextInputEvent &event)
 {
-    gsl::cstring_span str = event.text;
+    nonstd::string_view str = event.text;
 
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
         char32_t ch = utf::utf_traits<char>::decode(cur, end);
@@ -207,9 +206,9 @@ void File_Browser::move_to_character(uint32_t character)
     size_t newsel = sel;
     for (size_t i = sel; (i = (i + 1) % count) != sel && newsel == sel;) {
         const File_Entry &entry = model.entry(i);
-        gsl::cstring_span name = entry.name();
+        nonstd::string_view name = entry.name();
 
-        gsl::cstring_span::iterator it = name.begin();
+        nonstd::string_view::iterator it = name.begin();
         uint32_t leadchar = utf::utf_traits<char>::decode(it, name.end());
 
         if (unicode_tolower(character) == unicode_tolower(leadchar))

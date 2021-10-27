@@ -8,7 +8,7 @@
 
 class Dummy_Instrument : public Midi_Instrument {
 public:
-    void open_midi_output(gsl::cstring_span id) override {}
+    void open_midi_output(nonstd::string_view id) override {}
     void close_midi_output() override {}
 
 protected:
