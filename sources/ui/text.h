@@ -5,9 +5,9 @@
 
 #pragma once
 #include "utility/geometry.h"
-#include <gsl/gsl>
-#include <string>
 #include <SDL.h>
+#include <nonstd/string_view.hpp>
+#include <string>
 struct Font;
 
 struct Text_Painter {
@@ -17,12 +17,12 @@ struct Text_Painter {
     SDL_Color fg{0x00, 0x00, 0x00, 0xff};
 
     void draw_char(uint32_t ch);
-    void draw_ucs4(gsl::basic_string_span<const char32_t> str);
-    void draw_utf8(gsl::cstring_span str);
+    void draw_ucs4(nonstd::u32string_view str);
+    void draw_utf8(nonstd::string_view str);
 
     size_t measure_char(uint32_t ch);
-    size_t measure_ucs4(gsl::basic_string_span<const char32_t> str);
-    size_t measure_utf8(gsl::cstring_span str);
+    size_t measure_ucs4(nonstd::u32string_view str);
+    size_t measure_utf8(nonstd::string_view str);
 
     static void clear_font_caches();
 };

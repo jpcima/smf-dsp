@@ -8,7 +8,7 @@
 #include "utility/geometry.h"
 #include "utility/SDL++.h"
 #include <SDL.h>
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <mutex>
 #include <vector>
 #include <memory>
@@ -54,14 +54,14 @@ public:
     void update_modals();
     void open_help_dialog();
     void open_fx_dialog();
-    void choose_midi_output(bool ask, gsl::cstring_span choice);
-    void choose_synth(bool ask, gsl::cstring_span choice);
+    void choose_midi_output(bool ask, nonstd::string_view choice);
+    void choose_synth(bool ask, nonstd::string_view choice);
     void get_midi_outputs(std::vector<Midi_Output> &outputs);
 
-    void choose_theme(gsl::cstring_span choice);
+    void choose_theme(nonstd::string_view choice);
     void get_themes(std::vector<std::string> &themes);
 
-    void load_theme(gsl::cstring_span theme);
+    void load_theme(nonstd::string_view theme);
     void load_default_theme();
     void load_theme_configuration(const CSimpleIniA &ini);
     void get_fx_parameters(const CSimpleIniA &ini, int *values) const;

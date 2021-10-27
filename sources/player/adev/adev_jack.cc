@@ -5,9 +5,9 @@
 
 #if defined(ADEV_JACK)
 #include "adev_jack.h"
-#include "utility/strings.h"
 #include "utility/logs.h"
-#include <gsl/gsl>
+#include <nonstd/scope.hpp>
+#include <nonstd/string_view.hpp>
 #include <cmath>
 #include <cstring>
 
@@ -119,21 +119,21 @@ auto Audio_Device_Jack::identify_physical_ports() -> Connections
     if (!ports)
         return connections;
 
-    auto ports_cleanup = gsl::finally([ports]() { jack_free(ports); });
+    auto ports_cleanup = nonstd::make_scope_exit([ports]() { jack_free(ports); });
 
     if (!ports[0])
         return connections;
 
-    gsl::cstring_span prefix;
+    nonstd::string_view prefix;
     if (const char *name = ports[0]) {
         const char *pos = std::strchr(name, ':');
         if (pos)
-            prefix = gsl::cstring_span(name, pos + 1 - name);
+            prefix = nonstd::string_view(name, pos + 1 - name);
     }
 
     if (!prefix.empty()) {
         for (unsigned i = 0; i < connections.size() && ports[i]; ++i) {
-            if (string_starts_with<char>(ports[i], prefix))
+            if (nonstd::string_view(ports[i]).starts_with(prefix))
                 connections[i].push_back(ports[i]);
         }
     }

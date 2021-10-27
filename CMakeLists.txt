@@ -119,8 +119,10 @@ target_include_directories(smf-dsp PRIVATE
 
 target_link_libraries(smf-dsp PRIVATE
   vendor::uchardet
-  vendor::gsl-lite
   vendor::any-lite
+  vendor::span-lite
+  vendor::scope-lite
+  vendor::string-view-lite
   vendor::utf
   vendor::simpleini
   vendor::ring-buffer

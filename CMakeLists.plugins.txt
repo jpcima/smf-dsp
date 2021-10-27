@@ -6,7 +6,7 @@ add_library(plugin-common STATIC EXCLUDE_FROM_ALL
   "sources/utility/paths.cc"
   "sources/utility/logs.cc")
 target_include_directories(plugin-common PUBLIC "sources")
-target_link_libraries(plugin-common PUBLIC vendor::utf vendor::gsl-lite sys::iconv)
+target_link_libraries(plugin-common PUBLIC vendor::utf vendor::scope-lite vendor::string-view-lite sys::iconv)
 
 if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   target_link_libraries(plugin-common PRIVATE ICU::uc ICU::i18n)

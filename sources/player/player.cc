@@ -21,7 +21,8 @@
 #include "utility/charset.h"
 #include "utility/uv++.h"
 #include "utility/logs.h"
-#include <gsl/gsl>
+#include <nonstd/scope.hpp>
+#include <nonstd/string_view.hpp>
 #include <array>
 #include <stdexcept>
 #include <cstdio>
@@ -85,12 +86,12 @@ void Player::thread_exec()
     uv_loop_t *loop = &loop_buf;
     if (uv_loop_init(loop) != 0)
         throw std::runtime_error("uv_loop_init");
-    auto loop_cleanup = gsl::finally([loop] { uv_loop_close(loop); });
+    auto loop_cleanup = nonstd::make_scope_exit([loop] { uv_loop_close(loop); });
 #else
     uv_loop_t *loop = uv_loop_new();
     if (!loop)
         throw std::runtime_error("uv_loop_new");
-    auto loop_cleanup = gsl::finally([loop] { uv_loop_delete(loop); });
+    auto loop_cleanup = nonstd::make_scope_exit([loop] { uv_loop_delete(loop); });
 #endif
 
     uv_async_t async;
@@ -389,7 +390,7 @@ void Player::resume_play_list()
         const std::string &current = pll.current();
 
         if (FILE *fh = fopen_utf8(current.c_str(), "rb")) {
-            auto fh_cleanup = gsl::finally([fh] { fclose(fh); });
+            auto fh_cleanup = nonstd::make_scope_exit([fh] { fclose(fh); });
             smf.reset(fmidi_auto_stream_read(fh));
         }
 
@@ -549,7 +550,7 @@ void Player::extract_smf_metadata()
     fmidi_smf_track_begin(&it, 0);
     while ((ev = fmidi_smf_track_next(&smf, &it)) && ev->type == fmidi_event_meta) {
         uint8_t type = ev->data[0];
-        gsl::cstring_span text(reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1);
+        nonstd::string_view text(reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1);
         std::string *dst = nullptr;
 
         switch (type) {

@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 #include <string>
 
 struct fmidi_smf;
@@ -14,13 +14,13 @@ public:
     void scan(const fmidi_smf &smf);
 
     std::string general_encoding() const;
-    std::string encoding_for_text(gsl::cstring_span input) const;
+    std::string encoding_for_text(nonstd::string_view input) const;
 
-    std::string decode_to_utf8(gsl::cstring_span input) const;
+    std::string decode_to_utf8(nonstd::string_view input) const;
 
 private:
-    static gsl::cstring_span encoding_from_marker(gsl::cstring_span input);
-    static gsl::cstring_span strip_encoding_marker(gsl::cstring_span text, gsl::cstring_span enc);
+    static nonstd::string_view encoding_from_marker(nonstd::string_view input);
+    static nonstd::string_view strip_encoding_marker(nonstd::string_view text, nonstd::string_view enc);
 
 private:
     std::string encoding_;

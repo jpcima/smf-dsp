@@ -7,7 +7,8 @@
 #include "synth.h"
 #include "utility/load_library.h"
 #include <SimpleIni.h>
-#include <gsl/gsl>
+#include <nonstd/span.hpp>
+#include <nonstd/string_view.hpp>
 #include <string>
 #include <vector>
 #include <memory>
@@ -32,12 +33,12 @@ public:
     static const std::string &plugin_dir();
     static const std::vector<Plugin_Info> &plugins();
 
-    bool load(gsl::cstring_span id, double srate);
+    bool load(nonstd::string_view id, double srate);
     void unload();
     void generate(float *buffer, size_t nframes);
     void send_midi(const uint8_t *data, unsigned len);
     bool can_preload() const;
-    void preload(gsl::span<const synth_midi_ins> instruments);
+    void preload(nonstd::span<const synth_midi_ins> instruments);
 
 private:
     Dl_Handle module_;

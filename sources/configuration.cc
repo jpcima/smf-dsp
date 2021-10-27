@@ -48,7 +48,7 @@ const std::string &get_configuration_dir()
     return path;
 }
 
-std::string get_configuration_file(gsl::cstring_span name)
+std::string get_configuration_file(nonstd::string_view name)
 {
     std::string path = get_configuration_dir();
     if (path.empty())
@@ -65,7 +65,7 @@ std::unique_ptr<CSimpleIniA> create_configuration()
         new CSimpleIniA(iniIsUtf8, iniMultiKey, iniMultiLine));
 }
 
-std::unique_ptr<CSimpleIniA> load_configuration(gsl::cstring_span name)
+std::unique_ptr<CSimpleIniA> load_configuration(nonstd::string_view name)
 {
     std::unique_ptr<CSimpleIniA> ini = create_configuration();
     if (ini->LoadFile(get_configuration_file(name).c_str()) != SI_OK)
@@ -74,7 +74,7 @@ std::unique_ptr<CSimpleIniA> load_configuration(gsl::cstring_span name)
     return ini;
 }
 
-bool save_configuration(gsl::cstring_span name, const CSimpleIniA &ini)
+bool save_configuration(nonstd::string_view name, const CSimpleIniA &ini)
 {
     return ini.SaveFile(get_configuration_file(name).c_str()) == SI_OK;
 }

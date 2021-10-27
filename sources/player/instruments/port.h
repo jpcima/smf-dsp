@@ -15,7 +15,7 @@ public:
     ~Midi_Port_Instrument();
 
     static std::vector<Midi_Output> get_midi_outputs();
-    void open_midi_output(gsl::cstring_span id) override;
+    void open_midi_output(nonstd::string_view id) override;
     void close_midi_output() override;
 
 protected:

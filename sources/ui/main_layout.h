@@ -5,7 +5,7 @@
 
 #pragma once
 #include "utility/geometry.h"
-#include <gsl/gsl>
+#include <nonstd/string_view.hpp>
 struct Font;
 
 class Main_Layout {
@@ -15,7 +15,7 @@ public:
     // structures
     struct Text_Rect {
         Font *font = nullptr;
-        gsl::cstring_span text;
+        nonstd::string_view text;
         Rect bounds;
     };
     struct Line {

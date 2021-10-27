@@ -5,6 +5,7 @@
 
 #include "paths.h"
 #include "charset.h"
+#include <nonstd/scope.hpp>
 #include <list>
 #include <algorithm>
 #include <stdexcept>
@@ -49,7 +50,7 @@ std::string get_current_directory()
             throw std::bad_alloc();
         return std::string();
     }
-    auto cwd_cleanup = gsl::finally([cwd_ret] { free(cwd_ret); });
+    auto cwd_cleanup = nonstd::make_scope_exit([cwd_ret] { free(cwd_ret); });
 
     std::string cwd = normalize_path_separators(cwd_ret);
     if (!is_path_absolute(cwd))
@@ -68,7 +69,7 @@ static bool is_drive_letter(char32_t character)
 }
 #endif
 
-bool is_path_absolute(gsl::cstring_span path)
+bool is_path_absolute(nonstd::string_view path)
 {
 #ifndef _WIN32
     return !path.empty() && path[0] == '/';
@@ -95,7 +96,7 @@ bool is_path_separator(char32_t character)
     return false;
 }
 
-std::string normalize_path_separators(gsl::cstring_span path)
+std::string normalize_path_separators(nonstd::string_view path)
 {
     std::string result;
     result.reserve(path.size());
@@ -114,15 +115,15 @@ std::string normalize_path_separators(gsl::cstring_span path)
 }
 
 #ifndef _WIN32
-std::string make_path_canonical(gsl::cstring_span path)
+std::string make_path_canonical(nonstd::string_view path)
 {
-    char *buf = realpath(gsl::to_string(path).c_str(), nullptr);
+    char *buf = realpath(std::string(path).c_str(), nullptr);
     if (!buf) {
         if (errno == ENOMEM)
             throw std::bad_alloc();
         return std::string();
     }
-    auto cleanup = gsl::finally([buf] { free(buf); });
+    auto cleanup = nonstd::make_scope_exit([buf] { free(buf); });
 
     assert(buf[0] != '\0');
 
@@ -144,28 +145,29 @@ std::string make_path_canonical(gsl::cstring_span path)
     return real;
 }
 #else
-static std::list<gsl::cstring_span> split_path_components(gsl::cstring_span path)
+static std::list<nonstd::string_view> split_path_components(nonstd::string_view path)
 {
-    std::list<gsl::cstring_span> parts;
-    gsl::cstring_span rest = path;
+    std::list<nonstd::string_view> parts;
+    nonstd::string_view rest = path;
     if (!rest.empty()) {
-        gsl::cstring_span::iterator it;
+        nonstd::string_view::iterator it;
         while (it = std::find(rest.begin(), rest.end(), '/'), it != rest.end()) {
-            parts.emplace_back(rest.begin(), it);
-            rest = gsl::cstring_span(it + 1, rest.end());
+            size_t pos = std::distance(rest.begin(), it);
+            parts.emplace_back(rest.substr(0, pos));
+            rest = rest.substr(pos + 1);
         }
         parts.push_back(rest);
     }
     return parts;
 }
 
-static std::string join_path_components(const std::list<gsl::cstring_span> &parts)
+static std::string join_path_components(const std::list<nonstd::string_view> &parts)
 {
     if (parts.empty())
         return std::string();
 
     size_t size = static_cast<size_t>(-1);
-    for (gsl::cstring_span part : parts)
+    for (nonstd::string_view part : parts)
         size = size + 1 + part.size();
 
     std::string result;
@@ -182,11 +184,11 @@ static std::string join_path_components(const std::list<gsl::cstring_span> &part
     return result;
 }
 
-std::string make_path_canonical(gsl::cstring_span path)
+std::string make_path_canonical(nonstd::string_view path)
 {
 #ifdef _WIN32
     while (!path.empty() && is_path_separator(path[0]))
-        path = path.subspan(1);
+        path = path.substr(1);
 #endif
 
     std::string rel = normalize_path_separators(path);
@@ -202,8 +204,8 @@ std::string make_path_canonical(gsl::cstring_span path)
     }
 
     // split path components and clean up
-    std::list<gsl::cstring_span> parts;
-    for (gsl::cstring_span part : split_path_components(abs)) {
+    std::list<nonstd::string_view> parts;
+    for (nonstd::string_view part : split_path_components(abs)) {
         if (part == ".") {
         }
         else if (part == "..") {
@@ -218,7 +220,7 @@ std::string make_path_canonical(gsl::cstring_span path)
 }
 #endif
 
-std::string expand_path_tilde(gsl::cstring_span path)
+std::string expand_path_tilde(nonstd::string_view path)
 {
     if (path.empty())
         return std::string{};
@@ -233,28 +235,28 @@ std::string expand_path_tilde(gsl::cstring_span path)
     if (home.empty())
         return std::string{};
 
-    return normalize_path_separators(home + gsl::to_string(path.subspan(1)));
+    return normalize_path_separators(home + std::string(path.substr(1)));
 }
 
-gsl::cstring_span path_file_name(gsl::cstring_span path)
+nonstd::string_view path_file_name(nonstd::string_view path)
 {
     for (size_t i = path.size(); i-- > 0;) {
         if (path[i] == '/')
-            return path.subspan(i + 1);
+            return path.substr(i + 1);
     }
     return path;
 }
 
-gsl::cstring_span path_directory(gsl::cstring_span path)
+nonstd::string_view path_directory(nonstd::string_view path)
 {
     for (size_t i = path.size(); i-- > 0;) {
         if (path[i] == '/')
-            return path.subspan(0, i + 1);
+            return path.substr(0, i + 1);
     }
-    return gsl::cstring_span();
+    return nonstd::string_view();
 }
 
-std::string get_display_path(gsl::cstring_span path)
+std::string get_display_path(nonstd::string_view path)
 {
     std::string result(path.data(), path.size());
 

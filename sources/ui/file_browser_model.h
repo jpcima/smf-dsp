@@ -5,7 +5,8 @@
 
 #pragma once
 #include "file_entry.h"
-#include <gsl/gsl>
+#include <nonstd/span.hpp>
+#include <nonstd/string_view.hpp>
 #include <vector>
 #include <string>
 #include <functional>
@@ -14,17 +15,17 @@ class File_Browser_Model
 {
 public:
     File_Browser_Model();
-    explicit File_Browser_Model(gsl::cstring_span cwd);
+    explicit File_Browser_Model(nonstd::string_view cwd);
 
     std::string current_filename() const;
-    void set_current_filename(gsl::cstring_span file);
+    void set_current_filename(nonstd::string_view file);
     std::string filename(size_t index) const;
 
     std::string current_path() const;
-    void set_current_path(gsl::cstring_span path);
+    void set_current_path(nonstd::string_view path);
 
     const std::string &cwd() const noexcept { return cwd_; }
-    void set_cwd(gsl::cstring_span dir);
+    void set_cwd(nonstd::string_view dir);
 
     size_t selection() const noexcept { return sel_; }
     void set_selection(size_t sel);
@@ -32,8 +33,8 @@ public:
     size_t count() const noexcept { return entries_.size(); }
     const File_Entry &entry(size_t index) const noexcept { return entries_[index]; }
     const File_Entry *current_entry() const noexcept;
-    size_t find_entry(gsl::cstring_span name) const;
-    gsl::span<const File_Entry> all_entries() const noexcept { return entries_; }
+    size_t find_entry(nonstd::string_view name) const;
+    nonstd::span<const File_Entry> all_entries() const noexcept { return entries_; }
 
     void refresh();
 

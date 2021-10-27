@@ -7,6 +7,7 @@
 #include "file_browser_model.h"
 #include "utility/geometry.h"
 #include <SDL.h>
+#include <nonstd/span.hpp>
 #include <vector>
 #include <string>
 struct Font;
@@ -20,7 +21,7 @@ public:
     unsigned current_index() const;
     unsigned current_count() const;
     const File_Entry *current_entry() const noexcept;
-    gsl::span<const File_Entry> all_current_entries() const noexcept { return model_.all_entries(); }
+    nonstd::span<const File_Entry> all_current_entries() const noexcept { return model_.all_entries(); }
 
     std::string current_path() const;
     void set_current_path(const std::string &path);

@@ -16,3 +16,12 @@
 [submodule "thirdparty/timidityplus"]
 	path = thirdparty/timidityplus
 	url = https://github.com/jpcima/timidityplus.git
+[submodule "thirdparty/span-lite"]
+	path = thirdparty/span-lite
+	url = https://github.com/martinmoene/span-lite.git
+[submodule "thirdparty/scope-lite"]
+	path = thirdparty/scope-lite
+	url = https://github.com/martinmoene/scope-lite.git
+[submodule "thirdparty/string-view-lite"]
+	path = thirdparty/string-view-lite
+	url = https://github.com/martinmoene/string-view-lite.git

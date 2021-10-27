@@ -28,7 +28,7 @@ static_assert(
 Synth_Fx::Synth_Fx()
     : be_(new BassEnhance), eq_(new Eq_5band), rev_(new Reverb)
 {
-    gsl::span<const Fx_Parameter> params(fx_parameters);
+    nonstd::span<const Fx_Parameter> params(fx_parameters);
 
     for (size_t p = 0; p < params.size(); ++p)
         set_parameter(p, params[p].default_value);
@@ -192,7 +192,7 @@ void Synth_Fx::set_parameter(size_t index, int value)
     }
 }
 
-gsl::span<const Fx_Parameter> Synth_Fx::parameters()
+nonstd::span<const Fx_Parameter> Synth_Fx::parameters()
 {
-    return gsl::span<const Fx_Parameter>(fx_parameters, fx_parameter_count);
+    return nonstd::span<const Fx_Parameter>(fx_parameters, fx_parameter_count);
 }

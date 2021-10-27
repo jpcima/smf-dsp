@@ -25,8 +25,8 @@ File_Browser_Model::File_Browser_Model()
 {
 }
 
-File_Browser_Model::File_Browser_Model(gsl::cstring_span cwd)
-    : cwd_(gsl::to_string(cwd))
+File_Browser_Model::File_Browser_Model(nonstd::string_view cwd)
+    : cwd_(cwd)
 {
     entries_.reserve(256);
     refresh();
@@ -37,7 +37,7 @@ std::string File_Browser_Model::current_filename() const
     return filename(sel_);
 }
 
-void File_Browser_Model::set_current_filename(gsl::cstring_span file)
+void File_Browser_Model::set_current_filename(nonstd::string_view file)
 {
     const std::vector<File_Entry> &entries = entries_;
     size_t index = ~size_t{0};
@@ -66,16 +66,16 @@ std::string File_Browser_Model::current_path() const
     return cwd_ + current_filename();
 }
 
-void File_Browser_Model::set_current_path(gsl::cstring_span path)
+void File_Browser_Model::set_current_path(nonstd::string_view path)
 {
     size_t pos = path.size() - 1;
     while ((ssize_t)pos != -1 && path[pos] != '/')
         --pos;
     if ((ssize_t)pos == -1)
         return;
-    gsl::cstring_span filename = gsl::cstring_span(path).subspan(pos + 1);
+    nonstd::string_view filename = nonstd::string_view(path).substr(pos + 1);
 
-    cwd_ = gsl::to_string(path.subspan(0, pos + 1));
+    cwd_ = std::string(path.substr(0, pos + 1));
     sel_ = 0;
     refresh();
 
@@ -90,11 +90,11 @@ void File_Browser_Model::set_current_path(gsl::cstring_span path)
         sel_ = sel;
 }
 
-void File_Browser_Model::set_cwd(gsl::cstring_span dir)
+void File_Browser_Model::set_cwd(nonstd::string_view dir)
 {
     assert(!dir.empty() && dir[dir.size() - 1] == '/');
 
-    cwd_ = gsl::to_string(dir);
+    cwd_ = std::string(dir);
     sel_ = 0;
     refresh();
 }
@@ -107,7 +107,7 @@ void File_Browser_Model::set_selection(size_t sel)
     sel_ = sel;
 }
 
-size_t File_Browser_Model::find_entry(gsl::cstring_span name) const
+size_t File_Browser_Model::find_entry(nonstd::string_view name) const
 {
     const std::vector<File_Entry> &entries = entries_;
     for (size_t i = 0, n = entries.size(); i < n; ++i) {

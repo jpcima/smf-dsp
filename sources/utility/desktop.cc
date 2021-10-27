@@ -5,7 +5,7 @@
 
 #include "utility/desktop.h"
 #include "utility/logs.h"
-#include <gsl/gsl>
+#include <nonstd/scope.hpp>
 #if defined(_WIN32)
 #include "utility/charset.h"
 #include <windows.h>
@@ -36,7 +36,7 @@ bool open_file_externally(const std::string &path)
     char *uri = g_filename_to_uri(path.c_str(), nullptr, nullptr);
     if (!uri)
         return false;
-    auto cleanup = gsl::finally([uri]() { g_free(uri); });
+    auto cleanup = nonstd::make_scope_exit([uri]() { g_free(uri); });
     return g_app_info_launch_default_for_uri(uri, nullptr, nullptr);
 }
 #endif

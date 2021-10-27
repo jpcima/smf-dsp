@@ -39,12 +39,12 @@ static int hex_digit_from_char(char c)
         (c >= 'A' && c <= 'Z') ? (c - 'A' + 10) : -1;
 }
 
-static bool color_from_hex(gsl::cstring_span hex, SDL_Color &color)
+static bool color_from_hex(nonstd::string_view hex, SDL_Color &color)
 {
     if (hex.empty() || hex[0] != '#')
         return false;
 
-    hex = hex.subspan(1);
+    hex = hex.substr(1);
     size_t length = hex.size();
 
     uint32_t rgba = 0;
@@ -92,8 +92,8 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
 
     CSimpleIniA::TKeyVal::const_iterator it = dict->begin(), end = dict->end();
     for (; it != end; ++it) {
-        gsl::cstring_span key = it->first.pItem;
-        gsl::cstring_span value = it->second;
+        nonstd::string_view key = it->first.pItem;
+        nonstd::string_view value = it->second;
 
         unsigned index = ~0u;
         for (unsigned i = 0; i < Colors::Count && index == ~0u; ++i) {
@@ -110,10 +110,10 @@ bool Color_Palette::load(const CSimpleIniA &ini, const char *section)
         else {
             // try to look it up from another key
             std::unordered_set<std::string> met;
-            gsl::cstring_span key = value;
+            nonstd::string_view key = value;
             while (!found) {
                 auto it = dict->find(key.data());
-                if (it == dict->end() || !met.insert(gsl::to_string(key)).second)
+                if (it == dict->end() || !met.insert(std::string(key)).second)
                     break;
                 key = it->second;
                 found = color_from_hex(key, colors_[index]);

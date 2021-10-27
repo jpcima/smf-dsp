@@ -5,7 +5,6 @@
 
 #include "smftext.h"
 #include "utility/charset.h"
-#include "utility/strings.h"
 #include <nsLatin1Prober.h>
 #include <nsSJISProber.h>
 #include <nsUTF8Prober.h>
@@ -45,14 +44,14 @@ void SMF_Encoding_Detector::scan(const fmidi_smf &smf)
     fmidi_track_iter_t it;
     fmidi_smf_track_begin(&it, 0);
     while ((ev = fmidi_smf_track_next(&smf, &it)) && ev->type == fmidi_event_meta) {
-        gsl::cstring_span text;
+        nonstd::string_view text;
 
         uint8_t type = ev->data[0];
         if (type >= 0x01 && type <= 0x05 && ev->datalen - 1 > 0)
-            text = gsl::cstring_span{reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1};
+            text = nonstd::string_view{reinterpret_cast<const char *>(ev->data + 1), ev->datalen - 1};
 
         // skip detection on text pieces of explicit encoding
-        gsl::cstring_span explicit_enc = encoding_from_marker(text);
+        nonstd::string_view explicit_enc = encoding_from_marker(text);
         if (!explicit_enc.empty())
             continue;
 
@@ -105,24 +104,24 @@ std::string SMF_Encoding_Detector::general_encoding() const
     return encoding_;
 }
 
-std::string SMF_Encoding_Detector::encoding_for_text(gsl::cstring_span input) const
+std::string SMF_Encoding_Detector::encoding_for_text(nonstd::string_view input) const
 {
-    gsl::cstring_span explicit_enc = encoding_from_marker(input);
+    nonstd::string_view explicit_enc = encoding_from_marker(input);
 
     if (!explicit_enc.empty())
-        return gsl::to_string(explicit_enc);
+        return std::string(explicit_enc);
 
     return encoding_;
 }
 
-std::string SMF_Encoding_Detector::decode_to_utf8(gsl::cstring_span input) const
+std::string SMF_Encoding_Detector::decode_to_utf8(nonstd::string_view input) const
 {
     std::string output;
 
     if (!input.empty()) {
         std::string enc = encoding_for_text(input);
         if (enc.empty())
-            output = gsl::to_string(strip_encoding_marker(input, "UTF-8"));
+            output = std::string(strip_encoding_marker(input, "UTF-8"));
         else
             to_utf8(strip_encoding_marker(input, enc), output, enc.c_str(), true);
     }
@@ -131,8 +130,8 @@ std::string SMF_Encoding_Detector::decode_to_utf8(gsl::cstring_span input) const
 }
 
 struct Encoding_Marker {
-    gsl::cstring_span encoding;
-    gsl::cstring_span marker;
+    nonstd::string_view encoding;
+    nonstd::string_view marker;
 };
 
 static const std::array<Encoding_Marker, 3> all_encoding_markers {{
@@ -141,16 +140,16 @@ static const std::array<Encoding_Marker, 3> all_encoding_markers {{
     {"UTF-16BE", "\xfe\xff"},
 }};
 
-gsl::cstring_span SMF_Encoding_Detector::encoding_from_marker(gsl::cstring_span input)
+nonstd::string_view SMF_Encoding_Detector::encoding_from_marker(nonstd::string_view input)
 {
     for (const Encoding_Marker &em : all_encoding_markers) {
-        if (string_starts_with(input, em.marker))
+        if (input.starts_with(em.marker))
             return em.encoding;
     }
-    return gsl::cstring_span{};
+    return nonstd::string_view{};
 }
 
-gsl::cstring_span SMF_Encoding_Detector::strip_encoding_marker(gsl::cstring_span text, gsl::cstring_span enc)
+nonstd::string_view SMF_Encoding_Detector::strip_encoding_marker(nonstd::string_view text, nonstd::string_view enc)
 {
     const Encoding_Marker *em = nullptr;
 
@@ -159,8 +158,8 @@ gsl::cstring_span SMF_Encoding_Detector::strip_encoding_marker(gsl::cstring_span
             em = &all_encoding_markers[i];
     }
 
-    if (em && string_starts_with(text, em->marker))
-        text = text.subspan(em->marker.size());
+    if (em && text.starts_with(em->marker))
+        text = text.substr(em->marker.size());
 
     return text;
 }

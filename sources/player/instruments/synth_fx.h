@@ -1,5 +1,5 @@
 #pragma once
-#include <gsl/gsl>
+#include <nonstd/span.hpp>
 #include <memory>
 class BassEnhance;
 class Eq_5band;
@@ -26,7 +26,7 @@ public:
     int get_parameter(size_t index) const;
     void set_parameter(size_t index, int value);
 
-    static gsl::span<const Fx_Parameter> parameters();
+    static nonstd::span<const Fx_Parameter> parameters();
 
     enum {
         P_Bass_Enhance,

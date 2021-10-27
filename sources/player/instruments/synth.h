@@ -7,7 +7,6 @@
 #include "player/instrument.h"
 #include "synth/synth.h"
 #include <fmidi/fmidi.h>
-#include <gsl/gsl>
 #include <memory>
 
 class Midi_Synth_Instrument : public Midi_Instrument {
@@ -17,7 +16,7 @@ public:
 
     void flush_events() override;
 
-    void open_midi_output(gsl::cstring_span id) override;
+    void open_midi_output(nonstd::string_view id) override;
     void close_midi_output() override;
 
     bool is_synth() const override { return true; }

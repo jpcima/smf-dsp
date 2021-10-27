@@ -6,7 +6,6 @@
 #pragma once
 #include "keystate.h"
 #include "instruments/synth_fx.h"
-#include <gsl/gsl>
 #include <string>
 #include <vector>
 #include <bitset>

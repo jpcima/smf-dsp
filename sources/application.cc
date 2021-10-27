@@ -25,7 +25,6 @@
 #include "utility/SDL++.h"
 #include "utility/paths.h"
 #include "utility/charset.h"
-#include "utility/strings.h"
 #include "utility/desktop.h"
 #include "utility/logs.h"
 #if defined(HAVE_SDL2_IMAGE)
@@ -33,7 +32,8 @@
 #else
 #include "utility/SDL_stb_image.h"
 #endif
-#include <gsl/gsl>
+#include <nonstd/span.hpp>
+#include <nonstd/scope.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -48,7 +48,7 @@ static constexpr char default_synth_id[] = "adlmidi";
 
 static constexpr unsigned max_scale_factor = 2;
 
-static const std::pair<gsl::cstring_span, gsl::cstring_span> help_items[] = {
+static const std::pair<nonstd::string_view, nonstd::string_view> help_items[] = {
     {"F1", "Open the help screen"},
     {"F2", "Select a MIDI device for playback"},
     {"F3", "Select a synthesizer device for playback"},
@@ -314,7 +314,7 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
     SDL_RenderSetScale(rr, scale, scale);
     SDL_SetRenderDrawBlendMode(rr, SDL_BLENDMODE_BLEND);
 
-    auto draw_text_rect = [rr](const Main_Layout::Text_Rect &tr, gsl::cstring_span str, const SDL_Color &color) {
+    auto draw_text_rect = [rr](const Main_Layout::Text_Rect &tr, nonstd::string_view str, const SDL_Color &color) {
                               Text_Painter tp;
                               tp.rr = rr;
                               tp.fg = color;
@@ -573,7 +573,7 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
                 Rect r = lo.channel_instrument_label[ch];
                 tp.font = &font_s12;
                 tp.pos = r.origin();
-                tp.draw_utf8(gsl::ensure_z(patch_name));
+                tp.draw_utf8(patch_name);
             }
 
             if (paint & Pt_Foreground) {
@@ -599,7 +599,7 @@ void Application::paint_scaled(SDL_Renderer *rr, int paint, unsigned scale)
         if (info_mode_ == Info_File)
             draw_text_rect(lo.file_dir_path, get_display_path(fb.cwd()), pal[Colors::text_high_brightness]);
         else {
-            gsl::cstring_span file_dir = path_directory(ps.file_path);
+            nonstd::string_view file_dir = path_directory(ps.file_path);
             draw_text_rect(lo.file_dir_path, get_display_path(file_dir), pal[Colors::text_high_brightness]);
         }
         SDLpp_RestoreClipState(rr, clip);
@@ -657,12 +657,12 @@ void Application::paint_cached_background(SDL_Renderer *rr)
         SDL_Surface *su = SDLpp_CreateRGBA32Surface(size_.x, size_.y);
         if (!su)
             throw std::runtime_error("SDL_CreateRGBSurface");
-        auto su_cleanup = gsl::finally([su] { SDL_FreeSurface(su); });
+        auto su_cleanup = nonstd::make_scope_exit([su] { SDL_FreeSurface(su); });
 
         SDL_Renderer *sr = SDL_CreateSoftwareRenderer(su);
         if (!sr)
             throw std::runtime_error("SDL_CreateSoftwareRenderer");
-        auto sr_cleanup = gsl::finally([sr] { SDL_DestroyRenderer(sr); });
+        auto sr_cleanup = nonstd::make_scope_exit([sr] { SDL_DestroyRenderer(sr); });
 
         paint_scaled(sr, Pt_Background, 1);
         SDL_RenderPresent(sr);
@@ -1110,7 +1110,7 @@ void Application::open_fx_dialog()
         Fx_Box(Player_State &ps, const Rect &bounds, std::string title)
             : Modal_Box(bounds, std::move(title))
         {
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            nonstd::span<const Fx_Parameter> items = Synth_Fx::parameters();
             if (items.size() > 0)
                 sel_ = 0;
 
@@ -1130,7 +1130,7 @@ void Application::open_fx_dialog()
             int fw = tp.font->width();
             int fh = tp.font->height();
 
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            nonstd::span<const Fx_Parameter> items = Synth_Fx::parameters();
             const size_t sel = sel_;
             const int *values = values_;
 
@@ -1185,7 +1185,7 @@ void Application::open_fx_dialog()
 
         bool handle_key_pressed(const SDL_KeyboardEvent &event) override
         {
-            gsl::span<const Fx_Parameter> items = Synth_Fx::parameters();
+            nonstd::span<const Fx_Parameter> items = Synth_Fx::parameters();
             int *values = values_;
 
             int keymod = event.keysym.mod & (KMOD_CTRL|KMOD_SHIFT|KMOD_ALT|KMOD_GUI);
@@ -1304,7 +1304,7 @@ void Application::open_fx_dialog()
         if (!ini) ini = create_configuration();
 
         bool ini_update = false;
-        gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+        nonstd::span<const Fx_Parameter> params = Synth_Fx::parameters();
 
         for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
             long old_value = ini->GetLongValue("effects", params[i].name, -1);
@@ -1320,7 +1320,7 @@ void Application::open_fx_dialog()
     };
 }
 
-void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
+void Application::choose_midi_output(bool ask, nonstd::string_view choice)
 {
     std::vector<Midi_Output> outputs;
     get_midi_outputs(outputs);
@@ -1377,7 +1377,7 @@ void Application::choose_midi_output(bool ask, gsl::cstring_span choice)
     }
 }
 
-void Application::choose_synth(bool ask, gsl::cstring_span choice)
+void Application::choose_synth(bool ask, nonstd::string_view choice)
 {
     const std::vector<Synth_Host::Plugin_Info> &plugins = Synth_Host::plugins();
 
@@ -1448,7 +1448,7 @@ void Application::get_midi_outputs(std::vector<Midi_Output> &outputs)
     wait_cond.wait(lock);
 }
 
-void Application::choose_theme(gsl::cstring_span choice)
+void Application::choose_theme(nonstd::string_view choice)
 {
     std::vector<std::string> themes;
     get_themes(themes);
@@ -1485,24 +1485,24 @@ void Application::get_themes(std::vector<std::string> &themes)
 
     std::string file_name;
     while (dir.read_next(file_name)) {
-        bool is_theme = string_starts_with<char>(file_name, "t_") &&
-            string_ends_with<char>(file_name, ".ini");
+        bool is_theme = nonstd::string_view(file_name).starts_with("t_") &&
+            nonstd::string_view(file_name).ends_with(".ini");
         if (is_theme)
             themes.push_back(file_name.substr(2, file_name.size() - 6));
     }
 }
 
-void Application::load_theme(gsl::cstring_span theme)
+void Application::load_theme(nonstd::string_view theme)
 {
     load_default_theme();
 
     if (theme.empty())
         theme = "default";
 
-    Log::i("Loading theme: %s", gsl::to_string(theme).c_str());
+    Log::i("Loading theme: %s", std::string(theme).c_str());
 
     if (theme != "default") {
-        std::string filename = "t_" + gsl::to_string(theme);
+        std::string filename = "t_" + std::string(theme);
         std::unique_ptr<CSimpleIniA> ini = load_configuration(filename);
         if (!ini) {
             Log::e("Cannot load theme file: %s.ini", filename.c_str());
@@ -1514,10 +1514,10 @@ void Application::load_theme(gsl::cstring_span theme)
 
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
     if (!ini) ini = create_configuration();
-    ini->SetValue("", "theme", gsl::to_string(theme).c_str(), nullptr, true);
+    ini->SetValue("", "theme", std::string(theme).c_str(), nullptr, true);
     save_global_configuration(*ini);
 
-    last_theme_choice_ = gsl::to_string(theme);
+    last_theme_choice_ = std::string(theme);
 }
 
 void Application::load_default_theme()
@@ -1568,7 +1568,7 @@ void Application::load_theme_configuration(const CSimpleIniA &ini)
 
 void Application::get_fx_parameters(const CSimpleIniA &ini, int *values) const
 {
-    gsl::span<const Fx_Parameter> params = Synth_Fx::parameters();
+    nonstd::span<const Fx_Parameter> params = Synth_Fx::parameters();
 
     for (size_t i = 0; i < Synth_Fx::Parameter_Count; ++i) {
         long value = ini.GetLongValue("effects", params[i].name, -1);

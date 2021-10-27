@@ -7,7 +7,7 @@
 #include "fonts.h"
 #include "utility/SDL++.h"
 #include <utf/utf.hpp>
-#include <gsl/gsl>
+#include <nonstd/scope.hpp>
 #include <vector>
 #include <stdexcept>
 
@@ -70,13 +70,13 @@ void Text_Painter::draw_char(uint32_t ch)
     }
 }
 
-void Text_Painter::draw_ucs4(gsl::basic_string_span<const char32_t> str)
+void Text_Painter::draw_ucs4(nonstd::u32string_view str)
 {
     for (uint32_t ch : str)
         draw_char(ch);
 }
 
-void Text_Painter::draw_utf8(gsl::cstring_span str)
+void Text_Painter::draw_utf8(nonstd::string_view str)
 {
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
         char32_t ch = utf::utf_traits<char>::decode(cur, end);
@@ -94,7 +94,7 @@ size_t Text_Painter::measure_char(uint32_t ch)
     return font->width() * g->size;
 }
 
-size_t Text_Painter::measure_ucs4(gsl::basic_string_span<const char32_t> str)
+size_t Text_Painter::measure_ucs4(nonstd::u32string_view str)
 {
     size_t tw = 0;
     for (uint32_t ch : str)
@@ -102,7 +102,7 @@ size_t Text_Painter::measure_ucs4(gsl::basic_string_span<const char32_t> str)
     return tw;
 }
 
-size_t Text_Painter::measure_utf8(gsl::cstring_span str)
+size_t Text_Painter::measure_utf8(nonstd::string_view str)
 {
     size_t tw = 0;
     for (const char *cur = str.begin(), *end = str.end(); cur != end;) {
@@ -147,7 +147,7 @@ SDL_Texture *Font_Atlas::create(SDL_Renderer *rr, const Font &font)
     SDL_Surface *su = SDLpp_CreateRGBA4444Surface(as.x, as.y);
     if (!su)
         throw std::runtime_error("SDL_CreateRGBSurfaceWithFormat");
-    auto surface_cleanup = gsl::finally([su] { SDL_FreeSurface(su); });
+    auto surface_cleanup = nonstd::make_scope_exit([su] { SDL_FreeSurface(su); });
 
     if (SDL_MUSTLOCK(su)) {
         if (SDL_LockSurface(su) != 0)

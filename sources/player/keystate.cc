@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "keystate.h"
-#include <gsl/gsl>
 #include <cstring>
 
 void Channel_State::clear()
