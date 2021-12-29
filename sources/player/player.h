@@ -8,6 +8,7 @@
 #include "audio/analyzer_10band.h"
 #include "synth/synth.h"
 #include <fmidi/fmidi.h>
+#include <ExpSmoother.hpp>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -70,6 +71,8 @@ private:
     bool start_ticking();
     bool stop_ticking();
 
+    Playing_Status get_current_status() const;
+
     Audio_Device *init_audio_device();
     static void audio_callback(float *output, unsigned nframes, void *user_data);
 
@@ -90,6 +93,9 @@ private:
     Player_Song_Metadata smf_md_;
     double current_tempo_ = 0;
     unsigned current_speed_ = 100;
+    ExpSmoother current_volume_;
+    uint64_t song_serial_ = 0;
+    uint64_t seek_serial_ = 0;
 
     // channels
     std::bitset<16> channel_enabled_ { 0xffff };

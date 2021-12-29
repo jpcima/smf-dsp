@@ -64,6 +64,7 @@ include("CMakeLists.deps.txt")
 add_executable(smf-dsp WIN32
   "sources/configuration.cc"
   "sources/application.cc"
+  "sources/mpris_server.cc"
   "sources/main.cc"
   "sources/version_info.rc"
   "sources/audio/analyzer_10band.cc"
