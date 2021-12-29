@@ -179,7 +179,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
 endif()
 
 ###
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+if(SMF_MPRIS OR NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   pkg_check_modules(glib "glib-2.0" REQUIRED IMPORTED_TARGET)
   pkg_check_modules(gio "gio-2.0" REQUIRED IMPORTED_TARGET)
   add_library(glib INTERFACE)
@@ -188,6 +188,12 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   target_link_libraries(gio INTERFACE PkgConfig::gio)
   add_library(sys::glib ALIAS glib)
   add_library(sys::gio ALIAS gio)
+endif()
+if(SMF_MPRIS AND UNIX)
+  pkg_check_modules(gio-unix "gio-unix-2.0" REQUIRED IMPORTED_TARGET)
+  add_library(gio-unix INTERFACE)
+  target_link_libraries(gio-unix INTERFACE PkgConfig::gio-unix)
+  add_library(sys::gio-unix ALIAS gio-unix)
 endif()
 
 ###
@@ -410,4 +416,19 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/timidityplus")
   target_include_directories(timiditypp PRIVATE "thirdparty/timidityplus/timiditypp")
   target_link_libraries(timiditypp PRIVATE Threads::Threads)
   add_library(vendor::timiditypp ALIAS timiditypp)
+endif()
+
+###
+if(SMF_MPRIS)
+  add_library(mpris STATIC EXCLUDE_FROM_ALL
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.Player.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.Playlists.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.TrackList.c")
+  target_include_directories(mpris PUBLIC "thirdparty/mpris/src")
+  target_link_libraries(mpris PUBLIC sys::gio sys::glib)
+  if(SMF_MPRIS AND UNIX)
+    target_link_libraries(mpris PRIVATE sys::gio-unix)
+  endif()
+  add_library(vendor::mpris ALIAS mpris)
 endif()
