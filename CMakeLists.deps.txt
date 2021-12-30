@@ -68,6 +68,11 @@ target_include_directories(stb INTERFACE "thirdparty/stb")
 add_library(vendor::stb ALIAS stb)
 
 ###
+add_library(smoothers INTERFACE)
+target_include_directories(smoothers INTERFACE "thirdparty/smoothers/src")
+add_library(vendor::smoothers ALIAS smoothers)
+
+###
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   pkg_check_modules(alsa "alsa" REQUIRED IMPORTED_TARGET)
   add_library(alsa INTERFACE)

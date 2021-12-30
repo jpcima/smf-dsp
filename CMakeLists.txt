@@ -135,6 +135,7 @@ target_link_libraries(smf-dsp PRIVATE
   vendor::ring-buffer
   vendor::fmidi
   vendor::rtmidi
+  vendor::smoothers
   sys::SDL2
   sys::uv
   sys::iconv
