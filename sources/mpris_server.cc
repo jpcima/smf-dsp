@@ -9,6 +9,7 @@
 #include "player/state.h"
 #include "player/playlist.h"
 #include "utility/paths.h"
+#include "utility/uris.h"
 #include "utility/logs.h"
 #include "org.mpris.MediaPlayer2.h"
 #include "org.mpris.MediaPlayer2.Player.h"
@@ -449,15 +450,10 @@ gboolean Mpris_Server::Impl::handle_open_uri (
 
     Impl &impl = *(Impl *)g_object_get_data(G_OBJECT(object), "my:self");
 
-    GUri *uri = g_uri_parse(arg_Uri, G_URI_FLAGS_NONE, nullptr);
-
-    if (uri) {
-        auto uri_cleanup = nonstd::make_scope_exit([uri]() { g_uri_unref(uri); });
-        const gchar *scheme = g_uri_get_scheme(uri);
-        if ((!scheme || !scheme[0] || !strcmp(scheme, "file"))) {
-            const gchar *path = g_uri_get_path(uri);
-            impl.app_->play_full_path(path);
-        }
+    Uri_Split us;
+    if (parse_uri(arg_Uri, us)) {
+        if ((us.scheme.empty() || us.scheme == "file") && !us.path.empty())
+            impl.app_->play_full_path(us.path);
     }
 
     g_dbus_method_invocation_return_value(invocation, nullptr);

@@ -122,6 +122,7 @@ add_executable(smf-dsp WIN32
   "sources/utility/module.cc"
   "sources/utility/file_scan.cc"
   "sources/utility/portfts.cc"
+  "sources/utility/uris.cc"
   "sources/utility/uv++.cc"
   "sources/utility/load_library.cc"
   "sources/utility/logs.cc"
@@ -204,6 +205,12 @@ endif()
 if(SMF_MPRIS)
   target_link_libraries(smf-dsp PRIVATE vendor::mpris)
   target_compile_definitions(smf-dsp PRIVATE "HAVE_MPRIS")
+  if(HAVE_GLIB_GURI)
+    target_compile_definitions(smf-dsp PRIVATE "HAVE_GLIB_GURI")
+  else()
+    target_compile_definitions(smf-dsp PRIVATE "HAVE_APR")
+    target_link_libraries(smf-dsp PRIVATE sys::apr-util sys::apr)
+  endif()
 endif()
 
 link_what_you_use(smf-dsp)

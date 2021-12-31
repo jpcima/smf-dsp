@@ -22,7 +22,9 @@ jobs:
           libjack-jackd2-dev \
           libpulse-dev \
           libasound2-dev \
-          libfluidsynth-dev
+          libfluidsynth-dev \
+          libapr1-dev \
+          libaprutil1-dev
     - name: Set up AppImage tools
       run: |
         mkdir -p download/
