@@ -105,7 +105,7 @@ jobs:
     - name: Build
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: i686-w64-mingw32-cmake --build . --config "$BUILD_TYPE" -j 2
+      run: cmake --build . --config "$BUILD_TYPE" -j 2
     - name: Bundle DLL
       shell: bash
       working-directory: ${{runner.workspace}}/build
