@@ -41,7 +41,8 @@ Player::Player()
     // create audio device
     Synth_Fx *fx = new Synth_Fx;
     fx_.reset(fx);
-    if (Audio_Device *adev = init_audio_device()) {
+    Audio_Device *adev = init_audio_device();
+    if (adev) {
         float sample_rate = adev->sample_rate();
         synth_ins_.reset(new Midi_Synth_Instrument);
         adev->set_callback(&audio_callback, this);
@@ -51,6 +52,13 @@ Player::Player()
         fx->init(sample_rate);
         adev->start();
     }
+
+    // initialize smoother
+    current_volume_.setTarget(1.0f);
+    current_volume_.clearToTarget();
+    current_volume_.setTimeConstant(50e-3);
+    if (adev)
+        current_volume_.setSampleRate(adev->sample_rate());
 
     // initialize seeker
     seek_state_->set_message_callback(+[](const uint8_t *msg, uint32_t len, void *ptr) {
@@ -160,15 +168,37 @@ void Player::process_command_queue()
                 resume_play_list();
             break;
         }
-        case PC_Pause:
+        case PC_Stop:
             if (pl_) {
                 Player_Clock &c = *clock_;
-                if (!c.active())
-                    start_ticking();
-                else {
-                    for (Midi_Instrument *ins : instruments())
-                        ins->all_sound_off();
+                if (c.active()) {
+                    reset_current_playback();
                     stop_ticking();
+                }
+            }
+            break;
+        case PC_Pause:
+            {
+                Pcmd_Pause::Mode mode = static_cast<Pcmd_Pause &>(*cmd).mode;
+                bool active_before = clock_->active();
+                bool activate =
+                    (mode == Pcmd_Pause::Mode_Resume) ? true :
+                    (mode == Pcmd_Pause::Mode_Pause) ? false :
+                    !active_before;
+                if (activate != active_before) {
+                    if (activate) {
+                        if (!pl_)
+                            resume_play_list();
+                        if (pl_)
+                            start_ticking();
+                    }
+                    else {
+                        if (pl_) {
+                            for (Midi_Instrument *ins : instruments())
+                                ins->all_sound_off();
+                            stop_ticking();
+                        }
+                    }
                 }
             }
             break;
@@ -183,19 +213,34 @@ void Player::process_command_queue()
             goto_relative_time(o);
             break;
         }
+        case PC_Seek_Set: {
+            double t = static_cast<Pcmd_Seek_Set &>(*cmd).time;
+            goto_time(t);
+            break;
+        }
         case PC_Speed: {
             fmidi_player_t *pl = pl_.get();
             if (pl) {
-                unsigned cur = (unsigned)(0.5 + fmidi_player_current_speed(pl) * 100);
-                int speed = static_cast<int>(cur) + static_cast<Pcmd_Speed &>(*cmd).increment;
-                speed = std::max(speed, 1);
-                speed = std::min(speed, 500);
+                int speed = static_cast<Pcmd_Speed &>(*cmd).value;
+                if (static_cast<Pcmd_Speed &>(*cmd).relative) {
+                    unsigned cur = (unsigned)(0.5 + fmidi_player_current_speed(pl) * 100);
+                    speed += static_cast<int>(cur);
+                }
+                speed = std::max(speed, (int)Player_State::min_speed);
+                speed = std::min(speed, (int)Player_State::max_speed);
                 fmidi_player_set_speed(pl, speed * 0.01);
                 current_speed_ = speed;
             }
             break;
         }
-        case PC_Repeat_Mode:
+        case PC_Volume: {
+            current_volume_.setTarget(static_cast<Pcmd_Volume &>(*cmd).value);
+            break;
+        }
+        case PC_Set_Repeat_Mode:
+            repeat_mode_ = Repeat_Mode(static_cast<Pcmd_Set_Repeat_Mode &>(*cmd).repeat_mode);
+            break;
+        case PC_Next_Repeat_Mode:
             repeat_mode_ = Repeat_Mode((repeat_mode_ + 1) % (Repeat_Mode_Max + 1));
             break;
         case PC_Channel_Enable: {
@@ -286,6 +331,7 @@ void Player::rewind()
         return;
 
     fmidi_player_rewind(pl);
+    seek_serial_ += 1;
 
     for (Midi_Instrument *ins : instruments()) {
         ins->initialize();
@@ -323,6 +369,7 @@ void Player::reset_current_playback()
 {
     pl_.reset();
     smf_.reset();
+    song_serial_ += 1;
 
     for (Midi_Instrument *ins : instruments()) {
         ins->initialize();
@@ -377,6 +424,7 @@ void Player::end_seeking()
     sks.flush_state();
 
     seeking_ = false;
+    seek_serial_ += 1;
 }
 
 void Player::resume_play_list()
@@ -696,6 +744,10 @@ Player_State Player::make_state() const
         ps.duration = smf_duration_;
         ps.tempo = current_tempo_;
         ps.speed = current_speed_;
+        ps.volume = current_volume_.getTarget();
+        ps.status = get_current_status();
+        ps.seek_serial = seek_serial_;
+        ps.song_serial = song_serial_;
         ps.song_metadata = smf_md_;
     }
 
@@ -753,6 +805,12 @@ bool Player::stop_ticking()
     return true;
 }
 
+Playing_Status Player::get_current_status() const
+{
+    return !smf_ ? Playing_Status::Stopped :
+        clock_->active() ? Playing_Status::Playing : Playing_Status::Paused;
+}
+
 Audio_Device *Player::init_audio_device()
 {
     Audio_Device *adev = adev_.get();
@@ -805,6 +863,26 @@ void Player::audio_callback(float *output, unsigned nframes, void *user_data)
     }
     if (fx_enabled)
         fx.compute(output, nframes);
+
+    ///
+    ExpSmoother &smooth_volume = self->current_volume_;
+    float final_volume = smooth_volume.getTarget();
+    if (smooth_volume.getCurrentValue() == final_volume) {
+        if (final_volume != 1) {
+            for (unsigned i = 0; i < 2 * nframes; ++i)
+                output[i] *= final_volume;
+        }
+    }
+    else {
+        for (unsigned i = 0; i < nframes; ++i) {
+            float volume = smooth_volume.next();
+            output[2 * i] *= volume;
+            output[2 * i + 1] *= volume;
+        }
+        double dv = final_volume - smooth_volume.getCurrentValue();
+        if (std::fabs(dv) < 1e-4)
+            smooth_volume.clearToTarget();
+    }
 
     ///
     const float *levels = self->level_analyzer_.compute_stereo(output, nframes);

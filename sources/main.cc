@@ -12,10 +12,14 @@
 #include <getopt.h>
 #include <nonstd/scope.hpp>
 #include <memory>
+#include <stdexcept>
 #include <clocale>
 #if defined(__linux__)
 #include <jack/jack.h>
 #include <alsa/asoundlib.h>
+#endif
+#if defined(HAVE_APR)
+#include <apr_general.h>
 #endif
 #if defined(_WIN32)
 #include <windows.h>
@@ -65,6 +69,12 @@ int real_main(int argc, char *argv[])
     jack_set_error_function([](const char *) {});
     // Disable ALSA messages
     snd_lib_error_set_handler(&alsa_log_callback);
+#endif
+
+#if defined(HAVE_APR)
+    if (apr_initialize() != APR_SUCCESS)
+        throw std::runtime_error("Cannot initialize APR");
+    auto apr_cleanum = nonstd::make_scope_exit([]() { apr_terminate(); });
 #endif
 
     // Initialize SDL

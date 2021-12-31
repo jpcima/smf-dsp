@@ -68,6 +68,11 @@ target_include_directories(stb INTERFACE "thirdparty/stb")
 add_library(vendor::stb ALIAS stb)
 
 ###
+add_library(smoothers INTERFACE)
+target_include_directories(smoothers INTERFACE "thirdparty/smoothers/src")
+add_library(vendor::smoothers ALIAS smoothers)
+
+###
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   pkg_check_modules(alsa "alsa" REQUIRED IMPORTED_TARGET)
   add_library(alsa INTERFACE)
@@ -179,7 +184,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
 endif()
 
 ###
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
+if(SMF_MPRIS OR NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   pkg_check_modules(glib "glib-2.0" REQUIRED IMPORTED_TARGET)
   pkg_check_modules(gio "gio-2.0" REQUIRED IMPORTED_TARGET)
   add_library(glib INTERFACE)
@@ -188,6 +193,30 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Darwin)$")
   target_link_libraries(gio INTERFACE PkgConfig::gio)
   add_library(sys::glib ALIAS glib)
   add_library(sys::gio ALIAS gio)
+endif()
+if(SMF_MPRIS AND UNIX)
+  pkg_check_modules(gio-unix "gio-unix-2.0" REQUIRED IMPORTED_TARGET)
+  add_library(gio-unix INTERFACE)
+  target_link_libraries(gio-unix INTERFACE PkgConfig::gio-unix)
+  add_library(sys::gio-unix ALIAS gio-unix)
+endif()
+
+if(SMF_MPRIS)
+  if(glib_VERSION VERSION_LESS "2.66")
+    set(HAVE_GLIB_GURI FALSE)
+  else()
+    set(HAVE_GLIB_GURI TRUE)
+  endif()
+  if(NOT HAVE_GLIB_GURI)
+    pkg_check_modules(apr-util "apr-util-1" REQUIRED IMPORTED_TARGET)
+    pkg_check_modules(apr "apr-1" REQUIRED IMPORTED_TARGET)
+    add_library(apr-util INTERFACE)
+    add_library(apr INTERFACE)
+    target_link_libraries(apr-util INTERFACE PkgConfig::apr-util)
+    target_link_libraries(apr INTERFACE PkgConfig::apr)
+    add_library(sys::apr-util ALIAS apr-util)
+    add_library(sys::apr ALIAS apr)
+  endif()
 endif()
 
 ###
@@ -410,4 +439,19 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/timidityplus")
   target_include_directories(timiditypp PRIVATE "thirdparty/timidityplus/timiditypp")
   target_link_libraries(timiditypp PRIVATE Threads::Threads)
   add_library(vendor::timiditypp ALIAS timiditypp)
+endif()
+
+###
+if(SMF_MPRIS)
+  add_library(mpris STATIC EXCLUDE_FROM_ALL
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.Player.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.Playlists.c"
+    "thirdparty/mpris/src/org.mpris.MediaPlayer2.TrackList.c")
+  target_include_directories(mpris PUBLIC "thirdparty/mpris/src")
+  target_link_libraries(mpris PUBLIC sys::gio sys::glib)
+  if(SMF_MPRIS AND UNIX)
+    target_link_libraries(mpris PRIVATE sys::gio-unix)
+  endif()
+  add_library(vendor::mpris ALIAS mpris)
 endif()

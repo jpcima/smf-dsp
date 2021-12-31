@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION "3.7")
 
 project(smf-dsp VERSION "0.10.0" LANGUAGES C CXX)
+set(SMF_DSP_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 set(PROJECT_DISPLAY_NAME "SMF-DSP")
 set(PROJECT_AUTHOR "JPC")
 set(PROJECT_DESCRIPTION "Advanced MIDI file player")
@@ -44,6 +45,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   endif()
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(SMF_MPRIS_DEFAULT "ON")
+else()
+  set(SMF_MPRIS_DEFAULT "OFF")
+endif()
+option(SMF_MPRIS "Build with MPRIS support" "${SMF_MPRIS_DEFAULT}")
+
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check.c" "int main() { return 0; }")
 try_compile(HAVE_LINKER_FLAG_AS_NEEDED "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/check.c" LINK_LIBRARIES "-Wl,--as-needed")
 function(link_what_you_use TARGET)
@@ -52,11 +60,24 @@ function(link_what_you_use TARGET)
   endif()
 endfunction()
 
+option(SMF_DSP_QUIET_SUBPROJECTS "Configure subprojects silently" ON)
+function(message)
+  if(SMF_DSP_QUIET_SUBPROJECTS AND NOT SMF_DSP_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    list(GET ARGN 0 _mode)
+    set(_errormodes FATAL_ERROR SEND_ERROR)
+    if(NOT _mode IN_LIST _errormodes)
+      return()
+    endif()
+  endif()
+  _message(${ARGN})
+endfunction()
+
 include("CMakeLists.deps.txt")
 
 add_executable(smf-dsp WIN32
   "sources/configuration.cc"
   "sources/application.cc"
+  "sources/mpris_server.cc"
   "sources/main.cc"
   "sources/version_info.rc"
   "sources/audio/analyzer_10band.cc"
@@ -101,6 +122,7 @@ add_executable(smf-dsp WIN32
   "sources/utility/module.cc"
   "sources/utility/file_scan.cc"
   "sources/utility/portfts.cc"
+  "sources/utility/uris.cc"
   "sources/utility/uv++.cc"
   "sources/utility/load_library.cc"
   "sources/utility/logs.cc"
@@ -128,6 +150,7 @@ target_link_libraries(smf-dsp PRIVATE
   vendor::ring-buffer
   vendor::fmidi
   vendor::rtmidi
+  vendor::smoothers
   sys::SDL2
   sys::uv
   sys::iconv
@@ -177,6 +200,17 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_link_libraries(smf-dsp PRIVATE vendor::filesystem)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(smf-dsp PRIVATE sys::jack sys::alsa)
+endif()
+
+if(SMF_MPRIS)
+  target_link_libraries(smf-dsp PRIVATE vendor::mpris)
+  target_compile_definitions(smf-dsp PRIVATE "HAVE_MPRIS")
+  if(HAVE_GLIB_GURI)
+    target_compile_definitions(smf-dsp PRIVATE "HAVE_GLIB_GURI")
+  else()
+    target_compile_definitions(smf-dsp PRIVATE "HAVE_APR")
+    target_link_libraries(smf-dsp PRIVATE sys::apr-util sys::apr)
+  endif()
 endif()
 
 link_what_you_use(smf-dsp)

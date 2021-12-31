@@ -9,6 +9,7 @@
 #include "utility/SDL++.h"
 #include <SDL.h>
 #include <nonstd/string_view.hpp>
+#include <nonstd/span.hpp>
 #include <mutex>
 #include <vector>
 #include <memory>
@@ -21,6 +22,9 @@ class Player;
 struct Player_State;
 class Main_Layout;
 struct Midi_Output;
+#if defined(HAVE_MPRIS)
+class Mpris_Server;
+#endif
 
 class Application
 {
@@ -30,9 +34,14 @@ public:
     Application();
     ~Application();
 
+    static nonstd::span<const char *> supported_file_extensions();
+    static nonstd::span<const char *> supported_uri_schemes();
+    static nonstd::span<const char *> supported_mime_types();
+
     SDL_Window *init_window();
     SDL_Renderer *init_renderer();
     void exec();
+    void raise_window();
 
     void set_scale_factor(SDL_Window *win, unsigned sf);
     void paint(SDL_Renderer *rr, int paint);
@@ -46,6 +55,18 @@ public:
 
     void play_file(const std::string &dir, const File_Entry *entries, size_t index, size_t count);
     void play_random(const std::string &dir, const File_Entry &entry);
+    void play_full_path(const std::string &path);
+    void advance_playlist_by(int play_offset);
+    void seek_by(double time_offset);
+    void seek_to(double time);
+    void stop_playback();
+    void pause_playback();
+    void resume_playback();
+    void toggle_pause_playback();
+    void set_playback_speed(int speed, bool relative);
+    void set_playback_volume(double volume);
+    void set_repeat_mode(unsigned repeat_mode);
+    void set_next_repeat_mode();
     void set_current_path(const std::string &path);
     static bool filter_file_name(const std::string &name);
     static bool filter_file_entry(const File_Entry &ent);
@@ -78,6 +99,11 @@ private:
     void receive_state_in_other_thread(const Player_State &ps);
 
 private:
+#if defined(HAVE_MPRIS)
+    std::unique_ptr<Mpris_Server> mpris_;
+    volatile bool mpris_has_new_player_state_ = false;
+#endif
+
     SDLpp_Window_u window_;
     SDLpp_Renderer_u renderer_;
 

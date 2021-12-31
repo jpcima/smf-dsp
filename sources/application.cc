@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include "application.h"
+#include "mpris_server.h"
 #include "player/player.h"
 #include "player/playlist.h"
 #include "player/command.h"
@@ -82,6 +83,10 @@ uint32_t timer_push_event(uint32_t interval, void *user_data)
 
 Application::Application()
 {
+#if defined(HAVE_MPRIS)
+    mpris_.reset(new Mpris_Server(*this));
+#endif
+
     Log::i("Configuration directory: %s", get_configuration_dir().c_str());
 
     std::unique_ptr<CSimpleIniA> ini = initialize_config();
@@ -162,6 +167,27 @@ Application::~Application()
         SDL_RemoveTimer(update_timer_);
 }
 
+nonstd::span<const char *> Application::supported_file_extensions()
+{
+    static const char *list[] = {"MID", "RMI", "KAR", "MUS", nullptr};
+    size_t count = sizeof(list) / sizeof(list[0]) - 1;
+    return nonstd::span<const char *>(list, count);
+}
+
+nonstd::span<const char *> Application::supported_uri_schemes()
+{
+    static const char *list[] = {"file", nullptr};
+    size_t count = sizeof(list) / sizeof(list[0]) - 1;
+    return nonstd::span<const char *>(list, count);
+}
+
+nonstd::span<const char *> Application::supported_mime_types()
+{
+    static const char *list[] = {"audio/midi", nullptr};
+    size_t count = sizeof(list) / sizeof(list[0]) - 1;
+    return nonstd::span<const char *>(list, count);
+}
+
 SDL_Window *Application::init_window()
 {
     std::unique_ptr<CSimpleIniA> ini = load_global_configuration();
@@ -217,29 +243,28 @@ void Application::exec()
     SDL_Renderer *rr = renderer_.get();
 
     SDL_Event event;
-    bool shutting_down = false;
     while (!should_quit() && SDL_WaitEvent(&event)) {
         bool update = false;
 
         switch (event.type) {
         case SDL_KEYDOWN:
-            if (!shutting_down)
+            if (!fadeout_engaged_)
                 update = handle_key_pressed(event.key);
             break;
         case SDL_KEYUP:
-            if (!shutting_down)
+            if (!fadeout_engaged_)
                 update = handle_key_released(event.key);
             break;
         case SDL_MOUSEBUTTONDOWN:
-            if (!shutting_down)
+            if (!fadeout_engaged_)
                 update = handle_mouse_pressed(event.button);
             break;
         case SDL_MOUSEBUTTONUP:
-            if (!shutting_down)
+            if (!fadeout_engaged_)
                 update = handle_mouse_released(event.button);
             break;
         case SDL_TEXTINPUT:
-            if (!shutting_down)
+            if (!fadeout_engaged_)
                 update = handle_text_input(event.text);
             break;
         case SDL_WINDOWEVENT:
@@ -247,7 +272,7 @@ void Application::exec()
             break;
         case SDL_USEREVENT:
             update = true;
-            if (!shutting_down) {
+            if (!fadeout_engaged_) {
                 request_update();
                 update_modals();
             }
@@ -255,14 +280,12 @@ void Application::exec()
             break;
         case SDL_DROPFILE:
             Log::i("Received file drop: %s", event.drop.file);
-            set_current_path(event.drop.file);
-            file_browser_->trigger_selected_entry();
+            play_full_path(event.drop.file);
             break;
         case SDL_USEREVENT + 1:
             engage_shutdown_if_esc_key();
             break;
         case SDL_QUIT:
-            shutting_down = true;
             engage_shutdown();
             break;
         default:
@@ -276,6 +299,13 @@ void Application::exec()
             SDL_RenderPresent(rr);
         }
     }
+}
+
+void Application::raise_window()
+{
+    SDL_Window *win = window_.get();
+    SDL_RestoreWindow(win);
+    SDL_RaiseWindow(win);
 }
 
 void Application::set_scale_factor(SDL_Window *win, unsigned sf)
@@ -719,17 +749,13 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         break;
     case SDL_SCANCODE_PAGEUP:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Next> cmd(new Pcmd_Next);
-            cmd->play_offset = -1;
-            player_->push_command(std::move(cmd));
+            advance_playlist_by(-1);
             return true;
         }
         break;
     case SDL_SCANCODE_PAGEDOWN:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Next> cmd(new Pcmd_Next);
-            cmd->play_offset = +1;
-            player_->push_command(std::move(cmd));
+            advance_playlist_by(+1);
             return true;
         }
         break;
@@ -756,52 +782,39 @@ bool Application::handle_key_pressed(const SDL_KeyboardEvent &event)
         break;
     case SDL_SCANCODE_LEFT:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
-            cmd->time_offset = -5;
-            player_->push_command(std::move(cmd));
+            seek_by(-5);
             return true;
         }
         else if ((keymod & KMOD_SHIFT) && !(keymod & ~KMOD_SHIFT)) {
-            std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
-            cmd->time_offset = -10;
-            player_->push_command(std::move(cmd));
+            seek_by(-10);
             return true;
         }
         break;
     case SDL_SCANCODE_RIGHT:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
-            cmd->time_offset = +5;
-            player_->push_command(std::move(cmd));
+            seek_by(+5);
             return true;
         }
         else if ((keymod & KMOD_SHIFT) && !(keymod & ~KMOD_SHIFT)) {
-            std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
-            cmd->time_offset = +10;
-            player_->push_command(std::move(cmd));
+            seek_by(+10);
             return true;
         }
         break;
     case SDL_SCANCODE_LEFTBRACKET:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Speed> cmd(new Pcmd_Speed);
-            cmd->increment = -1;
-            player_->push_command(std::move(cmd));
+            set_playback_speed(-1, true);
             return true;
         }
         break;
     case SDL_SCANCODE_RIGHTBRACKET:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Speed> cmd(new Pcmd_Speed);
-            cmd->increment = +1;
-            player_->push_command(std::move(cmd));
+            set_playback_speed(+1, true);
             return true;
         }
         break;
     case SDL_SCANCODE_GRAVE:
         if (keymod == KMOD_NONE) {
-            std::unique_ptr<Pcmd_Repeat_Mode> cmd(new Pcmd_Repeat_Mode);
-            player_->push_command(std::move(cmd));
+            set_next_repeat_mode();
             return true;
         }
         break;
@@ -989,6 +1002,88 @@ void Application::play_random(const std::string &dir, const File_Entry &entry)
     player_->push_command(std::move(cmd));
 }
 
+void Application::play_full_path(const std::string &path)
+{
+    set_current_path(path);
+    file_browser_->trigger_selected_entry();
+}
+
+void Application::advance_playlist_by(int play_offset)
+{
+    std::unique_ptr<Pcmd_Next> cmd(new Pcmd_Next);
+    cmd->play_offset = play_offset;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::seek_by(double time_offset)
+{
+    std::unique_ptr<Pcmd_Seek_Cur> cmd(new Pcmd_Seek_Cur);
+    cmd->time_offset = time_offset;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::seek_to(double time)
+{
+    std::unique_ptr<Pcmd_Seek_Set> cmd(new Pcmd_Seek_Set);
+    cmd->time = time;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::stop_playback()
+{
+    std::unique_ptr<Pcmd_Stop> cmd(new Pcmd_Stop);
+    player_->push_command(std::move(cmd));
+}
+
+void Application::pause_playback()
+{
+    std::unique_ptr<Pcmd_Pause> cmd(new Pcmd_Pause);
+    cmd->mode = Pcmd_Pause::Mode_Pause;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::resume_playback()
+{
+    std::unique_ptr<Pcmd_Pause> cmd(new Pcmd_Pause);
+    cmd->mode = Pcmd_Pause::Mode_Resume;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::toggle_pause_playback()
+{
+    std::unique_ptr<Pcmd_Pause> cmd(new Pcmd_Pause);
+    cmd->mode = Pcmd_Pause::Mode_Toggle;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::set_playback_speed(int speed, bool relative)
+{
+    std::unique_ptr<Pcmd_Speed> cmd(new Pcmd_Speed);
+    cmd->value = speed;
+    cmd->relative = relative;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::set_playback_volume(double volume)
+{
+    std::unique_ptr<Pcmd_Volume> cmd(new Pcmd_Volume);
+    cmd->value = volume;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::set_repeat_mode(unsigned repeat_mode)
+{
+    std::unique_ptr<Pcmd_Set_Repeat_Mode> cmd(new Pcmd_Set_Repeat_Mode);
+    cmd->repeat_mode = repeat_mode;
+    player_->push_command(std::move(cmd));
+}
+
+void Application::set_next_repeat_mode()
+{
+    std::unique_ptr<Pcmd_Next_Repeat_Mode> cmd(new Pcmd_Next_Repeat_Mode);
+    player_->push_command(std::move(cmd));
+}
+
 void Application::set_current_path(const std::string &path)
 {
     file_browser_->set_current_path(path);
@@ -996,19 +1091,27 @@ void Application::set_current_path(const std::string &path)
 
 bool Application::filter_file_name(const std::string &name)
 {
-    size_t len = name.size();
-    if (len < 4 || name[len - 4] != '.')
-        return false;
+    for (const char *const *extp = supported_file_extensions().data(); *extp; ++extp) {
+        nonstd::string_view ext(*extp);
 
-    char ext[3];
-    memcpy(ext, &name[len - 3], 3);
+        if (name.size() <= ext.size() + 1)
+            continue;
 
-    std::transform(
-        ext, ext + 3, ext,
-        [](char c) -> char { return (c >= 'a' && c <= 'z') ? (c - 'a' + 'A') : c; });
+        const char *srcp = name.data() + name.size() - ext.size() - 1;
+        if (*srcp++ != '.')
+            continue;
 
-    return !memcmp(ext, "MID", 3) || !memcmp(ext, "RMI", 3) || !memcmp(ext, "KAR", 3) ||
-        !memcmp(ext, "MUS", 3);
+        auto tr = [](char c) -> char { return (c >= 'a' && c <= 'z') ? (c - 'a' + 'A') : c; };
+
+        bool eq = true;
+        for (size_t i = 0; eq && i < ext.size(); ++i)
+            eq = (tr(ext[i]) == tr(srcp[i]));
+
+        if (eq)
+            return true;
+    }
+
+    return false;
 }
 
 bool Application::filter_file_entry(const File_Entry &ent)
@@ -1020,6 +1123,18 @@ void Application::request_update()
 {
     std::unique_ptr<Pcmd_Request_State> cmd(new Pcmd_Request_State);
     player_->push_command(std::move(cmd));
+#if defined(HAVE_MPRIS)
+    {
+        std::unique_lock<std::mutex> lock{ps_mutex_};
+        if (mpris_has_new_player_state_) {
+            Player_State ps = *ps_;
+            mpris_has_new_player_state_ = false;
+            lock.unlock();
+            mpris_->receive_new_player_state(ps);
+        }
+    }
+    mpris_->exec();
+#endif
 }
 
 void Application::update_modals()
@@ -1703,6 +1818,10 @@ std::unique_ptr<CSimpleIniA> Application::initialize_config()
 void Application::receive_state_in_other_thread(const Player_State &ps)
 {
     std::unique_lock<std::mutex> lock(ps_mutex_, std::try_to_lock);
-    if (lock.owns_lock())
+    if (lock.owns_lock()) {
         *ps_ = ps;
+#if defined(HAVE_MPRIS)
+        mpris_has_new_player_state_ = true;
+#endif
+    }
 }
