@@ -57,7 +57,7 @@ To build the software, type these commands in the source directory.
 
 Install following packages on Debian/LibraZiK/Mint:
 
-- `build-essential` `git` `pkg-config` `libsdl2-dev` `libasound2-dev` `libpulse-dev` `libjack-jackd2-dev` `libuv1-dev` `libuchardet-dev` `libglib2.0-dev`
+- `build-essential` `git` `pkg-config` `libsdl2-dev` `libsdl2-image-dev` `libasound2-dev` `libpulse-dev` `libjack-jackd2-dev` `libuv1-dev` `libuchardet-dev` `libglib2.0-dev` `libapr1-dev` `libaprutil1-dev`
 
 (in case JACK 1 is preferred over JACK 2, replace `libjack-jackd2-dev` with `libjack-dev`)
 
