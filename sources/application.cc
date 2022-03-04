@@ -169,7 +169,7 @@ Application::~Application()
 
 nonstd::span<const char *> Application::supported_file_extensions()
 {
-    static const char *list[] = {"MID", "RMI", "KAR", "MUS", nullptr};
+    static const char *list[] = {"MID", "MIDI", "RMI", "KAR", "MUS", nullptr};
     size_t count = sizeof(list) / sizeof(list[0]) - 1;
     return nonstd::span<const char *>(list, count);
 }
