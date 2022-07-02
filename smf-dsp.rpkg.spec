@@ -49,7 +49,7 @@ tar -C thirdparty -xf %{SOURCE8}
 tar -C thirdparty -xf %{SOURCE9}
 
 %build
-%cmake -DSMF_DSP_PLUGIN_DIR=%{_libdir}/smf-dsp
+%cmake -DSMF_DSP_PLUGIN_DIR=%{_libdir}/smf-dsp -DSMF_DSP_DEFAULT_SF2=%{_datadir}/soundfonts/default.sf2
 %cmake_build
 
 %install

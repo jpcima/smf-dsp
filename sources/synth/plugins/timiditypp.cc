@@ -70,7 +70,7 @@ static void timiditypp_plugin_shutdown()
 {
 }
 
-static const char *default_soundfont_value[] = {"A320U.sf2", nullptr};
+static const char *default_soundfont_value[] = {SMF_DSP_DEFAULT_SF2, nullptr};
 
 static const synth_option the_synth_options[] = {
     {"soundfont", "List of SoundFont files to load", 'm', {.m = default_soundfont_value}},

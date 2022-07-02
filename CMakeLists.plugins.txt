@@ -18,6 +18,8 @@ endif()
 
 function(add_plugin TARGET)
   add_library("${TARGET}" MODULE ${ARGN})
+  target_compile_definitions("${TARGET}" PRIVATE
+    "SMF_DSP_DEFAULT_SF2=\"${SMF_DSP_DEFAULT_SF2}\"")
   target_link_libraries("${TARGET}" PRIVATE plugin-common)
   set_target_properties("${TARGET}" PROPERTIES PREFIX "")
   link_what_you_use("${TARGET}")

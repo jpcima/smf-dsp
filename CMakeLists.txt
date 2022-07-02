@@ -4,6 +4,7 @@ project(smf-dsp VERSION "0.10.0" LANGUAGES C CXX)
 include(GNUInstallDirs)
 
 set(SMF_DSP_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+set(SMF_DSP_DEFAULT_SF2 "A320U.sf2" CACHE FILEPATH "Default soundfont file")
 set(PROJECT_DISPLAY_NAME "SMF-DSP")
 set(PROJECT_AUTHOR "JPC")
 set(PROJECT_DESCRIPTION "Advanced MIDI file player")
