@@ -1,7 +1,9 @@
-//          Copyright Jean Pierre Cimalando 2018.
+//          Copyright Jean Pierre Cimalando 2018-2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
+//
+// SPDX-License-Identifier: BSL-1.0
 
 #include "ring_buffer.h"
 
@@ -9,6 +11,24 @@ template <bool Atomic>
 inline size_t Ring_Buffer_Ex<Atomic>::capacity() const
 {
     return cap_ - 1;
+}
+
+//------------------------------------------------------------------------------
+template <class Mutex>
+inline Soft_Ring_Buffer_Ex<Mutex>::Soft_Ring_Buffer_Ex(size_t capacity)
+    : rb_(capacity)
+{
+}
+
+template <class Mutex>
+inline Soft_Ring_Buffer_Ex<Mutex>::~Soft_Ring_Buffer_Ex()
+{
+}
+
+template <class Mutex>
+inline size_t Soft_Ring_Buffer_Ex<Mutex>::capacity() const
+{
+    return rb_.capacity();
 }
 
 //------------------------------------------------------------------------------
