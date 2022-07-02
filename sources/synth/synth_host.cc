@@ -191,7 +191,7 @@ std::string Synth_Host::find_plugin_dir()
     if (dir.size() >= suffixlen && nonstd::string_view(dir).substr(dir.size() - suffixlen) == suffix) {
         Log::i("Use FHS plugin search");
         dir.resize(dir.size() - suffixlen);
-        dir.append("/lib/" PROGRAM_NAME "/");
+        dir.append("/" SMF_DSP_PLUGIN_LIBDIR "/" PROGRAM_NAME "/");
     }
     else {
         Log::i("Use portable application plugin search");

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION "3.7")
-
 project(smf-dsp VERSION "0.10.0" LANGUAGES C CXX)
+
+include(GNUInstallDirs)
+
 set(SMF_DSP_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 set(PROJECT_DISPLAY_NAME "SMF-DSP")
 set(PROJECT_AUTHOR "JPC")
@@ -132,7 +134,8 @@ target_compile_definitions(smf-dsp PRIVATE
   "PROGRAM_NAME=\"${PROJECT_NAME}\""
   "PROGRAM_DISPLAY_NAME=\"${PROJECT_DISPLAY_NAME}\""
   "PROGRAM_AUTHOR=\"${PROJECT_AUTHOR}\""
-  "PROGRAM_VERSION=\"${PROJECT_VERSION}\"")
+  "PROGRAM_VERSION=\"${PROJECT_VERSION}\""
+  "SMF_DSP_PLUGIN_LIBDIR=\"${CMAKE_INSTALL_LIBDIR}\"")
 
 target_include_directories(smf-dsp PRIVATE
   "sources"
@@ -222,20 +225,20 @@ configure_file("sources/version_info.h.in" "${PROJECT_BINARY_DIR}/version_info/v
 
 #
 install(TARGETS smf-dsp
-  RUNTIME DESTINATION "bin"
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT "player")
 
 install(FILES "resources/desktop/smf-dsp.desktop"
-  DESTINATION "share/applications"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/64x64/smf-dsp.png"
-  DESTINATION "share/icons/hicolor/64x64/apps"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/64x64/apps"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/16x16/smf-dsp.png"
-  DESTINATION "share/icons/hicolor/16x16/apps"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/16x16/apps"
   COMPONENT "desktop-entry")
 install(FILES "resources/desktop/io.github.jpcima.smf_dsp.metainfo.xml"
-  DESTINATION "share/metainfo"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/metainfo"
   COMPONENT "desktop-entry")
 
 include("CMakeLists.plugins.txt")
