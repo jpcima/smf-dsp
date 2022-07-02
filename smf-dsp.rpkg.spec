@@ -32,6 +32,8 @@ BuildRequires: glib2-devel
 BuildRequires: (jack-audio-connection-kit-devel or pipewire-jack-audio-connection-kit-devel)
 BuildRequires: alsa-lib-devel
 BuildRequires: libsoundio-devel
+BuildRequires: apr-devel
+BuildRequires: apr-util-devel
 
 %description
 Advanced MIDI file player, including various chip music synths
