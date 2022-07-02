@@ -24,6 +24,7 @@ Source8:    {{{ git_pack dir_name=scope-lite       path=thirdparty/scope-lite }}
 Source9:    {{{ git_pack dir_name=string-view-lite path=thirdparty/string-view-lite }}}
 
 BuildRequires: cmake
+BuildRequires: gcc-c++
 BuildRequires: SDL2-devel
 BuildRequires: SDL2_image-devel
 BuildRequires: libuv-devel
