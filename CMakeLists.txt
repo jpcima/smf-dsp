@@ -12,6 +12,30 @@ math(EXPR PROJECT_LETTER_VERSION "97+${PROJECT_VERSION_PATCH}")
 string(ASCII "${PROJECT_LETTER_VERSION}" PROJECT_LETTER_VERSION)
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}${PROJECT_LETTER_VERSION}")
 
+####
+# rpkg version
+
+function(smf_dsp_update_rpkg_version SPEC LEAD FOLLOW)
+  file(READ "${SPEC}" text)
+  set(expr "((^|\n|\r)Version[ \t]*:[ \t]*)[^\n\r]*")
+  string(REGEX MATCH "${expr}" match "${text}")
+  if(match STREQUAL "")
+    message(FATAL_ERROR "The spec file does not have a \"Version\" field.")
+  endif()
+  string(REGEX REPLACE
+    "${expr}" "\\1{{{ git_dir_version lead=\"${LEAD}\" follow=\"${FOLLOW}\" }}}"
+    new_text "${text}")
+  if(NOT text STREQUAL new_text)
+    file(WRITE "${SPEC}" "${new_text}")
+  endif()
+endfunction()
+
+smf_dsp_update_rpkg_version(
+  "${PROJECT_SOURCE_DIR}/smf-dsp.rpkg.spec"
+  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
+  "${PROJECT_VERSION_PATCH}")
+
+###
 set(CMAKE_CXX_STANDARD "14")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

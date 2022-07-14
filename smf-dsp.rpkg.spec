@@ -1,6 +1,6 @@
 Name:       {{{ git_dir_name }}}
 
-Version:    {{{ git_dir_version }}}
+Version:    {{{ git_dir_version lead="0.10" follow="0" }}}
 
 Release:    1%{?dist}
 
