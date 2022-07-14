@@ -3,7 +3,7 @@
 // The Fmidi library - a free software toolkit for MIDI file processing
 //
 // =============================================================================
-//          Copyright Jean Pierre Cimalando 2018.
+//          Copyright Jean Pierre Cimalando 2018-2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)

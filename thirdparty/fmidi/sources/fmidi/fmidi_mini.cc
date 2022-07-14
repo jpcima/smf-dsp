@@ -4,7 +4,7 @@
 // Single-file implementation, based on software revision: 14bafdb
 //
 // =============================================================================
-//          Copyright Jean Pierre Cimalando 2018-2020.
+//          Copyright Jean Pierre Cimalando 2018-2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE.md or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
