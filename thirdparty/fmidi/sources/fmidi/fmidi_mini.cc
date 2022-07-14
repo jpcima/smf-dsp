@@ -1,7 +1,7 @@
 // =============================================================================
 //
 // The Fmidi library - a free software toolkit for MIDI file processing
-// Single-file implementation, based on software revision: 3e6d5b5
+// Single-file implementation, based on software revision: 14bafdb
 //
 // =============================================================================
 //          Copyright Jean Pierre Cimalando 2018-2020.
@@ -12,33 +12,21 @@
 
 
 #include "fmidi/fmidi.h"
-#include <vector>
-
-struct fmidi_raw_track {
-    std::unique_ptr<uint8_t[]> data;
-    uint32_t length;
-};
-
-struct fmidi_smf {
-    fmidi_smf_info_t info;
-    std::unique_ptr<fmidi_raw_track[]> track;
-};
-
-//------------------------------------------------------------------------------
-uintptr_t fmidi_event_pad(uintptr_t size);
-fmidi_event_t *fmidi_event_alloc(std::vector<uint8_t> &buf, uint32_t datalen);
-unsigned fmidi_message_sizeof(uint8_t id);
-
-//------------------------------------------------------------------------------
-inline uintptr_t fmidi_event_pad(uintptr_t size)
-{
-    uintptr_t nb = size % alignof(fmidi_event_t);
-    return nb ? (size + alignof(fmidi_event_t) - nb) : size;
-}
-
-#include "fmidi/fmidi.h"
 
 #if !defined(FMIDI_DISABLE_DESCRIBE_API)
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+
+template <> struct fmt::formatter<fmidi_smf_t> {
+    constexpr format_parse_context::iterator parse(format_parse_context &ctx) const { return ctx.begin(); }
+    fmt::format_context::iterator format(const fmidi_smf_t &obj, fmt::format_context &ctx);
+};
+
+template <> struct fmt::formatter<fmidi_event_t> {
+    constexpr format_parse_context::iterator parse(format_parse_context &ctx) const { return ctx.begin(); }
+    fmt::format_context::iterator format(const fmidi_event_t &obj, fmt::format_context &ctx);
+};
+
 //------------------------------------------------------------------------------
 struct printfmt_quoted {
     printfmt_quoted(const char *text, size_t length)
@@ -46,7 +34,11 @@ struct printfmt_quoted {
     const char *text = nullptr;
     size_t length = 0;
 };
-std::ostream &operator<<(std::ostream &out, const printfmt_quoted &q);
+
+template <> struct fmt::formatter<printfmt_quoted> {
+    constexpr format_parse_context::iterator parse(format_parse_context &ctx) const { return ctx.begin(); }
+    fmt::format_context::iterator format(const printfmt_quoted &obj, fmt::format_context &ctx);
+};
 
 //------------------------------------------------------------------------------
 struct printfmt_bytes {
@@ -55,7 +47,12 @@ struct printfmt_bytes {
     const uint8_t *data = nullptr;
     size_t size = 0;
 };
-std::ostream &operator<<(std::ostream &out, const printfmt_bytes &b);
+
+template <> struct fmt::formatter<printfmt_bytes> {
+    constexpr format_parse_context::iterator parse(format_parse_context &ctx) const { return ctx.begin(); }
+    fmt::format_context::iterator format(const printfmt_bytes &obj, fmt::format_context &ctx);
+};
+
 #endif // !defined(FMIDI_DISABLE_DESCRIBE_API)
 
 //------------------------------------------------------------------------------
@@ -182,553 +179,6 @@ inline off_t Stream_Writer::tell() const
 {
     return ftell(stream);
 }
-
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <tuple>
-
-enum memstream_status {  // make it match fmidi status codes
-    ms_ok,
-    ms_err_format,
-    ms_err_eof,
-};
-
-class memstream {
-public:
-    memstream(const uint8_t *data, size_t length);
-
-    size_t endpos() const;
-    size_t getpos() const;
-    memstream_status setpos(size_t off);
-
-    memstream_status skip(size_t count);
-    memstream_status skipbyte(unsigned byte);
-
-    const uint8_t *peek(size_t length);
-    const uint8_t *read(size_t length);
-
-    memstream_status peekbyte(unsigned *retp);
-    memstream_status readbyte(unsigned *retp);
-
-    memstream_status readintLE(uint32_t *retp, unsigned length);
-    memstream_status readintBE(uint32_t *retp, unsigned length);
-    memstream_status readvlq(uint32_t *retp);
-    memstream_status peekvlq(uint32_t *retp);
-
-private:
-    const uint8_t *base_ = nullptr;
-    size_t length_ = 0;
-    size_t offset_ = 0;
-    typedef std::tuple<memstream_status, uint32_t, unsigned> vlq_result;
-    vlq_result doreadvlq();
-};
-
-//------------------------------------------------------------------------------
-inline memstream::memstream(const uint8_t *data, size_t length)
-    : base_(data), length_(length) {
-}
-
-inline size_t memstream::endpos() const {
-    return length_;
-}
-
-inline size_t memstream::getpos() const {
-    return offset_;
-}
-#if !defined(FMIDI_DISABLE_DESCRIBE_API)
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#endif
-#include <string>
-
-double fmidi_smpte_time(const fmidi_smpte *smpte)
-{
-    const uint8_t *d = smpte->code;
-    static const double spftable[4] = { 1.0/24, 1.0/25, 1001.0/30000, 1.0/30 };
-    uint8_t hh = d[0];
-    double spf = spftable[(hh >> 5) & 0b11];
-    hh &= 0b11111;
-    uint8_t mm = d[1], ss = d[2], fr = d[3], ff = d[4];
-    return (fr + 0.01 * ff) * spf + ss + mm * 60 + hh * 3600;
-}
-
-double fmidi_delta_time(double delta, uint16_t unit, uint32_t tempo)
-{
-    if (unit & (1 << 15)) {
-        unsigned tpf = unit & 0xff;  // delta units per frame
-        unsigned fps = -(int8_t)(unit >> 8);  // frames per second
-        return delta / (tpf * fps);
-    }
-    else {
-        unsigned dpqn = unit;  // delta units per 1/4 note
-        double tpqn = 1e-6 * tempo;  // 1/4 note duration
-        return delta * tpqn / dpqn;
-    }
-}
-
-double fmidi_time_delta(double time, uint16_t unit, uint32_t tempo)
-{
-    if (unit & (1 << 15)) {
-        unsigned tpf = unit & 0xff;  // delta units per frame
-        unsigned fps = -(int8_t)(unit >> 8);  // frames per second
-        return time * (tpf * fps);
-    }
-    else {
-        unsigned dpqn = unit;  // delta units per 1/4 note
-        double tpqn = 1e-6 * tempo;  // 1/4 note duration
-        return time * dpqn / tpqn;
-    }
-}
-
-//------------------------------------------------------------------------------
-fmidi_event_t *fmidi_event_alloc(std::vector<uint8_t> &buf, uint32_t datalen)
-{
-    size_t pos = buf.size();
-    size_t evsize = fmidi_event_sizeof(datalen);
-    size_t padsize = fmidi_event_pad(evsize);
-    buf.resize(buf.size() + padsize);
-    fmidi_event_t *event = (fmidi_event_t *)&buf[pos];
-    return event;
-}
-
-unsigned fmidi_message_sizeof(uint8_t id)
-{
-    if ((id >> 7) == 0) {
-        return 0;
-    }
-    else if ((id >> 4) != 0b1111) {
-        static const uint8_t sizetable[8] = {
-            3, 3, 3, 3, 2, 2, 3 };
-        return sizetable[(id >> 4) & 0b111];
-    }
-    else {
-        static const uint8_t sizetable[16] = {
-            0, 2, 3, 2, 1, 1, 1, 0,
-            1, 1, 1, 1, 1, 1, 1, 1 };
-        return sizetable[id & 0b1111];
-    }
-}
-
-//------------------------------------------------------------------------------
-class fmidi_category_t : public std::error_category {
-public:
-    const char *name() const noexcept override
-        { return "fmidi"; }
-    std::string message(int condition) const override
-        { return fmidi_strerror((fmidi_status_t)condition); }
-};
-
-static fmidi_category_t the_category;
-
-const std::error_category &fmidi_category() {
-    return the_category;
-};
-
-//------------------------------------------------------------------------------
-#if !defined(FMIDI_DISABLE_DESCRIBE_API)
-template <class OutputStreamRef>
-static bool fmidi_repr_meta(OutputStreamRef out, const uint8_t *data, uint32_t len)
-{
-    if (len <= 0)
-        return false;
-
-    unsigned tag = *data++;
-    --len;
-
-    printfmt_quoted qtext{(const char *)data, len};
-
-    switch (tag) {
-    default:
-        fmt::print(out, "(meta/unknown :tag #x{:02x})", tag);
-        return true;
-    case 0x00: {  // sequence number
-        if (len < 2) return false;
-        unsigned number = (data[0] << 8) | data[1];
-        fmt::print(out, "(meta/seq-number {})", number);
-        return true;
-    }
-    case 0x01:
-        fmt::print(out, "(meta/text {})", qtext);
-        return true;
-    case 0x02:
-        fmt::print(out, "(meta/copyright {})", qtext);
-        return true;
-    case 0x03:
-        fmt::print(out, "(meta/track {})", qtext);
-        return true;
-    case 0x04:
-        fmt::print(out, "(meta/instrument {})", qtext);
-        return true;
-    case 0x05:
-        fmt::print(out, "(meta/lyric {})", qtext);
-        return true;
-    case 0x06:
-        fmt::print(out, "(meta/marker {})", qtext);
-        return true;
-    case 0x07:
-        fmt::print(out, "(meta/cue-point {})", qtext);
-        return true;
-    case 0x09:
-        fmt::print(out, "(meta/device-name {})", qtext);
-        return true;
-    case 0x20:
-        if (len < 1) return false;
-        fmt::print(out, "(meta/channel-prefix {})", data[0]);
-        return true;
-    case 0x21:
-        if (len < 1) return false;
-        fmt::print(out, "(meta/port {})", data[0]);
-        return true;
-    case 0x2f:
-    case 0x3f:
-        fmt::print(out, "(meta/end)");
-        return true;
-    case 0x51: {
-        if (len < 3) return false;
-        unsigned t = (data[0] << 16) | (data[1] << 8) | data[2];
-        fmt::print(out, "(meta/tempo {} #|{} bpm|#)", t, 60. / (t * 1e-6));
-        return true;
-    }
-    case 0x54: {
-        if (len < 5) return false;
-        static const char *fpstable[] = {"24", "25", "30000/1001", "30"};
-        uint8_t hh = data[0];
-        const char *fps = fpstable[(hh >> 5) & 0b11];
-        fmt::print(
-            out, "(meta/offset {:02d} {:02d} {:02d} {:02d} {:02d}/100 :frames/second {})",
-            hh & 0b11111, data[1], data[2], data[3], data[4], fps);
-        return true;
-    }
-    case 0x58:
-        if (len < 4) return false;
-        fmt::print(out, "(meta/time-sig {} {} {} {})",
-                   data[0], data[1], data[2], data[3]);
-        return true;
-    case 0x59: {
-        if (len < 2) return false;
-        fmt::print(out, "(meta/key-sig {} :{})",
-                   (int8_t)data[0], data[1] ? "minor" : "major");
-        return true;
-    }
-    case 0x7f:
-        fmt::print(out, "(meta/sequencer-specific {})", printfmt_bytes{data, len});
-        return true;
-    }
-
-    return false;
-}
-
-template <class OutputStreamRef>
-static bool fmidi_repr_midi(OutputStreamRef out, const uint8_t *data, uint32_t len)
-{
-    if (len <= 0)
-        return false;
-
-    unsigned status = *data++;
-    --len;
-
-    auto b7 = [data](unsigned i)
-        { return data[i] & 0x7f; };
-    auto b14 = [data](unsigned i)
-        { return (data[i] & 0x7f) | (data[i + 1] & 0x7f) << 7; };
-
-    if (status >> 4 == 0xf) {
-        unsigned op = status & 0xf;
-
-        switch (op) {
-        case 0b0000:
-            fmt::print(out, "(sysex #xf0 {})", printfmt_bytes{data, len});
-            return true;
-        case 0b0001: {
-            if (len < 1) return false;
-            unsigned tc = b7(0);
-            fmt::print(out, "(time-code {} {})", tc >> 4, tc & 0b1111);
-            return true;
-        }
-        case 0b0010:
-            if (len < 2) return false;
-            fmt::print(out, "(song-position {})", b14(0));
-            return true;
-        case 0b0011:
-            if (len < 1) return {};
-            fmt::print(out, "(song-select {})", b7(0));
-            return true;
-        case 0b0110:
-            fmt::print(out, "(tune-request)");
-            return true;
-        case 0b1000:
-            fmt::print(out, "(timing-clock)");
-            return true;
-        case 0b1010:
-            fmt::print(out, "(start)");
-            return true;
-        case 0b1011:
-            fmt::print(out, "(continue)");
-            return true;
-        case 0b1100:
-            fmt::print(out, "(stop)");
-            return true;
-        case 0b1110:
-            fmt::print(out, "(active-sensing)");
-            return true;
-        case 0b1111:
-            fmt::print(out, "(reset)");
-            return true;
-        }
-    }
-    else {
-        unsigned op = status >> 4;
-        unsigned ch = status & 0xf;
-
-        switch (op) {
-        case 0b1000:
-            if (len < 2) return false;
-            fmt::print(out, "(note-off {} :velocity {} :channel {})", b7(0), b7(1), ch);
-            return true;
-        case 0b1001:
-            if (len < 2) return false;
-            fmt::print(out, "(note-on {} :velocity {} :channel {})", b7(0), b7(1), ch);
-            return true;
-        case 0b1010:
-            if (len < 2) return false;
-            fmt::print(out, "(poly-aftertouch {} :pressure {} :channel {})", b7(0), b7(1), ch);
-            return true;
-        case 0b1011:
-            if (len < 2) return false;
-            fmt::print(out, "(control #x{:02x} {} :channel {})", b7(0), b7(1), ch);
-            return true;
-        case 0b1100:
-            if (len < 1) return false;
-            fmt::print(out, "(program {} :channel {})", b7(0), ch);
-            return true;
-        case 0b1101:
-            if (len < 1) return false;
-            fmt::print(out, "(aftertouch :pressure {} :channel {})", b7(0), ch);
-            return true;
-        case 0b1110:
-            if (len < 2) return false;
-            fmt::print(out, "(pitch-bend {} :channel {})", b14(0), ch);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static bool fmidi_identify_sysex(const uint8_t *msg, size_t len, std::string &text)
-{
-    if (len < 4 || msg[0] != 0xf0 || msg[len - 1] != 0xf7)
-        return false;
-
-    unsigned manufacturer = msg[1];
-    unsigned deviceid = msg[2];
-
-    switch (manufacturer) {
-        case 0x7e:  // universal non-realtime
-            if (len >= 6) {
-                switch ((msg[3] << 8) | msg[4]) {
-                case 0x0901: text = "GM system on"; return true;
-                case 0x0902: text = "GM system off"; return true;
-                }
-            }
-            break;
-        case 0x7f:  // universal realtime
-            if (len >= 6) {
-                switch ((msg[3] << 8) | msg[4]) {
-                case 0x0401: text = "GM master volume"; return true;
-                case 0x0402: text = "GM master balance"; return true;
-                }
-            }
-            break;
-        case 0x41:  // Roland
-            if (len >= 9) {
-                unsigned model = msg[3];
-                unsigned mode = msg[4];
-                unsigned address = (msg[5] << 16) | (msg[6] << 8) | msg[7];
-                if (mode == 0x12) {  // send
-                    switch ((model << 24) | address) {
-                    case (0x42u << 24) | 0x00007fu: text = "GS system mode set"; return true;
-                    case (0x42u << 24) | 0x40007fu: text = "GS mode set"; return true;
-                    default: text = fmt::format("GS parameter #x{:06x}", address); return true;
-                    }
-                }
-            }
-            break;
-        case 0x43:  // Yamaha
-            if (len >= 5) {
-                unsigned model = msg[3];
-                switch((model << 8) | (deviceid & 0xf0))
-                {
-                case (0x4c << 8) | 0x10:  // XG
-                    if (len >= 8) {
-                        unsigned address = (msg[4] << 16) | (msg[5] << 8) | msg[6];
-                        switch (address) {
-                        case 0x00007e: text = "XG system on"; return true;
-                        default: text = fmt::format("XG parameter #x{:06x}", address); return true;
-                        }
-                        break;
-                    }
-                }
-            }
-            break;
-    }
-
-    return false;
-}
-
-template <class OutputStreamRef>
-static void fmidi_repr_smf(OutputStreamRef out, const fmidi_smf_t &smf)
-{
-    const fmidi_smf_info_t *info = fmidi_smf_get_info(&smf);
-    fmt::print(out, "(midi-file");
-    fmt::print(out, "\n  :format {}", info->format);
-
-    unsigned unit = info->delta_unit;
-    if (unit & (1 << 15))
-        fmt::print(out, "\n  :delta-unit (smpte-based :units/frame {} :frames/second {})",
-                   unit & 0xff, -(int8_t)(unit >> 8));
-    else
-        fmt::print(out, "\n  :delta-unit (tempo-based :units/beat {})", unit);
-
-    fmt::print(out, "\n  :tracks"
-               "\n  (", unit);
-
-    struct RPN_Info {
-        unsigned lsb = 127, msb = 127;
-        bool nrpn = false;
-    };
-    RPN_Info channel_rpn[16];
-
-    std::string strbuf;
-    strbuf.reserve(256);
-
-    for (unsigned i = 0, n = info->track_count; i < n; ++i) {
-        fmidi_track_iter_t it;
-        fmidi_smf_track_begin(&it, i);
-        if (i > 0)
-            fmt::print(out, "\n   ");
-        fmt::print(out, "(;;--- track {} ---;;", i);
-        while (const fmidi_event_t *evt = fmidi_smf_track_next(&smf, &it)) {
-            RPN_Info *rpn = nullptr;
-
-            const uint8_t *data = evt->data;
-            uint32_t datalen = evt->datalen;
-
-            if (evt->type == fmidi_event_message) {
-                unsigned status = data[0];
-                unsigned channel = status & 0x0f;
-                // controllers
-                if (datalen == 3 && (status & 0xf0) == 0xb0) {
-                    unsigned ctl = data[1] & 0x7f;
-                    switch (ctl) {
-                    case 0x62: case 0x64:  // (N)RPN LSB
-                        rpn = &channel_rpn[channel];
-                        rpn->lsb = data[2] & 0x7f, rpn->nrpn = ctl == 0x62;
-                        break;
-                    case 0x63: case 0x65:  // (N)RPN MSB
-                        rpn = &channel_rpn[channel];
-                        rpn->msb = data[2] & 0x7f, rpn->nrpn = ctl == 0x63;
-                        break;
-                    case 0x06: case 0x26:  // Data Entry MSB, LSB
-                        rpn = &channel_rpn[channel];
-                        break;
-                    }
-                }
-            }
-
-            fmt::print(out, "\n    (:delta {:<5} {}", evt->delta, *evt);
-            if (rpn)
-                fmt::print(out, " #|{}RPN #x{:02x} #x{:02x}|#",
-                           rpn->nrpn ? "N" : "", rpn->msb, rpn->lsb);
-            else if (fmidi_identify_sysex(data, datalen, strbuf))
-                fmt::print(out, " #|{}|#", strbuf);
-            fmt::print(out, ")");
-        }
-        fmt::print(out, ")");
-    }
-    fmt::print(out, "))\n");
-}
-
-std::ostream &operator<<(std::ostream &out, const fmidi_smf_t &smf)
-{
-    fmidi_repr_smf<std::ostream &>(out, smf);
-    return out;
-}
-
-void fmidi_smf_describe(const fmidi_smf_t *smf, FILE *stream)
-{
-    fmidi_repr_smf<FILE *>(stream, *smf);
-}
-
-template <class OutputStreamRef>
-static void fmidi_repr_event(OutputStreamRef out, const fmidi_event_t &evt)
-{
-    const uint8_t *data = evt.data;
-    uint32_t len = evt.datalen;
-
-    switch (evt.type) {
-    case fmidi_event_meta: {
-        if (!fmidi_repr_meta<OutputStreamRef>(out, data, len))
-            fmt::print(out, "(meta/unknown)");
-        break;
-    }
-    case fmidi_event_message: {
-        if (!fmidi_repr_midi<OutputStreamRef>(out, data, len))
-            fmt::print(out, "(unknown)");
-        break;
-    }
-    case fmidi_event_escape: {
-        fmt::print(out, "(raw {})", printfmt_bytes{data, len});
-        break;
-    }
-    case fmidi_event_xmi_timbre: {
-        fmt::print(out, "(xmi/timbre :patch {} :bank {})", evt.data[0], evt.data[1]);
-        break;
-    }
-    case fmidi_event_xmi_branch_point: {
-        fmt::print(out, "(xmi/branch-point {})", evt.data[0]);
-        break;
-    }
-    }
-}
-
-std::ostream &operator<<(std::ostream &out, const fmidi_event_t &evt)
-{
-    fmidi_repr_event<std::ostream &>(out, evt);
-    return out;
-}
-
-void fmidi_event_describe(const fmidi_event_t *evt, FILE *stream)
-{
-    fmidi_repr_event<FILE *>(stream, *evt);
-}
-
-//------------------------------------------------------------------------------
-std::ostream &operator<<(std::ostream &out, const printfmt_quoted &q)
-{
-    const char *text = q.text;
-    size_t length = q.length;
-    out.put('"');
-    for (size_t i = 0; i < length; ++i) {
-        char c = text[i];
-        if (c == '\\' || c == '"') out.put('\\');
-        out.put(c);
-    }
-    return out.put('"');
-}
-
-std::ostream &operator<<(std::ostream &out, const printfmt_bytes &b)
-{
-    const uint8_t *data = b.data;
-    for (size_t i = 0, n = b.size; i < n; ++i) {
-        if (i > 0) out.put(' ');
-        fmt::print(out, "#x{:02x}", data[i]);
-    }
-    return out;
-}
-#endif // !defined(FMIDI_DISABLE_DESCRIBE_API)
-
 
 thread_local fmidi_error_info_t fmidi_last_error;
 
@@ -1262,62 +712,593 @@ bool fmidi_seq_next_event(fmidi_seq_t *seq, fmidi_seq_event_t *sqevt)
 }
 
 
-#include <memory>
-#include <stdio.h>
+#include "fmidi/fmidi.h"
+#include <vector>
 
-////////////////////////
-// FILE PATH ENCODING //
-////////////////////////
-
-FILE *fmidi_fopen(const char *path, const char *mode);
-
-///////////////
-// FILE RAII //
-///////////////
-
-struct FILE_deleter;
-typedef std::unique_ptr<FILE, FILE_deleter> unique_FILE;
-
-struct FILE_deleter {
-    void operator()(FILE *stream) const
-        { fclose(stream); }
+struct fmidi_raw_track {
+    std::unique_ptr<uint8_t[]> data;
+    uint32_t length;
 };
-#if defined(_WIN32)
-# include <windows.h>
-# include <memory>
-# include <errno.h>
-#endif
 
-FILE *fmidi_fopen(const char *path, const char *mode)
+struct fmidi_smf {
+    fmidi_smf_info_t info;
+    std::unique_ptr<fmidi_raw_track[]> track;
+};
+
+//------------------------------------------------------------------------------
+uintptr_t fmidi_event_pad(uintptr_t size);
+fmidi_event_t *fmidi_event_alloc(std::vector<uint8_t> &buf, uint32_t datalen);
+unsigned fmidi_message_sizeof(uint8_t id);
+
+//------------------------------------------------------------------------------
+inline uintptr_t fmidi_event_pad(uintptr_t size)
 {
-#if !defined(_WIN32)
-    return fopen(path, mode);
-#else
-    auto toWideString = [](const char *utf8) -> wchar_t * {
-        unsigned wsize = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
-        if (wsize == 0)
-            return nullptr;
-        wchar_t *wide = new wchar_t[wsize];
-        wsize = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, wsize);
-        if (wsize == 0) {
-            delete[] wide;
-            return nullptr;
-        }
-        return wide;
-    };
-    std::unique_ptr<wchar_t[]> wpath(toWideString(path));
-    if (!wpath) {
-        errno = EINVAL;
-        return nullptr;
-    }
-    std::unique_ptr<wchar_t[]> wmode(toWideString(mode));
-    if (!wmode) {
-        errno = EINVAL;
-        return nullptr;
-    }
-    return _wfopen(wpath.get(), wmode.get());
-#endif
+    uintptr_t nb = size % alignof(fmidi_event_t);
+    return nb ? (size + alignof(fmidi_event_t) - nb) : size;
 }
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <tuple>
+
+enum memstream_status {  // make it match fmidi status codes
+    ms_ok,
+    ms_err_format,
+    ms_err_eof,
+};
+
+class memstream {
+public:
+    memstream(const uint8_t *data, size_t length);
+
+    size_t endpos() const;
+    size_t getpos() const;
+    memstream_status setpos(size_t off);
+
+    memstream_status skip(size_t count);
+    memstream_status skipbyte(unsigned byte);
+
+    const uint8_t *peek(size_t length);
+    const uint8_t *read(size_t length);
+
+    memstream_status peekbyte(unsigned *retp);
+    memstream_status readbyte(unsigned *retp);
+
+    memstream_status readintLE(uint32_t *retp, unsigned length);
+    memstream_status readintBE(uint32_t *retp, unsigned length);
+    memstream_status readvlq(uint32_t *retp);
+    memstream_status peekvlq(uint32_t *retp);
+
+private:
+    const uint8_t *base_ = nullptr;
+    size_t length_ = 0;
+    size_t offset_ = 0;
+    typedef std::tuple<memstream_status, uint32_t, unsigned> vlq_result;
+    vlq_result doreadvlq();
+};
+
+//------------------------------------------------------------------------------
+inline memstream::memstream(const uint8_t *data, size_t length)
+    : base_(data), length_(length) {
+}
+
+inline size_t memstream::endpos() const {
+    return length_;
+}
+
+inline size_t memstream::getpos() const {
+    return offset_;
+}
+#include <string>
+
+double fmidi_smpte_time(const fmidi_smpte *smpte)
+{
+    const uint8_t *d = smpte->code;
+    static const double spftable[4] = { 1.0/24, 1.0/25, 1001.0/30000, 1.0/30 };
+    uint8_t hh = d[0];
+    double spf = spftable[(hh >> 5) & 0b11];
+    hh &= 0b11111;
+    uint8_t mm = d[1], ss = d[2], fr = d[3], ff = d[4];
+    return (fr + 0.01 * ff) * spf + ss + mm * 60 + hh * 3600;
+}
+
+double fmidi_delta_time(double delta, uint16_t unit, uint32_t tempo)
+{
+    if (unit & (1 << 15)) {
+        unsigned tpf = unit & 0xff;  // delta units per frame
+        unsigned fps = -(int8_t)(unit >> 8);  // frames per second
+        return delta / (tpf * fps);
+    }
+    else {
+        unsigned dpqn = unit;  // delta units per 1/4 note
+        double tpqn = 1e-6 * tempo;  // 1/4 note duration
+        return delta * tpqn / dpqn;
+    }
+}
+
+double fmidi_time_delta(double time, uint16_t unit, uint32_t tempo)
+{
+    if (unit & (1 << 15)) {
+        unsigned tpf = unit & 0xff;  // delta units per frame
+        unsigned fps = -(int8_t)(unit >> 8);  // frames per second
+        return time * (tpf * fps);
+    }
+    else {
+        unsigned dpqn = unit;  // delta units per 1/4 note
+        double tpqn = 1e-6 * tempo;  // 1/4 note duration
+        return time * dpqn / tpqn;
+    }
+}
+
+//------------------------------------------------------------------------------
+fmidi_event_t *fmidi_event_alloc(std::vector<uint8_t> &buf, uint32_t datalen)
+{
+    size_t pos = buf.size();
+    size_t evsize = fmidi_event_sizeof(datalen);
+    size_t padsize = fmidi_event_pad(evsize);
+    buf.resize(buf.size() + padsize);
+    fmidi_event_t *event = (fmidi_event_t *)&buf[pos];
+    return event;
+}
+
+unsigned fmidi_message_sizeof(uint8_t id)
+{
+    if ((id >> 7) == 0) {
+        return 0;
+    }
+    else if ((id >> 4) != 0b1111) {
+        static const uint8_t sizetable[8] = {
+            3, 3, 3, 3, 2, 2, 3 };
+        return sizetable[(id >> 4) & 0b111];
+    }
+    else {
+        static const uint8_t sizetable[16] = {
+            0, 2, 3, 2, 1, 1, 1, 0,
+            1, 1, 1, 1, 1, 1, 1, 1 };
+        return sizetable[id & 0b1111];
+    }
+}
+
+//------------------------------------------------------------------------------
+class fmidi_category_t : public std::error_category {
+public:
+    const char *name() const noexcept override
+        { return "fmidi"; }
+    std::string message(int condition) const override
+        { return fmidi_strerror((fmidi_status_t)condition); }
+};
+
+static fmidi_category_t the_category;
+
+const std::error_category &fmidi_category() {
+    return the_category;
+};
+
+//------------------------------------------------------------------------------
+#if !defined(FMIDI_DISABLE_DESCRIBE_API)
+template <class FmtOutputIterator>
+static bool fmidi_repr_meta(FmtOutputIterator &out, const uint8_t *data, uint32_t len)
+{
+    if (len <= 0)
+        return false;
+
+    unsigned tag = *data++;
+    --len;
+
+    printfmt_quoted qtext{(const char *)data, len};
+
+    switch (tag) {
+    default:
+        out = fmt::format_to(out, "(meta/unknown :tag #x{:02x})", tag);
+        return true;
+    case 0x00: {  // sequence number
+        if (len < 2) return false;
+        unsigned number = (data[0] << 8) | data[1];
+        out = fmt::format_to(out, "(meta/seq-number {})", number);
+        return true;
+    }
+    case 0x01:
+        out = fmt::format_to(out, "(meta/text {})", qtext);
+        return true;
+    case 0x02:
+        out = fmt::format_to(out, "(meta/copyright {})", qtext);
+        return true;
+    case 0x03:
+        out = fmt::format_to(out, "(meta/track {})", qtext);
+        return true;
+    case 0x04:
+        out = fmt::format_to(out, "(meta/instrument {})", qtext);
+        return true;
+    case 0x05:
+        out = fmt::format_to(out, "(meta/lyric {})", qtext);
+        return true;
+    case 0x06:
+        out = fmt::format_to(out, "(meta/marker {})", qtext);
+        return true;
+    case 0x07:
+        out = fmt::format_to(out, "(meta/cue-point {})", qtext);
+        return true;
+    case 0x09:
+        out = fmt::format_to(out, "(meta/device-name {})", qtext);
+        return true;
+    case 0x20:
+        if (len < 1) return false;
+        out = fmt::format_to(out, "(meta/channel-prefix {})", data[0]);
+        return true;
+    case 0x21:
+        if (len < 1) return false;
+        out = fmt::format_to(out, "(meta/port {})", data[0]);
+        return true;
+    case 0x2f:
+    case 0x3f:
+        out = fmt::format_to(out, "(meta/end)");
+        return true;
+    case 0x51: {
+        if (len < 3) return false;
+        unsigned t = (data[0] << 16) | (data[1] << 8) | data[2];
+        out = fmt::format_to(out, "(meta/tempo {} #|{} bpm|#)", t, 60. / (t * 1e-6));
+        return true;
+    }
+    case 0x54: {
+        if (len < 5) return false;
+        static const char *fpstable[] = {"24", "25", "30000/1001", "30"};
+        uint8_t hh = data[0];
+        const char *fps = fpstable[(hh >> 5) & 0b11];
+        out = fmt::format_to(
+            out, "(meta/offset {:02d} {:02d} {:02d} {:02d} {:02d}/100 :frames/second {})",
+            hh & 0b11111, data[1], data[2], data[3], data[4], fps);
+        return true;
+    }
+    case 0x58:
+        if (len < 4) return false;
+        out = fmt::format_to(out, "(meta/time-sig {} {} {} {})",
+                   data[0], data[1], data[2], data[3]);
+        return true;
+    case 0x59: {
+        if (len < 2) return false;
+        out = fmt::format_to(out, "(meta/key-sig {} :{})",
+                   (int8_t)data[0], data[1] ? "minor" : "major");
+        return true;
+    }
+    case 0x7f:
+        out = fmt::format_to(out, "(meta/sequencer-specific {})", printfmt_bytes{data, len});
+        return true;
+    }
+
+    return false;
+}
+
+template <class FmtOutputIterator>
+static bool fmidi_repr_midi(FmtOutputIterator &out, const uint8_t *data, uint32_t len)
+{
+    if (len <= 0)
+        return false;
+
+    unsigned status = *data++;
+    --len;
+
+    auto b7 = [data](unsigned i)
+        { return data[i] & 0x7f; };
+    auto b14 = [data](unsigned i)
+        { return (data[i] & 0x7f) | (data[i + 1] & 0x7f) << 7; };
+
+    if (status >> 4 == 0xf) {
+        unsigned op = status & 0xf;
+
+        switch (op) {
+        case 0b0000:
+            out = fmt::format_to(out, "(sysex #xf0 {})", printfmt_bytes{data, len});
+            return true;
+        case 0b0001: {
+            if (len < 1) return false;
+            unsigned tc = b7(0);
+            out = fmt::format_to(out, "(time-code {} {})", tc >> 4, tc & 0b1111);
+            return true;
+        }
+        case 0b0010:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(song-position {})", b14(0));
+            return true;
+        case 0b0011:
+            if (len < 1) return {};
+            out = fmt::format_to(out, "(song-select {})", b7(0));
+            return true;
+        case 0b0110:
+            out = fmt::format_to(out, "(tune-request)");
+            return true;
+        case 0b1000:
+            out = fmt::format_to(out, "(timing-clock)");
+            return true;
+        case 0b1010:
+            out = fmt::format_to(out, "(start)");
+            return true;
+        case 0b1011:
+            out = fmt::format_to(out, "(continue)");
+            return true;
+        case 0b1100:
+            out = fmt::format_to(out, "(stop)");
+            return true;
+        case 0b1110:
+            out = fmt::format_to(out, "(active-sensing)");
+            return true;
+        case 0b1111:
+            out = fmt::format_to(out, "(reset)");
+            return true;
+        }
+    }
+    else {
+        unsigned op = status >> 4;
+        unsigned ch = status & 0xf;
+
+        switch (op) {
+        case 0b1000:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(note-off {} :velocity {} :channel {})", b7(0), b7(1), ch);
+            return true;
+        case 0b1001:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(note-on {} :velocity {} :channel {})", b7(0), b7(1), ch);
+            return true;
+        case 0b1010:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(poly-aftertouch {} :pressure {} :channel {})", b7(0), b7(1), ch);
+            return true;
+        case 0b1011:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(control #x{:02x} {} :channel {})", b7(0), b7(1), ch);
+            return true;
+        case 0b1100:
+            if (len < 1) return false;
+            out = fmt::format_to(out, "(program {} :channel {})", b7(0), ch);
+            return true;
+        case 0b1101:
+            if (len < 1) return false;
+            out = fmt::format_to(out, "(aftertouch :pressure {} :channel {})", b7(0), ch);
+            return true;
+        case 0b1110:
+            if (len < 2) return false;
+            out = fmt::format_to(out, "(pitch-bend {} :channel {})", b14(0), ch);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool fmidi_identify_sysex(const uint8_t *msg, size_t len, std::string &text)
+{
+    if (len < 4 || msg[0] != 0xf0 || msg[len - 1] != 0xf7)
+        return false;
+
+    unsigned manufacturer = msg[1];
+    unsigned deviceid = msg[2];
+
+    switch (manufacturer) {
+        case 0x7e:  // universal non-realtime
+            if (len >= 6) {
+                switch ((msg[3] << 8) | msg[4]) {
+                case 0x0901: text = "GM system on"; return true;
+                case 0x0902: text = "GM system off"; return true;
+                }
+            }
+            break;
+        case 0x7f:  // universal realtime
+            if (len >= 6) {
+                switch ((msg[3] << 8) | msg[4]) {
+                case 0x0401: text = "GM master volume"; return true;
+                case 0x0402: text = "GM master balance"; return true;
+                }
+            }
+            break;
+        case 0x41:  // Roland
+            if (len >= 9) {
+                unsigned model = msg[3];
+                unsigned mode = msg[4];
+                unsigned address = (msg[5] << 16) | (msg[6] << 8) | msg[7];
+                if (mode == 0x12) {  // send
+                    switch ((model << 24) | address) {
+                    case (0x42u << 24) | 0x00007fu: text = "GS system mode set"; return true;
+                    case (0x42u << 24) | 0x40007fu: text = "GS mode set"; return true;
+                    default: text = fmt::format("GS parameter #x{:06x}", address); return true;
+                    }
+                }
+            }
+            break;
+        case 0x43:  // Yamaha
+            if (len >= 5) {
+                unsigned model = msg[3];
+                switch((model << 8) | (deviceid & 0xf0))
+                {
+                case (0x4c << 8) | 0x10:  // XG
+                    if (len >= 8) {
+                        unsigned address = (msg[4] << 16) | (msg[5] << 8) | msg[6];
+                        switch (address) {
+                        case 0x00007e: text = "XG system on"; return true;
+                        default: text = fmt::format("XG parameter #x{:06x}", address); return true;
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+    }
+
+    return false;
+}
+
+template <class FmtOutputIterator>
+static void fmidi_repr_smf(FmtOutputIterator &out, const fmidi_smf_t &smf)
+{
+    const fmidi_smf_info_t *info = fmidi_smf_get_info(&smf);
+    out = fmt::format_to(out, "(midi-file");
+    out = fmt::format_to(out, "\n  :format {}", info->format);
+
+    unsigned unit = info->delta_unit;
+    if (unit & (1 << 15))
+        out = fmt::format_to(out, "\n  :delta-unit (smpte-based :units/frame {} :frames/second {})",
+                             unit & 0xff, -(int8_t)(unit >> 8));
+    else
+        out = fmt::format_to(out, "\n  :delta-unit (tempo-based :units/beat {})", unit);
+
+    out = fmt::format_to(out, "\n  :tracks"
+                         "\n  (", unit);
+
+    struct RPN_Info {
+        unsigned lsb = 127, msb = 127;
+        bool nrpn = false;
+    };
+    RPN_Info channel_rpn[16];
+
+    std::string strbuf;
+    strbuf.reserve(256);
+
+    for (unsigned i = 0, n = info->track_count; i < n; ++i) {
+        fmidi_track_iter_t it;
+        fmidi_smf_track_begin(&it, i);
+        if (i > 0)
+            out = fmt::format_to(out, "\n   ");
+        out = fmt::format_to(out, "(;;--- track {} ---;;", i);
+        while (const fmidi_event_t *evt = fmidi_smf_track_next(&smf, &it)) {
+            RPN_Info *rpn = nullptr;
+
+            const uint8_t *data = evt->data;
+            uint32_t datalen = evt->datalen;
+
+            if (evt->type == fmidi_event_message) {
+                unsigned status = data[0];
+                unsigned channel = status & 0x0f;
+                // controllers
+                if (datalen == 3 && (status & 0xf0) == 0xb0) {
+                    unsigned ctl = data[1] & 0x7f;
+                    switch (ctl) {
+                    case 0x62: case 0x64:  // (N)RPN LSB
+                        rpn = &channel_rpn[channel];
+                        rpn->lsb = data[2] & 0x7f, rpn->nrpn = ctl == 0x62;
+                        break;
+                    case 0x63: case 0x65:  // (N)RPN MSB
+                        rpn = &channel_rpn[channel];
+                        rpn->msb = data[2] & 0x7f, rpn->nrpn = ctl == 0x63;
+                        break;
+                    case 0x06: case 0x26:  // Data Entry MSB, LSB
+                        rpn = &channel_rpn[channel];
+                        break;
+                    }
+                }
+            }
+
+            out = fmt::format_to(out, "\n    (:delta {:<5} {}", evt->delta, *evt);
+            if (rpn)
+                out = fmt::format_to(out, " #|{}RPN #x{:02x} #x{:02x}|#",
+                                     rpn->nrpn ? "N" : "", rpn->msb, rpn->lsb);
+            else if (fmidi_identify_sysex(data, datalen, strbuf))
+                out = fmt::format_to(out, " #|{}|#", strbuf);
+            out = fmt::format_to(out, ")");
+        }
+        out = fmt::format_to(out, ")");
+    }
+    out = fmt::format_to(out, "))\n");
+}
+
+std::ostream &operator<<(std::ostream &out, const fmidi_smf_t &smf)
+{
+    fmt::print(out, "{}", smf);
+    return out;
+}
+
+void fmidi_smf_describe(const fmidi_smf_t *smf, FILE *stream)
+{
+    fmt::print(stream, "{}", *smf);
+}
+
+template <class FmtOutputIterator>
+static void fmidi_repr_event(FmtOutputIterator &out, const fmidi_event_t &evt)
+{
+    const uint8_t *data = evt.data;
+    uint32_t len = evt.datalen;
+
+    switch (evt.type) {
+    case fmidi_event_meta: {
+        if (!fmidi_repr_meta<FmtOutputIterator>(out, data, len))
+            out = fmt::format_to(out, "(meta/unknown)");
+        break;
+    }
+    case fmidi_event_message: {
+        if (!fmidi_repr_midi<FmtOutputIterator>(out, data, len))
+            out = fmt::format_to(out, "(unknown)");
+        break;
+    }
+    case fmidi_event_escape: {
+        out = fmt::format_to(out, "(raw {})", printfmt_bytes{data, len});
+        break;
+    }
+    case fmidi_event_xmi_timbre: {
+        out = fmt::format_to(out, "(xmi/timbre :patch {} :bank {})", evt.data[0], evt.data[1]);
+        break;
+    }
+    case fmidi_event_xmi_branch_point: {
+        out = fmt::format_to(out, "(xmi/branch-point {})", evt.data[0]);
+        break;
+    }
+    }
+}
+
+std::ostream &operator<<(std::ostream &out, const fmidi_event_t &evt)
+{
+    fmt::print(out, "{}", evt);
+    return out;
+}
+
+void fmidi_event_describe(const fmidi_event_t *evt, FILE *stream)
+{
+    fmt::print(stream, "{}", *evt);
+}
+
+//------------------------------------------------------------------------------
+auto fmt::formatter<fmidi_smf_t>::format(const fmidi_smf_t &obj, fmt::format_context &ctx) -> fmt::format_context::iterator
+{
+    fmt::format_context::iterator out = ctx.out();
+    fmidi_repr_smf(out, obj);
+    return out;
+}
+
+//------------------------------------------------------------------------------
+auto fmt::formatter<fmidi_event_t>::format(const fmidi_event_t &obj, fmt::format_context &ctx) -> fmt::format_context::iterator
+{
+    fmt::format_context::iterator out = ctx.out();
+    fmidi_repr_event(out, obj);
+    return out;
+}
+
+//------------------------------------------------------------------------------
+auto fmt::formatter<printfmt_quoted>::format(const printfmt_quoted &obj, fmt::format_context &ctx) -> fmt::format_context::iterator
+{
+    fmt::format_context::iterator out = ctx.out();
+    const char *text = obj.text;
+    size_t length = obj.length;
+    *out++ = '"';
+    for (size_t i = 0; i < length; ++i) {
+        char c = text[i];
+        if (c == '\\' || c == '"') *out++ = '\\';
+        *out++ = c;
+    }
+    *out++ = '"';
+    return out;
+}
+
+//------------------------------------------------------------------------------
+auto fmt::formatter<printfmt_bytes>::format(const printfmt_bytes &obj, fmt::format_context &ctx) -> fmt::format_context::iterator
+{
+    fmt::format_context::iterator out = ctx.out();
+    const uint8_t *data = obj.data;
+    for (size_t i = 0, n = obj.size; i < n; ++i) {
+        if (i > 0) *out++ = ' ';
+        out = fmt::format_to(out, FMT_STRING("#x{:02x}"), data[i]);
+    }
+    return out;
+}
+
+#endif // !defined(FMIDI_DISABLE_DESCRIBE_API)
 
 
 memstream_status memstream::setpos(size_t off)
@@ -1445,6 +1426,832 @@ memstream::vlq_result memstream::doreadvlq()
     if (cont)
         return vlq_result{ms_err_format, 0, 0};
     return vlq_result{ms_ok, ret, length};
+}
+
+
+#include <memory>
+#include <stdio.h>
+
+////////////////////////
+// FILE PATH ENCODING //
+////////////////////////
+
+FILE *fmidi_fopen(const char *path, const char *mode);
+
+///////////////
+// FILE RAII //
+///////////////
+
+struct FILE_deleter;
+typedef std::unique_ptr<FILE, FILE_deleter> unique_FILE;
+
+struct FILE_deleter {
+    void operator()(FILE *stream) const
+        { fclose(stream); }
+};
+#if defined(_WIN32)
+# include <windows.h>
+# include <memory>
+# include <errno.h>
+#endif
+
+FILE *fmidi_fopen(const char *path, const char *mode)
+{
+#if !defined(_WIN32)
+    return fopen(path, mode);
+#else
+    auto toWideString = [](const char *utf8) -> wchar_t * {
+        unsigned wsize = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
+        if (wsize == 0)
+            return nullptr;
+        wchar_t *wide = new wchar_t[wsize];
+        wsize = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, wsize);
+        if (wsize == 0) {
+            delete[] wide;
+            return nullptr;
+        }
+        return wide;
+    };
+    std::unique_ptr<wchar_t[]> wpath(toWideString(path));
+    if (!wpath) {
+        errno = EINVAL;
+        return nullptr;
+    }
+    std::unique_ptr<wchar_t[]> wmode(toWideString(mode));
+    if (!wmode) {
+        errno = EINVAL;
+        return nullptr;
+    }
+    return _wfopen(wpath.get(), wmode.get());
+#endif
+}
+
+#include "fmidi/fmidi.h"
+#include <string.h>
+
+fmidi_fileformat_t fmidi_mem_identify(const uint8_t *data, size_t length)
+{
+    const uint8_t smf_magic[4] = {'M', 'T', 'h', 'd'};
+
+    for (size_t offset : {0x00, 0x80}) {
+        // a few unidentified files start at 0x80 (Sound Canvas MIDI collection)
+        if (length + offset >= 4 && memcmp(data + offset, smf_magic, 4) == 0)
+            return fmidi_fileformat_smf;
+    }
+
+    const uint8_t rmi_magic1[4] = {'R', 'I', 'F', 'F'};
+    const uint8_t rmi_magic2[8] = {'R', 'M', 'I', 'D', 'd', 'a', 't', 'a'};
+    if (length >= 16 && memcmp(data, rmi_magic1, 4) == 0 && memcmp(data + 8, rmi_magic2, 8) == 0)
+        return fmidi_fileformat_smf;
+
+    const uint8_t xmi_magic[20] = {
+        'F', 'O', 'R', 'M', 0, 0, 0, 14,
+        'X', 'D', 'I', 'R', 'I', 'N', 'F', 'O', 0, 0, 0, 2
+    };
+    if (length >= 20 && memcmp(data, xmi_magic, 20) == 0)
+        return fmidi_fileformat_xmi;
+
+    const uint8_t mus_magic[4] = {'M', 'U', 'S', 0x1a};
+    if (length >= 4 && memcmp(data, mus_magic, 4) == 0)
+        return fmidi_fileformat_mus;
+
+    RET_FAIL((fmidi_fileformat_t)-1, fmidi_err_format);
+}
+
+fmidi_fileformat_t fmidi_stream_identify(FILE *stream)
+{
+    rewind(stream);
+
+    uint8_t magic[0x100];
+    size_t size = fread(magic, 1, sizeof(magic), stream);
+    if (ferror(stream))
+        RET_FAIL((fmidi_fileformat_t)-1, fmidi_err_input);
+
+    return fmidi_mem_identify(magic, size);
+}
+
+fmidi_smf_t *fmidi_auto_mem_read(const uint8_t *data, size_t length)
+{
+    switch (fmidi_mem_identify(data, length)) {
+    case fmidi_fileformat_smf:
+        return fmidi_smf_mem_read(data, length);
+    case fmidi_fileformat_xmi:
+        return fmidi_xmi_mem_read(data, length);
+    case fmidi_fileformat_mus:
+        return fmidi_mus_mem_read(data, length);
+    default:
+        return nullptr;
+    }
+}
+
+fmidi_smf_t *fmidi_auto_file_read(const char *filename)
+{
+    unique_FILE fh(fmidi_fopen(filename, "rb"));
+    if (!fh)
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    fmidi_smf_t *smf = fmidi_auto_stream_read(fh.get());
+    return smf;
+}
+
+fmidi_smf_t *fmidi_auto_stream_read(FILE *stream)
+{
+    switch (fmidi_stream_identify(stream)) {
+    case fmidi_fileformat_smf:
+        return fmidi_smf_stream_read(stream);
+    case fmidi_fileformat_xmi:
+        return fmidi_xmi_stream_read(stream);
+    case fmidi_fileformat_mus:
+        return fmidi_mus_stream_read(stream);
+    default:
+        return nullptr;
+    }
+}
+
+#include "fmidi/fmidi.h"
+#include <string.h>
+
+fmidi_smf_t *fmidi_mus_mem_read(const uint8_t *data, size_t length)
+{
+    const uint8_t magic[] = {'M', 'U', 'S', 0x1a};
+
+    if (length < sizeof(magic) || memcmp(data, magic, 4))
+        RET_FAIL(nullptr, fmidi_err_format);
+
+    memstream mb(data + sizeof(magic), length - sizeof(magic));
+    memstream_status ms;
+
+    uint32_t score_len;
+    uint32_t score_start;
+    uint32_t channels;
+    uint32_t sec_channels;
+    uint32_t instr_cnt;
+
+    if ((ms = mb.readintLE(&score_len, 2)) ||
+        (ms = mb.readintLE(&score_start, 2)) ||
+        (ms = mb.readintLE(&channels, 2)) ||
+        (ms = mb.readintLE(&sec_channels, 2)) ||
+        (ms = mb.readintLE(&instr_cnt, 2)) ||
+        (ms = mb.skip(2)))
+        RET_FAIL(nullptr, fmidi_err_format);
+
+    std::unique_ptr<uint32_t[]> instrs{new uint32_t[instr_cnt]};
+    for (uint32_t i = 0; i < instr_cnt; ++i) {
+        if ((ms = mb.readintLE(&instrs[i], 2)))
+            RET_FAIL(nullptr, fmidi_err_format);
+    }
+
+    fmidi_smf_u smf(new fmidi_smf);
+    smf->info.format = 0;
+    smf->info.track_count = 1;
+    smf->info.delta_unit = 70; // DMX 140 Hz -> PPQN at 120 BPM
+    smf->track.reset(new fmidi_raw_track[1]);
+
+    fmidi_raw_track &track = smf->track[0];
+    std::vector<uint8_t> evbuf;
+    evbuf.reserve(8192);
+
+    uint32_t ev_delta = 0;
+    uint32_t note_velocity[16] = {};
+
+    for (unsigned channel = 0; channel < 16; ++channel) {
+        // initial velocity
+        note_velocity[channel] = 64;
+        // channel volume
+        fmidi_event_t *event = fmidi_event_alloc(evbuf, 3);
+        event->type = fmidi_event_message;
+        event->delta = ev_delta;
+        event->datalen = 3;
+        uint8_t *data = event->data;
+        data[0] = 0xb0 | channel;
+        data[1] = 7;
+        data[2] = 127;
+    }
+
+    for (bool score_end = false; !score_end;) {
+        uint32_t ev_desc;
+        if ((ms = mb.readintLE(&ev_desc, 1)))
+            RET_FAIL(nullptr, fmidi_err_format);
+
+        const uint8_t mus_channel_to_midi_channel[16] = {
+            0,  1,  2,  3,  4,  5,  6,  7,
+            8,  10, 11, 12, 13, 14, 15, 9
+        };
+
+        bool ev_last = (ev_desc & 128) != 0;
+        uint32_t ev_type = (ev_desc >> 4) & 7;
+        uint32_t ev_channel = mus_channel_to_midi_channel[ev_desc & 15];
+
+        uint8_t midi[3] {};
+        uint8_t midi_size = 0;
+
+        switch (ev_type) {
+            // release note
+        case 0: {
+            uint32_t data1;
+            if ((ms = mb.readintLE(&data1, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            midi[0] = 0x80 | ev_channel;
+            midi[1] = data1 & 127;
+            midi[2] = 64;
+            midi_size = 3;
+            break;
+        }
+            // play note
+        case 1: {
+            uint32_t data1;
+            if ((ms = mb.readintLE(&data1, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            if (data1 & 128) {
+                uint32_t data2;
+                if ((ms = mb.readintLE(&data2, 1)))
+                    RET_FAIL(nullptr, fmidi_err_format);
+                note_velocity[ev_channel] = data2 & 127;
+            }
+            midi[0] = 0x90 | ev_channel;
+            midi[1] = data1 & 127;
+            midi[2] = note_velocity[ev_channel];
+            midi_size = 3;
+            break;
+        }
+            // pitch wheel
+        case 2: {
+            uint32_t data1;
+            if ((ms = mb.readintLE(&data1, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            uint32_t bend = (data1 < 128) ? (data1 << 6) :
+                (8192 + (data1 - 128) * 8191 / 127);
+            midi[0] = 0xe0 | ev_channel;
+            midi[1] = bend & 127;
+            midi[2] = bend >> 7;
+            midi_size = 3;
+            break;
+        }
+            // system event
+        case 3: {
+            uint32_t data1;
+            if ((ms = mb.readintLE(&data1, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            midi[0] = 0xb0 | ev_channel;
+            midi[2] = 0;
+            midi_size = 3;
+            switch (data1 & 127) {
+            case 10: midi[1] = 120; break;
+            case 11: midi[1] = 123; break;
+            case 12: midi[1] = 126; break;
+            case 13: midi[1] = 127; break;
+            case 14: midi[1] = 121; break;
+            default: midi_size = 0; break;
+            }
+            break;
+        }
+            // change controller
+        case 4: {
+            uint32_t data1;
+            if ((ms = mb.readintLE(&data1, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            uint32_t data2;
+            if ((ms = mb.readintLE(&data2, 1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            midi[0] = 0xb0 | ev_channel;
+            midi[2] = data2 & 127;
+            midi_size = 3;
+            switch (data1 & 127) {
+            case 0:
+                // program change
+                midi[0] = 0xc0 | ev_channel;
+                midi[1] = data2 & 127;
+                midi_size = 2;
+                break;
+            case 1: midi[1] = 0; break;
+            case 2: midi[1] = 1; break;
+            case 3: midi[1] = 7; break;
+            case 4: midi[1] = 10; break;
+            case 5: midi[1] = 11; break;
+            case 6: midi[1] = 91; break;
+            case 7: midi[1] = 93; break;
+            case 8: midi[1] = 64; break;
+            case 9: midi[1] = 67; break;
+            default: midi_size = 0; break;
+            }
+            break;
+        }
+            // end of measure
+        case 5: {
+            break;
+        }
+            // score end
+        case 6: {
+            score_end = true;
+            break;
+        }
+            // unknown purpose
+        case 7: {
+            if ((ms = mb.skip(1)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            break;
+        }
+        }
+
+        uint32_t delta_inc = 0;
+        if (ev_last) {
+            if ((ms = mb.readvlq(&delta_inc)))
+                RET_FAIL(nullptr, fmidi_err_format);
+            ev_desc += delta_inc;
+        }
+
+        if (midi_size > 0) {
+            fmidi_event_t *event = fmidi_event_alloc(evbuf, midi_size);
+            event->type = fmidi_event_message;
+            event->delta = ev_delta;
+            event->datalen = midi_size;
+            memcpy(event->data, midi, midi_size);
+            ev_delta = 0;
+        }
+
+        ev_delta += delta_inc;
+    }
+
+    fmidi_event_t *event = fmidi_event_alloc(evbuf, 1);
+    event->type = fmidi_event_meta;
+    event->delta = ev_delta;
+    event->datalen = 1;
+    event->data[0] = 0x2f;
+
+    uint32_t evdatalen = track.length = evbuf.size();
+    uint8_t *evdata = new uint8_t[evdatalen];
+    track.data.reset(evdata);
+    memcpy(evdata, evbuf.data(), evdatalen);
+
+    return smf.release();
+}
+
+fmidi_smf_t *fmidi_mus_file_read(const char *filename)
+{
+    unique_FILE fh(fmidi_fopen(filename, "rb"));
+    if (!fh)
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    fmidi_smf_t *smf = fmidi_mus_stream_read(fh.get());
+    return smf;
+}
+
+fmidi_smf_t *fmidi_mus_stream_read(FILE *stream)
+{
+    rewind(stream);
+
+    constexpr size_t mus_file_size_limit = 65536;
+    uint8_t buf[mus_file_size_limit];
+
+    size_t length = fread(buf, 1, mus_file_size_limit, stream);
+    if (ferror(stream))
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    fmidi_smf_t *smf = fmidi_mus_mem_read(buf, length);
+    return smf;
+}
+
+#include "fmidi/fmidi.h"
+#include <vector>
+#include <memory>
+#include <algorithm>
+#include <string.h>
+#include <sys/stat.h>
+#if defined(_WIN32)
+# define fileno _fileno
+#endif
+
+const fmidi_smf_info_t *fmidi_smf_get_info(const fmidi_smf_t *smf)
+{
+    return &smf->info;
+}
+
+double fmidi_smf_compute_duration(const fmidi_smf_t *smf)
+{
+    double duration = 0;
+    fmidi_seq_u seq(fmidi_seq_new(smf));
+    fmidi_seq_event_t sqevt;
+    while (fmidi_seq_next_event(seq.get(), &sqevt))
+        duration = sqevt.time;
+    return duration;
+}
+
+static fmidi_event_t *fmidi_read_meta_event(
+    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
+{
+    memstream_status ms;
+    unsigned id;
+    if ((ms = mb.readbyte(&id)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+
+    uint32_t datalen;
+    const uint8_t *data;
+    if (id == 0x2f || id == 0x3f) {  // end of track
+        if (mb.skipbyte(0)) {
+            // omitted final null byte in some broken files
+        }
+        else {
+            // repeated end of track events
+            for (bool again = true; again;) {
+                size_t offset = mb.getpos();
+                again = !mb.readvlq(nullptr) && !mb.skipbyte(0xff) &&
+                    (!mb.skipbyte(0x2f) || !mb.skipbyte(0x3f));
+                if (!again)
+                    mb.setpos(offset);
+                else
+                    again = !mb.skipbyte(0);
+            }
+        }
+        datalen = 0;
+        data = nullptr;
+    }
+    else {
+        if ((ms = mb.readvlq(&datalen)))
+            RET_FAIL(nullptr, (fmidi_status)ms);
+        if (!(data = mb.read(datalen)))
+            RET_FAIL(nullptr, fmidi_err_eof);
+    }
+    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen + 1);
+    evt->type = fmidi_event_meta;
+    evt->delta = delta;
+    evt->datalen = datalen + 1;
+    evt->data[0] = id;
+    memcpy(&evt->data[1], data, datalen);
+    return evt;
+}
+
+static fmidi_event_t *fmidi_read_escape_event(
+    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
+{
+    memstream_status ms;
+    uint32_t datalen;
+    const uint8_t *data;
+    if ((ms = mb.readvlq(&datalen)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+    if (!(data = mb.read(datalen)))
+        RET_FAIL(nullptr, fmidi_err_eof);
+
+    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen);
+    evt->type = fmidi_event_escape;
+    evt->delta = delta;
+    evt->datalen = datalen;
+    memcpy(&evt->data[0], data, datalen);
+    return evt;
+}
+
+static fmidi_event_t *fmidi_read_sysex_event(
+    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
+{
+    memstream_status ms;
+    fmidi_event_t *evt;
+
+    std::vector<uint8_t> syxbuf;
+    syxbuf.reserve(256);
+    syxbuf.push_back(0xf0);
+
+    uint32_t partlen;
+    const uint8_t *part;
+    if ((ms = mb.readvlq(&partlen)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+    if (!(part = mb.read(partlen)))
+        RET_FAIL(nullptr, fmidi_err_eof);
+
+    bool term = false;
+    const uint8_t *endp;
+
+    // handle files having multiple concatenated sysex events in one
+    while ((endp = (const uint8_t *)memchr(part, 0xf7, partlen))) {
+        syxbuf.insert(syxbuf.end(), part, endp + 1);
+
+        evt = fmidi_event_alloc(evbuf, syxbuf.size());
+        evt->type = fmidi_event_message;
+        evt->delta = delta;
+        evt->datalen = syxbuf.size();
+        memcpy(&evt->data[0], &syxbuf[0], syxbuf.size());
+
+        uint32_t reallen = endp + 1 - part;
+        partlen -= reallen;
+        part += reallen;
+
+        if (partlen == 0)
+            return evt;
+
+        if (part[0] != 0xf0) {
+#if 1
+            // trailing garbage, ignore
+#else
+            // sierra: incorrect length covering part of the next event. repair
+            mb.setpos(mb.getpos() - partlen);
+#endif
+            return evt;
+        }
+        ++part;
+        --partlen;
+
+        syxbuf.clear();
+        syxbuf.push_back(0xf0);
+    }
+
+    // handle the rest in multiple parts (Casio MIDI)
+    while (!term) {
+        term = endp;
+        if (term && endp + 1 != part + partlen) {
+            // ensure no excess bytes
+            RET_FAIL(nullptr, fmidi_err_format);
+        }
+        syxbuf.insert(syxbuf.end(), part, part + partlen);
+
+        if (!term) {
+            size_t offset = mb.getpos();
+            bool havecont = false;
+
+            uint32_t contdelta;
+            unsigned id;
+            if (!mb.readvlq(&contdelta) && !mb.readbyte(&id)) {
+                // raw sequence incoming? use it as next sysex part
+                havecont = id == 0xf7;
+            }
+            if (havecont) {
+                if ((ms = mb.readvlq(&partlen)))
+                    RET_FAIL(nullptr, (fmidi_status)ms);
+                if (!(part = mb.read(partlen)))
+                    RET_FAIL(nullptr, fmidi_err_eof);
+                endp = (const uint8_t *)memchr(part, 0xf7, partlen);
+            }
+            else {
+                // no next part? assume unfinished message and repair
+                mb.setpos(offset);
+                syxbuf.push_back(0xf7);
+                term = true;
+            }
+        }
+    }
+
+    evt = fmidi_event_alloc(evbuf, syxbuf.size());
+    evt->type = fmidi_event_message;
+    evt->delta = delta;
+    evt->datalen = syxbuf.size();
+    memcpy(&evt->data[0], &syxbuf[0], syxbuf.size());
+    return evt;
+}
+
+static fmidi_event_t *fmidi_read_message_event(
+    memstream &mb, std::vector<uint8_t> &evbuf, unsigned id, uint32_t delta)
+{
+    uint32_t datalen = fmidi_message_sizeof(id);
+    const uint8_t *data;
+    if (datalen <= 0)
+        RET_FAIL(nullptr, fmidi_err_format);
+    if (!(data = mb.read(datalen - 1)))
+        RET_FAIL(nullptr, fmidi_err_eof);
+
+    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen);
+    evt->type = fmidi_event_message;
+    evt->delta = delta;
+    evt->datalen = datalen;
+    evt->data[0] = id;
+    memcpy(&evt->data[1], data, datalen - 1);
+    return evt;
+}
+
+static fmidi_event_t *fmidi_read_event(
+    memstream &mb, std::vector<uint8_t> &evbuf, uint8_t *runstatus)
+{
+    memstream_status ms;
+    uint32_t delta;
+    unsigned id;
+    if ((ms = mb.readvlq(&delta)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+    if ((ms = mb.readbyte(&id)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+
+    fmidi_event_t *evt;
+    if (id == 0xff) {
+        evt = fmidi_read_meta_event(mb, evbuf, delta);
+    }
+    else if (id == 0xf7) {
+        evt = fmidi_read_escape_event(mb, evbuf, delta);
+    }
+    else if (id == 0xf0) {
+        evt = fmidi_read_sysex_event(mb, evbuf, delta);
+    }
+    else {
+        if (id & 128) {
+            *runstatus = id;
+        }
+        else {
+            id = *runstatus;
+            mb.setpos(mb.getpos() - 1);
+        }
+        evt = fmidi_read_message_event(mb, evbuf, id, delta);
+    }
+
+    return evt;
+}
+
+void fmidi_smf_track_begin(fmidi_track_iter_t *it, uint16_t track)
+{
+    it->track = track;
+    it->index = 0;
+}
+
+const fmidi_event_t *fmidi_smf_track_next(
+    const fmidi_smf_t *smf, fmidi_track_iter_t *it)
+{
+    if (it->track >= smf->info.track_count)
+        return nullptr;
+
+    const fmidi_raw_track &trk = smf->track[it->track];
+    const uint8_t *trkdata = trk.data.get();
+
+    const fmidi_event_t *evt = (const fmidi_event_t *)&trkdata[it->index];
+    if ((const uint8_t *)evt == trkdata + trk.length)
+        return nullptr;
+
+    it->index += fmidi_event_pad(fmidi_event_sizeof(evt->datalen));
+    return evt;
+}
+
+static bool fmidi_smf_read_contents(fmidi_smf_t *smf, memstream &mb)
+{
+    uint16_t ntracks = smf->info.track_count;
+    smf->track.reset(new fmidi_raw_track[ntracks]);
+
+    std::vector<uint8_t> evbuf;
+    evbuf.reserve(8192);
+
+    uint8_t runstatus = 0;  // status runs from track to track
+
+    for (unsigned itrack = 0; itrack < ntracks; ++itrack) {
+        fmidi_raw_track &trk = smf->track[itrack];
+        size_t trkoffset = mb.getpos();
+
+        memstream_status ms;
+        const uint8_t *trackmagic;
+        uint32_t tracklen;
+
+        if (!(trackmagic = mb.read(4))) {
+            // file has less tracks than promised, repair
+            smf->info.track_count = ntracks = itrack;
+            break;
+        }
+
+        if (memcmp(trackmagic, "MTrk", 4)) {
+            if (mb.getpos() == mb.endpos()) {
+                // some kind of final junk header, ignore
+                smf->info.track_count = ntracks = itrack;
+                break;
+            }
+            RET_FAIL(false, fmidi_err_format);
+        }
+        if ((ms = mb.readintBE(&tracklen, 4)))
+            RET_FAIL(false, (fmidi_status)ms);
+
+        // check track length, broken in many files. disregard if invalid
+        bool tracklengood = !mb.skip(tracklen) &&
+            (mb.getpos() == mb.endpos() ||
+             ((trackmagic = mb.peek(4)) && !memcmp(trackmagic, "MTrk", 4)));
+        mb.setpos(trkoffset + 8);
+
+        fmidi_event_t *evt;
+        size_t evoffset = mb.getpos();
+        bool endoftrack = false;
+        evbuf.clear();
+        while (!endoftrack && (evt = fmidi_read_event(mb, evbuf, &runstatus))) {
+            // some files use 3F instead or 2F for end of track
+            endoftrack = evt->type == fmidi_event_meta &&
+                (evt->data[0] == 0x2f || evt->data[0] == 0x3f);
+            // fmt::print(stderr, "T{} @{:#x} {}\n", itrack, evoffset, *evt);
+            evoffset = mb.getpos();
+            if (tracklengood && evoffset > trkoffset + 8 + tracklen)
+                // next track overlap
+                RET_FAIL(false, fmidi_err_format);
+        }
+
+        if (!endoftrack) {
+            switch (fmidi_last_error.code) {
+            case fmidi_err_eof:
+                // truncated track? stop reading
+                smf->info.track_count = ntracks = itrack + 1;
+                break;
+            case fmidi_err_format:
+                // event with absurdly high delta time? ignore the rest of
+                // the track and if possible proceed to the next
+                mb.setpos(evoffset);
+                if (mb.peekvlq(nullptr) == ms_err_format) {
+                    if (!tracklengood)
+                        smf->info.track_count = ntracks = itrack + 1;
+                    break;
+                }
+                return false;
+            default:
+                return false;
+            }
+        }
+
+        if (endoftrack) {
+            // permit meta events coming after end of track
+            const uint8_t *head;
+            while ((head = mb.peek(2)) && head[0] == 0x00 && head[1] == 0xff) {
+                if (!(evt = fmidi_read_event(mb, evbuf, &runstatus))) {
+                    if (fmidi_last_error.code == fmidi_err_eof)
+                        smf->info.track_count = ntracks = itrack + 1;
+                    else
+                        return false;
+                }
+                else if (tracklengood && mb.getpos() > trkoffset + 8 + tracklen)
+                    // next track overlap
+                    RET_FAIL(false, fmidi_err_format);
+            }
+        }
+
+        uint32_t evdatalen = trk.length = evbuf.size();
+        uint8_t *evdata = new uint8_t[evdatalen];
+        trk.data.reset(evdata);
+        memcpy(evdata, evbuf.data(), evdatalen);
+
+        if (tracklengood)
+            mb.setpos(trkoffset + 8 + tracklen);
+    }
+
+    return true;
+}
+
+fmidi_smf_t *fmidi_smf_mem_read(const uint8_t *data, size_t length)
+{
+    memstream mb(data, length);
+    memstream_status ms;
+    const uint8_t *filemagic;
+    uint32_t headerlen;
+    uint32_t format;
+    uint32_t ntracks;
+    uint32_t deltaunit;
+
+    while ((filemagic = mb.peek(4)) && memcmp(filemagic, "MThd", 4))
+        mb.skip(1);
+    mb.skip(4);
+
+    if (!filemagic)
+        RET_FAIL(nullptr, fmidi_err_format);
+
+    if ((ms = mb.readintBE(&headerlen, 4)) ||
+        (ms = mb.readintBE(&format, 2)) ||
+        (ms = mb.readintBE(&ntracks, 2)) ||
+        (ms = mb.readintBE(&deltaunit, 2)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+
+    if (ntracks < 1 || headerlen < 6)
+        RET_FAIL(nullptr, fmidi_err_format);
+
+    if ((ms = mb.skip(headerlen - 6)))
+        RET_FAIL(nullptr, (fmidi_status)ms);
+
+    std::unique_ptr<fmidi_smf_t> smf(new fmidi_smf_t);
+    smf->info.format = format;
+    smf->info.track_count = ntracks;
+    smf->info.delta_unit = deltaunit;
+
+    if (!fmidi_smf_read_contents(smf.get(), mb))
+        return nullptr;
+
+    return smf.release();
+}
+
+void fmidi_smf_free(fmidi_smf_t *smf)
+{
+    delete smf;
+}
+
+fmidi_smf_t *fmidi_smf_file_read(const char *filename)
+{
+    unique_FILE fh(fmidi_fopen(filename, "rb"));
+    if (!fh)
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    fmidi_smf_t *smf = fmidi_smf_stream_read(fh.get());
+    return smf;
+}
+
+fmidi_smf_t *fmidi_smf_stream_read(FILE *stream)
+{
+    struct stat st;
+    size_t length;
+
+    rewind(stream);
+
+    if (fstat(fileno(stream), &st) != 0)
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    length = st.st_size;
+    if (length > fmidi_file_size_limit)
+        RET_FAIL(nullptr, fmidi_err_largefile);
+
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[length]);
+    if (!fread(buf.get(), length, 1, stream))
+        RET_FAIL(nullptr, fmidi_err_input);
+
+    fmidi_smf_t *smf = fmidi_smf_mem_read(buf.get(), length);
+    return smf;
 }
 
 #include "fmidi/fmidi.h"
@@ -1906,774 +2713,6 @@ fmidi_smf_t *fmidi_xmi_stream_read(FILE *stream)
         buf[length] = 0;
 
     fmidi_smf_t *smf = fmidi_xmi_mem_read(buf.get(), length + pad);
-    return smf;
-}
-
-#include "fmidi/fmidi.h"
-#include <vector>
-#include <memory>
-#include <algorithm>
-#include <string.h>
-#include <sys/stat.h>
-#if defined(_WIN32)
-# define fileno _fileno
-#endif
-
-const fmidi_smf_info_t *fmidi_smf_get_info(const fmidi_smf_t *smf)
-{
-    return &smf->info;
-}
-
-double fmidi_smf_compute_duration(const fmidi_smf_t *smf)
-{
-    double duration = 0;
-    fmidi_seq_u seq(fmidi_seq_new(smf));
-    fmidi_seq_event_t sqevt;
-    while (fmidi_seq_next_event(seq.get(), &sqevt))
-        duration = sqevt.time;
-    return duration;
-}
-
-static fmidi_event_t *fmidi_read_meta_event(
-    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
-{
-    memstream_status ms;
-    unsigned id;
-    if ((ms = mb.readbyte(&id)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-
-    uint32_t datalen;
-    const uint8_t *data;
-    if (id == 0x2f || id == 0x3f) {  // end of track
-        if (mb.skipbyte(0)) {
-            // omitted final null byte in some broken files
-        }
-        else {
-            // repeated end of track events
-            for (bool again = true; again;) {
-                size_t offset = mb.getpos();
-                again = !mb.readvlq(nullptr) && !mb.skipbyte(0xff) &&
-                    (!mb.skipbyte(0x2f) || !mb.skipbyte(0x3f));
-                if (!again)
-                    mb.setpos(offset);
-                else
-                    again = !mb.skipbyte(0);
-            }
-        }
-        datalen = 0;
-        data = nullptr;
-    }
-    else {
-        if ((ms = mb.readvlq(&datalen)))
-            RET_FAIL(nullptr, (fmidi_status)ms);
-        if (!(data = mb.read(datalen)))
-            RET_FAIL(nullptr, fmidi_err_eof);
-    }
-    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen + 1);
-    evt->type = fmidi_event_meta;
-    evt->delta = delta;
-    evt->datalen = datalen + 1;
-    evt->data[0] = id;
-    memcpy(&evt->data[1], data, datalen);
-    return evt;
-}
-
-static fmidi_event_t *fmidi_read_escape_event(
-    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
-{
-    memstream_status ms;
-    uint32_t datalen;
-    const uint8_t *data;
-    if ((ms = mb.readvlq(&datalen)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-    if (!(data = mb.read(datalen)))
-        RET_FAIL(nullptr, fmidi_err_eof);
-
-    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen);
-    evt->type = fmidi_event_escape;
-    evt->delta = delta;
-    evt->datalen = datalen;
-    memcpy(&evt->data[0], data, datalen);
-    return evt;
-}
-
-static fmidi_event_t *fmidi_read_sysex_event(
-    memstream &mb, std::vector<uint8_t> &evbuf, uint32_t delta)
-{
-    memstream_status ms;
-    fmidi_event_t *evt;
-
-    std::vector<uint8_t> syxbuf;
-    syxbuf.reserve(256);
-    syxbuf.push_back(0xf0);
-
-    uint32_t partlen;
-    const uint8_t *part;
-    if ((ms = mb.readvlq(&partlen)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-    if (!(part = mb.read(partlen)))
-        RET_FAIL(nullptr, fmidi_err_eof);
-
-    bool term = false;
-    const uint8_t *endp;
-
-    // handle files having multiple concatenated sysex events in one
-    while ((endp = (const uint8_t *)memchr(part, 0xf7, partlen))) {
-        syxbuf.insert(syxbuf.end(), part, endp + 1);
-
-        evt = fmidi_event_alloc(evbuf, syxbuf.size());
-        evt->type = fmidi_event_message;
-        evt->delta = delta;
-        evt->datalen = syxbuf.size();
-        memcpy(&evt->data[0], &syxbuf[0], syxbuf.size());
-
-        uint32_t reallen = endp + 1 - part;
-        partlen -= reallen;
-        part += reallen;
-
-        if (partlen == 0)
-            return evt;
-
-        if (part[0] != 0xf0) {
-#if 1
-            // trailing garbage, ignore
-#else
-            // sierra: incorrect length covering part of the next event. repair
-            mb.setpos(mb.getpos() - partlen);
-#endif
-            return evt;
-        }
-        ++part;
-        --partlen;
-
-        syxbuf.clear();
-        syxbuf.push_back(0xf0);
-    }
-
-    // handle the rest in multiple parts (Casio MIDI)
-    while (!term) {
-        term = endp;
-        if (term && endp + 1 != part + partlen) {
-            // ensure no excess bytes
-            RET_FAIL(nullptr, fmidi_err_format);
-        }
-        syxbuf.insert(syxbuf.end(), part, part + partlen);
-
-        if (!term) {
-            size_t offset = mb.getpos();
-            bool havecont = false;
-
-            uint32_t contdelta;
-            unsigned id;
-            if (!mb.readvlq(&contdelta) && !mb.readbyte(&id)) {
-                // raw sequence incoming? use it as next sysex part
-                havecont = id == 0xf7;
-            }
-            if (havecont) {
-                if ((ms = mb.readvlq(&partlen)))
-                    RET_FAIL(nullptr, (fmidi_status)ms);
-                if (!(part = mb.read(partlen)))
-                    RET_FAIL(nullptr, fmidi_err_eof);
-                endp = (const uint8_t *)memchr(part, 0xf7, partlen);
-            }
-            else {
-                // no next part? assume unfinished message and repair
-                mb.setpos(offset);
-                syxbuf.push_back(0xf7);
-                term = true;
-            }
-        }
-    }
-
-    evt = fmidi_event_alloc(evbuf, syxbuf.size());
-    evt->type = fmidi_event_message;
-    evt->delta = delta;
-    evt->datalen = syxbuf.size();
-    memcpy(&evt->data[0], &syxbuf[0], syxbuf.size());
-    return evt;
-}
-
-static fmidi_event_t *fmidi_read_message_event(
-    memstream &mb, std::vector<uint8_t> &evbuf, unsigned id, uint32_t delta)
-{
-    uint32_t datalen = fmidi_message_sizeof(id);
-    const uint8_t *data;
-    if (datalen <= 0)
-        RET_FAIL(nullptr, fmidi_err_format);
-    if (!(data = mb.read(datalen - 1)))
-        RET_FAIL(nullptr, fmidi_err_eof);
-
-    fmidi_event_t *evt = fmidi_event_alloc(evbuf, datalen);
-    evt->type = fmidi_event_message;
-    evt->delta = delta;
-    evt->datalen = datalen;
-    evt->data[0] = id;
-    memcpy(&evt->data[1], data, datalen - 1);
-    return evt;
-}
-
-static fmidi_event_t *fmidi_read_event(
-    memstream &mb, std::vector<uint8_t> &evbuf, uint8_t *runstatus)
-{
-    memstream_status ms;
-    uint32_t delta;
-    unsigned id;
-    if ((ms = mb.readvlq(&delta)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-    if ((ms = mb.readbyte(&id)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-
-    fmidi_event_t *evt;
-    if (id == 0xff) {
-        evt = fmidi_read_meta_event(mb, evbuf, delta);
-    }
-    else if (id == 0xf7) {
-        evt = fmidi_read_escape_event(mb, evbuf, delta);
-    }
-    else if (id == 0xf0) {
-        evt = fmidi_read_sysex_event(mb, evbuf, delta);
-    }
-    else {
-        if (id & 128) {
-            *runstatus = id;
-        }
-        else {
-            id = *runstatus;
-            mb.setpos(mb.getpos() - 1);
-        }
-        evt = fmidi_read_message_event(mb, evbuf, id, delta);
-    }
-
-    return evt;
-}
-
-void fmidi_smf_track_begin(fmidi_track_iter_t *it, uint16_t track)
-{
-    it->track = track;
-    it->index = 0;
-}
-
-const fmidi_event_t *fmidi_smf_track_next(
-    const fmidi_smf_t *smf, fmidi_track_iter_t *it)
-{
-    if (it->track >= smf->info.track_count)
-        return nullptr;
-
-    const fmidi_raw_track &trk = smf->track[it->track];
-    const uint8_t *trkdata = trk.data.get();
-
-    const fmidi_event_t *evt = (const fmidi_event_t *)&trkdata[it->index];
-    if ((const uint8_t *)evt == trkdata + trk.length)
-        return nullptr;
-
-    it->index += fmidi_event_pad(fmidi_event_sizeof(evt->datalen));
-    return evt;
-}
-
-static bool fmidi_smf_read_contents(fmidi_smf_t *smf, memstream &mb)
-{
-    uint16_t ntracks = smf->info.track_count;
-    smf->track.reset(new fmidi_raw_track[ntracks]);
-
-    std::vector<uint8_t> evbuf;
-    evbuf.reserve(8192);
-
-    uint8_t runstatus = 0;  // status runs from track to track
-
-    for (unsigned itrack = 0; itrack < ntracks; ++itrack) {
-        fmidi_raw_track &trk = smf->track[itrack];
-        size_t trkoffset = mb.getpos();
-
-        memstream_status ms;
-        const uint8_t *trackmagic;
-        uint32_t tracklen;
-
-        if (!(trackmagic = mb.read(4))) {
-            // file has less tracks than promised, repair
-            smf->info.track_count = ntracks = itrack;
-            break;
-        }
-
-        if (memcmp(trackmagic, "MTrk", 4)) {
-            if (mb.getpos() == mb.endpos()) {
-                // some kind of final junk header, ignore
-                smf->info.track_count = ntracks = itrack;
-                break;
-            }
-            RET_FAIL(false, fmidi_err_format);
-        }
-        if ((ms = mb.readintBE(&tracklen, 4)))
-            RET_FAIL(false, (fmidi_status)ms);
-
-        // check track length, broken in many files. disregard if invalid
-        bool tracklengood = !mb.skip(tracklen) &&
-            (mb.getpos() == mb.endpos() ||
-             ((trackmagic = mb.peek(4)) && !memcmp(trackmagic, "MTrk", 4)));
-        mb.setpos(trkoffset + 8);
-
-        fmidi_event_t *evt;
-        size_t evoffset = mb.getpos();
-        bool endoftrack = false;
-        evbuf.clear();
-        while (!endoftrack && (evt = fmidi_read_event(mb, evbuf, &runstatus))) {
-            // some files use 3F instead or 2F for end of track
-            endoftrack = evt->type == fmidi_event_meta &&
-                (evt->data[0] == 0x2f || evt->data[0] == 0x3f);
-            // fmt::print(stderr, "T{} @{:#x} {}\n", itrack, evoffset, *evt);
-            evoffset = mb.getpos();
-            if (tracklengood && evoffset > trkoffset + 8 + tracklen)
-                // next track overlap
-                RET_FAIL(false, fmidi_err_format);
-        }
-
-        if (!endoftrack) {
-            switch (fmidi_last_error.code) {
-            case fmidi_err_eof:
-                // truncated track? stop reading
-                smf->info.track_count = ntracks = itrack + 1;
-                break;
-            case fmidi_err_format:
-                // event with absurdly high delta time? ignore the rest of
-                // the track and if possible proceed to the next
-                mb.setpos(evoffset);
-                if (mb.peekvlq(nullptr) == ms_err_format) {
-                    if (!tracklengood)
-                        smf->info.track_count = ntracks = itrack + 1;
-                    break;
-                }
-                return false;
-            default:
-                return false;
-            }
-        }
-
-        if (endoftrack) {
-            // permit meta events coming after end of track
-            const uint8_t *head;
-            while ((head = mb.peek(2)) && head[0] == 0x00 && head[1] == 0xff) {
-                if (!(evt = fmidi_read_event(mb, evbuf, &runstatus))) {
-                    if (fmidi_last_error.code == fmidi_err_eof)
-                        smf->info.track_count = ntracks = itrack + 1;
-                    else
-                        return false;
-                }
-                else if (tracklengood && mb.getpos() > trkoffset + 8 + tracklen)
-                    // next track overlap
-                    RET_FAIL(false, fmidi_err_format);
-            }
-        }
-
-        uint32_t evdatalen = trk.length = evbuf.size();
-        uint8_t *evdata = new uint8_t[evdatalen];
-        trk.data.reset(evdata);
-        memcpy(evdata, evbuf.data(), evdatalen);
-
-        if (tracklengood)
-            mb.setpos(trkoffset + 8 + tracklen);
-    }
-
-    return true;
-}
-
-fmidi_smf_t *fmidi_smf_mem_read(const uint8_t *data, size_t length)
-{
-    memstream mb(data, length);
-    memstream_status ms;
-    const uint8_t *filemagic;
-    uint32_t headerlen;
-    uint32_t format;
-    uint32_t ntracks;
-    uint32_t deltaunit;
-
-    while ((filemagic = mb.peek(4)) && memcmp(filemagic, "MThd", 4))
-        mb.skip(1);
-    mb.skip(4);
-
-    if (!filemagic)
-        RET_FAIL(nullptr, fmidi_err_format);
-
-    if ((ms = mb.readintBE(&headerlen, 4)) ||
-        (ms = mb.readintBE(&format, 2)) ||
-        (ms = mb.readintBE(&ntracks, 2)) ||
-        (ms = mb.readintBE(&deltaunit, 2)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-
-    if (ntracks < 1 || headerlen < 6)
-        RET_FAIL(nullptr, fmidi_err_format);
-
-    if ((ms = mb.skip(headerlen - 6)))
-        RET_FAIL(nullptr, (fmidi_status)ms);
-
-    std::unique_ptr<fmidi_smf_t> smf(new fmidi_smf_t);
-    smf->info.format = format;
-    smf->info.track_count = ntracks;
-    smf->info.delta_unit = deltaunit;
-
-    if (!fmidi_smf_read_contents(smf.get(), mb))
-        return nullptr;
-
-    return smf.release();
-}
-
-void fmidi_smf_free(fmidi_smf_t *smf)
-{
-    delete smf;
-}
-
-fmidi_smf_t *fmidi_smf_file_read(const char *filename)
-{
-    unique_FILE fh(fmidi_fopen(filename, "rb"));
-    if (!fh)
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    fmidi_smf_t *smf = fmidi_smf_stream_read(fh.get());
-    return smf;
-}
-
-fmidi_smf_t *fmidi_smf_stream_read(FILE *stream)
-{
-    struct stat st;
-    size_t length;
-
-    rewind(stream);
-
-    if (fstat(fileno(stream), &st) != 0)
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    length = st.st_size;
-    if (length > fmidi_file_size_limit)
-        RET_FAIL(nullptr, fmidi_err_largefile);
-
-    std::unique_ptr<uint8_t[]> buf(new uint8_t[length]);
-    if (!fread(buf.get(), length, 1, stream))
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    fmidi_smf_t *smf = fmidi_smf_mem_read(buf.get(), length);
-    return smf;
-}
-
-#include "fmidi/fmidi.h"
-#include <string.h>
-
-fmidi_fileformat_t fmidi_mem_identify(const uint8_t *data, size_t length)
-{
-    const uint8_t smf_magic[4] = {'M', 'T', 'h', 'd'};
-
-    for (size_t offset : {0x00, 0x80}) {
-        // a few unidentified files start at 0x80 (Sound Canvas MIDI collection)
-        if (length + offset >= 4 && memcmp(data + offset, smf_magic, 4) == 0)
-            return fmidi_fileformat_smf;
-    }
-
-    const uint8_t rmi_magic1[4] = {'R', 'I', 'F', 'F'};
-    const uint8_t rmi_magic2[8] = {'R', 'M', 'I', 'D', 'd', 'a', 't', 'a'};
-    if (length >= 16 && memcmp(data, rmi_magic1, 4) == 0 && memcmp(data + 8, rmi_magic2, 8) == 0)
-        return fmidi_fileformat_smf;
-
-    const uint8_t xmi_magic[20] = {
-        'F', 'O', 'R', 'M', 0, 0, 0, 14,
-        'X', 'D', 'I', 'R', 'I', 'N', 'F', 'O', 0, 0, 0, 2
-    };
-    if (length >= 20 && memcmp(data, xmi_magic, 20) == 0)
-        return fmidi_fileformat_xmi;
-
-    const uint8_t mus_magic[4] = {'M', 'U', 'S', 0x1a};
-    if (length >= 4 && memcmp(data, mus_magic, 4) == 0)
-        return fmidi_fileformat_mus;
-
-    RET_FAIL((fmidi_fileformat_t)-1, fmidi_err_format);
-}
-
-fmidi_fileformat_t fmidi_stream_identify(FILE *stream)
-{
-    rewind(stream);
-
-    uint8_t magic[0x100];
-    size_t size = fread(magic, 1, sizeof(magic), stream);
-    if (ferror(stream))
-        RET_FAIL((fmidi_fileformat_t)-1, fmidi_err_input);
-
-    return fmidi_mem_identify(magic, size);
-}
-
-fmidi_smf_t *fmidi_auto_mem_read(const uint8_t *data, size_t length)
-{
-    switch (fmidi_mem_identify(data, length)) {
-    case fmidi_fileformat_smf:
-        return fmidi_smf_mem_read(data, length);
-    case fmidi_fileformat_xmi:
-        return fmidi_xmi_mem_read(data, length);
-    case fmidi_fileformat_mus:
-        return fmidi_mus_mem_read(data, length);
-    default:
-        return nullptr;
-    }
-}
-
-fmidi_smf_t *fmidi_auto_file_read(const char *filename)
-{
-    unique_FILE fh(fmidi_fopen(filename, "rb"));
-    if (!fh)
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    fmidi_smf_t *smf = fmidi_auto_stream_read(fh.get());
-    return smf;
-}
-
-fmidi_smf_t *fmidi_auto_stream_read(FILE *stream)
-{
-    switch (fmidi_stream_identify(stream)) {
-    case fmidi_fileformat_smf:
-        return fmidi_smf_stream_read(stream);
-    case fmidi_fileformat_xmi:
-        return fmidi_xmi_stream_read(stream);
-    case fmidi_fileformat_mus:
-        return fmidi_mus_stream_read(stream);
-    default:
-        return nullptr;
-    }
-}
-
-#include "fmidi/fmidi.h"
-#include <string.h>
-
-fmidi_smf_t *fmidi_mus_mem_read(const uint8_t *data, size_t length)
-{
-    const uint8_t magic[] = {'M', 'U', 'S', 0x1a};
-
-    if (length < sizeof(magic) || memcmp(data, magic, 4))
-        RET_FAIL(nullptr, fmidi_err_format);
-
-    memstream mb(data + sizeof(magic), length - sizeof(magic));
-    memstream_status ms;
-
-    uint32_t score_len;
-    uint32_t score_start;
-    uint32_t channels;
-    uint32_t sec_channels;
-    uint32_t instr_cnt;
-
-    if ((ms = mb.readintLE(&score_len, 2)) ||
-        (ms = mb.readintLE(&score_start, 2)) ||
-        (ms = mb.readintLE(&channels, 2)) ||
-        (ms = mb.readintLE(&sec_channels, 2)) ||
-        (ms = mb.readintLE(&instr_cnt, 2)) ||
-        (ms = mb.skip(2)))
-        RET_FAIL(nullptr, fmidi_err_format);
-
-    std::unique_ptr<uint32_t[]> instrs{new uint32_t[instr_cnt]};
-    for (uint32_t i = 0; i < instr_cnt; ++i) {
-        if ((ms = mb.readintLE(&instrs[i], 2)))
-            RET_FAIL(nullptr, fmidi_err_format);
-    }
-
-    fmidi_smf_u smf(new fmidi_smf);
-    smf->info.format = 0;
-    smf->info.track_count = 1;
-    smf->info.delta_unit = 70; // DMX 140 Hz -> PPQN at 120 BPM
-    smf->track.reset(new fmidi_raw_track[1]);
-
-    fmidi_raw_track &track = smf->track[0];
-    std::vector<uint8_t> evbuf;
-    evbuf.reserve(8192);
-
-    uint32_t ev_delta = 0;
-    uint32_t note_velocity[16] = {};
-
-    for (unsigned channel = 0; channel < 16; ++channel) {
-        // initial velocity
-        note_velocity[channel] = 64;
-        // channel volume
-        fmidi_event_t *event = fmidi_event_alloc(evbuf, 3);
-        event->type = fmidi_event_message;
-        event->delta = ev_delta;
-        event->datalen = 3;
-        uint8_t *data = event->data;
-        data[0] = 0xb0 | channel;
-        data[1] = 7;
-        data[2] = 127;
-    }
-
-    for (bool score_end = false; !score_end;) {
-        uint32_t ev_desc;
-        if ((ms = mb.readintLE(&ev_desc, 1)))
-            RET_FAIL(nullptr, fmidi_err_format);
-
-        const uint8_t mus_channel_to_midi_channel[16] = {
-            0,  1,  2,  3,  4,  5,  6,  7,
-            8,  10, 11, 12, 13, 14, 15, 9
-        };
-
-        bool ev_last = (ev_desc & 128) != 0;
-        uint32_t ev_type = (ev_desc >> 4) & 7;
-        uint32_t ev_channel = mus_channel_to_midi_channel[ev_desc & 15];
-
-        uint8_t midi[3] {};
-        uint8_t midi_size = 0;
-
-        switch (ev_type) {
-            // release note
-        case 0: {
-            uint32_t data1;
-            if ((ms = mb.readintLE(&data1, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            midi[0] = 0x80 | ev_channel;
-            midi[1] = data1 & 127;
-            midi[2] = 64;
-            midi_size = 3;
-            break;
-        }
-            // play note
-        case 1: {
-            uint32_t data1;
-            if ((ms = mb.readintLE(&data1, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            if (data1 & 128) {
-                uint32_t data2;
-                if ((ms = mb.readintLE(&data2, 1)))
-                    RET_FAIL(nullptr, fmidi_err_format);
-                note_velocity[ev_channel] = data2 & 127;
-            }
-            midi[0] = 0x90 | ev_channel;
-            midi[1] = data1 & 127;
-            midi[2] = note_velocity[ev_channel];
-            midi_size = 3;
-            break;
-        }
-            // pitch wheel
-        case 2: {
-            uint32_t data1;
-            if ((ms = mb.readintLE(&data1, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            uint32_t bend = (data1 < 128) ? (data1 << 6) :
-                (8192 + (data1 - 128) * 8191 / 127);
-            midi[0] = 0xe0 | ev_channel;
-            midi[1] = bend & 127;
-            midi[2] = bend >> 7;
-            midi_size = 3;
-            break;
-        }
-            // system event
-        case 3: {
-            uint32_t data1;
-            if ((ms = mb.readintLE(&data1, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            midi[0] = 0xb0 | ev_channel;
-            midi[2] = 0;
-            midi_size = 3;
-            switch (data1 & 127) {
-            case 10: midi[1] = 120; break;
-            case 11: midi[1] = 123; break;
-            case 12: midi[1] = 126; break;
-            case 13: midi[1] = 127; break;
-            case 14: midi[1] = 121; break;
-            default: midi_size = 0; break;
-            }
-            break;
-        }
-            // change controller
-        case 4: {
-            uint32_t data1;
-            if ((ms = mb.readintLE(&data1, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            uint32_t data2;
-            if ((ms = mb.readintLE(&data2, 1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            midi[0] = 0xb0 | ev_channel;
-            midi[2] = data2 & 127;
-            midi_size = 3;
-            switch (data1 & 127) {
-            case 0:
-                // program change
-                midi[0] = 0xc0 | ev_channel;
-                midi[1] = data2 & 127;
-                midi_size = 2;
-                break;
-            case 1: midi[1] = 0; break;
-            case 2: midi[1] = 1; break;
-            case 3: midi[1] = 7; break;
-            case 4: midi[1] = 10; break;
-            case 5: midi[1] = 11; break;
-            case 6: midi[1] = 91; break;
-            case 7: midi[1] = 93; break;
-            case 8: midi[1] = 64; break;
-            case 9: midi[1] = 67; break;
-            default: midi_size = 0; break;
-            }
-            break;
-        }
-            // end of measure
-        case 5: {
-            break;
-        }
-            // score end
-        case 6: {
-            score_end = true;
-            break;
-        }
-            // unknown purpose
-        case 7: {
-            if ((ms = mb.skip(1)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            break;
-        }
-        }
-
-        uint32_t delta_inc = 0;
-        if (ev_last) {
-            if ((ms = mb.readvlq(&delta_inc)))
-                RET_FAIL(nullptr, fmidi_err_format);
-            ev_desc += delta_inc;
-        }
-
-        if (midi_size > 0) {
-            fmidi_event_t *event = fmidi_event_alloc(evbuf, midi_size);
-            event->type = fmidi_event_message;
-            event->delta = ev_delta;
-            event->datalen = midi_size;
-            memcpy(event->data, midi, midi_size);
-            ev_delta = 0;
-        }
-
-        ev_delta += delta_inc;
-    }
-
-    fmidi_event_t *event = fmidi_event_alloc(evbuf, 1);
-    event->type = fmidi_event_meta;
-    event->delta = ev_delta;
-    event->datalen = 1;
-    event->data[0] = 0x2f;
-
-    uint32_t evdatalen = track.length = evbuf.size();
-    uint8_t *evdata = new uint8_t[evdatalen];
-    track.data.reset(evdata);
-    memcpy(evdata, evbuf.data(), evdatalen);
-
-    return smf.release();
-}
-
-fmidi_smf_t *fmidi_mus_file_read(const char *filename)
-{
-    unique_FILE fh(fmidi_fopen(filename, "rb"));
-    if (!fh)
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    fmidi_smf_t *smf = fmidi_mus_stream_read(fh.get());
-    return smf;
-}
-
-fmidi_smf_t *fmidi_mus_stream_read(FILE *stream)
-{
-    rewind(stream);
-
-    constexpr size_t mus_file_size_limit = 65536;
-    uint8_t buf[mus_file_size_limit];
-
-    size_t length = fread(buf, 1, mus_file_size_limit, stream);
-    if (ferror(stream))
-        RET_FAIL(nullptr, fmidi_err_input);
-
-    fmidi_smf_t *smf = fmidi_mus_mem_read(buf, length);
     return smf;
 }
 
