@@ -67,55 +67,81 @@ jobs:
         name: SMF-DSP 64-bit for GNU Linux
         path: ${{runner.workspace}}/build/release/*.AppImage
   build_for_mingw32:
-    runs-on: ubuntu-18.04
-    container:
-      image: archlinux
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
     steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: mingw32
+        update: true
+        install: >-
+          base-devel
+          git
+          mingw-w64-i686-cmake
+          mingw-w64-i686-pkg-config
+          mingw-w64-i686-gcc
+          mingw-w64-i686-winpthreads
+          mingw-w64-i686-pkg-config
+          mingw-w64-i686-libiconv
+          mingw-w64-i686-icu
+          mingw-w64-i686-libuv
+          mingw-w64-i686-SDL2
+          mingw-w64-i686-SDL2_image
+          mingw-w64-i686-llvm
+    - uses: actions/checkout@v2
+      with:
+        repository: jpcima/dll-bundler
+        submodules: recursive
+        path: dll-bundler
+    - name: Install dll-bundler
+      run: |
+        mkdir dll-bundler-build
+        cd dll-bundler-build
+        cmake "$GITHUB_WORKSPACE/dll-bundler" -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX=/mingw32
+        cmake --build . -j 2
+        cmake --build . -j --target install
+        cd ..
+    - uses: actions/checkout@v2
+      with:
+        repository: andrewrk/libsoundio
+        submodules: recursive
+        ref: 2.0.0
+        path: libsoundio
+    - name: Install libsoundio
+      run: |
+        mkdir libsoundio-build
+        cd libsoundio-build
+        cmake "$GITHUB_WORKSPACE/libsoundio" -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX=/mingw32
+        cmake --build . -j 2
+        cmake --build . -j --target install
+        # fix installation
+        mv /mingw32/{lib,bin}/libsoundio.dll
+        cd ..
     - name: Set build name
       run: |
         echo "build_name=smf-dsp-win32" >> "$GITHUB_ENV"
-    - name: Configure pacman repositories
-      shell: bash
-      run: |
-        cat >>/etc/pacman.conf <<EOF
-        [multilib]
-        Include = /etc/pacman.d/mirrorlist
-        [mingw-w64]
-        SigLevel = Optional TrustAll
-        Server = https://github.com/jpcima/arch-mingw-w64/releases/download/repo.\$arch/
-        EOF
-    - name: Set up dependencies
-      shell: bash
-      run: |
-        pacman -Sqy --noconfirm
-        pacman -Squ --noconfirm --needed
-        pacman -Sq --noconfirm --needed archlinux-keyring
-        pacman -Sq --noconfirm base-devel git zip mingw-w64-cmake mingw-w64-gcc mingw-w64-winpthreads mingw-w64-pkg-config mingw-w64-win-iconv mingw-w64-icu mingw-w64-libuv mingw-w64-sdl2 mingw-w64-libsoundio dll-bundler-git
     - uses: actions/checkout@v2
       with:
         submodules: recursive
     - name: Create Build Environment
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: cmake -E make_directory build
     - name: Configure CMake
-      shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: i686-w64-mingw32-cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+      run: cmake -G "MSYS Makefiles" "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
     - name: Build
-      shell: bash
       working-directory: ${{runner.workspace}}/build
       run: cmake --build . --config "$BUILD_TYPE" -j 2
     - name: Bundle DLL
-      shell: bash
       working-directory: ${{runner.workspace}}/build
       run: |
         for f in *.exe *.dll; do
-          dll-bundler -L /usr/i686-w64-mingw32/bin "$f"
+          dll-bundler -L "$(cygpath -m /mingw32/bin)" "$f"
         done
     - name: Install
       working-directory: ${{runner.workspace}}/build
-      shell: bash
       run: |
         mkdir -p release/"${build_name}"/
         for f in *.{exe,dll}; do cp -f "$f" release/"${build_name}"/; done
